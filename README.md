@@ -228,6 +228,40 @@ source. Revisions are monotonic only within one Session and are not host storage
 External assistants and other review-before-apply workflows use a sibling contract rather
 than mutating `EditorModel` or replaying low-level commands:
 
+```mermaid
+flowchart LR
+    subgraph Consumers["Downstream Consumers"]
+        Host["macOS document host"]
+        Reviewer["Assistant or review UI"]
+        Storage["Persistence"]
+    end
+
+    subgraph Platform["Default macOS Boundary"]
+        Facade["SlopadAppKit curated facade"]
+        Controller["AppKitEditorViewController native synchronization"]
+    end
+
+    subgraph Headless["Headless Runtime Owners"]
+        Session["EditorSession composition, CAS, and projections"]
+        Model["EditorModel canonical document and transaction history"]
+        Layout["BlockLayout derived geometry and visibility"]
+    end
+
+    Host -->|"one product and import"| Facade
+    Facade --> Controller
+    Controller -->|"actions and reviewed patch"| Session
+    Session -->|"context, update, and render facts"| Controller
+    Session -->|"validated canonical transaction"| Model
+    Model -->|"semantic change"| Session
+    Session -->|"derived layout requests"| Layout
+    Host <-->|"encoded context and reviewed post-image"| Reviewer
+    Host -->|"persist documentSnapshot"| Storage
+```
+
+The facade and context values are boundaries, not additional state owners. The canonical
+document changes only in `EditorModel`; `EditorSession` authorizes the reviewed patch and
+projects the result, while the controller makes the native surface agree before returning.
+
 ```swift
 let context = try controller.documentContextSnapshot()
 

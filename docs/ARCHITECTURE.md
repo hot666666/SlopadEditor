@@ -222,6 +222,54 @@ document context rather than a context-free host intent. The engine contract is 
 to complete custom adapters, and the AppKit controller adds native marked-text rejection
 plus synchronized surface forwarding.
 
+The ownership structure is separate from the request sequence. Subgraphs name ownership
+domains, while edge labels name the public operations and immutable values crossing those
+boundaries:
+
+```mermaid
+flowchart LR
+    subgraph Consumer["Reviewing Consumer"]
+        Host["Document host"]
+        Reviewer["Assistant or review UI"]
+    end
+
+    subgraph Platform["Platform Boundary"]
+        Facade["SlopadAppKit compile-time facade"]
+        Controller["AppKitEditorViewController native state owner"]
+        Surface["Synchronized AppKit surface"]
+    end
+
+    subgraph Engine["Headless Session Orchestration"]
+        Session["EditorSession composition and source CAS owner"]
+    end
+
+    subgraph Canonical["Canonical Contract and Mutation"]
+        Validation["SlopadCoreModel canonical post-image validation"]
+        Model["EditorModel document, selection, and transaction owner"]
+        History["One undo and redo history entry"]
+    end
+
+    subgraph Derived["Derived Runtime"]
+        Layout["BlockLayout visibility and geometry"]
+    end
+
+    Host <-->|"encoded context and reviewed post-image"| Reviewer
+    Host -->|"one import"| Facade
+    Facade --> Controller
+    Controller <-->|"context snapshot, document patch, and update"| Session
+    Session -->|"post-image after exact source CAS"| Validation
+    Validation -->|"typed valid post-image"| Model
+    Model --> History
+    Model -.->|"one semantic change"| Session
+    Session <-->|"layout request and geometry facts"| Layout
+    Controller -->|"render, focus, selection, and callback convergence"| Surface
+```
+
+This map makes the two non-owners explicit: `SlopadAppKit` only curates the ordinary host
+surface, and `EditorDocumentContextSnapshot`/`EditorDocumentPatch`—named on the
+controller/Session edge—only transport values. They never duplicate Session identity,
+canonical document authority, or history.
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -242,9 +290,9 @@ sequenceDiagram
     Session->>Session: exact CAS(epoch + revision + selection)
     Session->>Model: validate and replace full post-image
     alt empty, duplicate, invalid content, missing parent, cycle, non-DFS, or invalid selection
-        Model-->>Host: typed error; state unchanged
+        Model-->>Host: typed error, state unchanged
     else exact document and selection no-op
-        Model-->>Host: nil; no history, revision, callback, or render
+        Model-->>Host: nil, no history, revision, callback, or render
     else changed post-image
         Model-->>Session: one transaction and one semantic change
         Session-->>AppKit: one committed-revision EditorUpdate
