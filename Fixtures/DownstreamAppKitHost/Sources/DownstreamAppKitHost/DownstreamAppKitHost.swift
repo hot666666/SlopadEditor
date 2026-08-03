@@ -109,6 +109,16 @@ private struct DownstreamAppKitHost {
         )
         precondition(noOpUpdate == nil)
 
+        // Escape escalation: the editor tells the host when it ran out of things to do
+        // with a semantic action, instead of the host guessing from the responder chain.
+        var escalatedActions: [AppKitEditorAction] = []
+        controller.onUnhandledAction = { action in
+            escalatedActions.append(action)
+            return action == .escape
+        }
+        controller.perform(.undo, makeFirstResponder: false, scrollSelectionIntoView: false)
+        _ = escalatedActions
+
         // Focus is a first-class contract now: a host observes it, sets it, and reads it
         // back without reaching for a render call.
         var observedFocus: [Bool] = []
