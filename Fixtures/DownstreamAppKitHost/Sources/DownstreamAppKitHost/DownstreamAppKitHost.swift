@@ -109,6 +109,13 @@ private struct DownstreamAppKitHost {
         )
         precondition(noOpUpdate == nil)
 
+        // An inline host sizes its container from the document height without subscribing
+        // to render snapshots.
+        var observedHeights: [Double] = []
+        controller.onContentHeightChange = { observedHeights.append($0) }
+        _ = controller.contentHeight
+        _ = observedHeights
+
         // Escape escalation: the editor tells the host when it ran out of things to do
         // with a semantic action, instead of the host guessing from the responder chain.
         var escalatedActions: [AppKitEditorAction] = []

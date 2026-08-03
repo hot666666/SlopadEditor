@@ -174,6 +174,20 @@ public final class AppKitEditorViewController: NSViewController {
         return try session.documentContextSnapshot()
     }
     public private(set) var snapshot: EditorSessionSnapshot?
+
+    /// The full height of the laid-out document, excluding the editor's bottom padding.
+    ///
+    /// This is the value an inline editor sizes itself to. It is `0` until the first
+    /// layout settles.
+    public private(set) var contentHeight: Double = 0
+
+    /// Called when the document height changes, and only then.
+    ///
+    /// `onSnapshotChanged` also carries `totalHeight`, but it fires on every scroll and
+    /// render pass, so a host that only wants to grow a frame would be recomputing on
+    /// every keystroke and every scroll tick. This fires when the number a host would act
+    /// on actually moved.
+    public var onContentHeightChange: ((Double) -> Void)?
     public var blockChromeRenderer: any AppKitBlockChromeRenderer
     public var onSnapshotChanged: ((EditorSessionSnapshot) -> Void)?
     public var onUpdate: ((EditorUpdate) -> Void)?
@@ -699,8 +713,19 @@ public final class AppKitEditorViewController: NSViewController {
 
         isSynchronizingSurface = false
         if let finalViewport, let finalSnapshot {
+            // Reported from the settled snapshot rather than from each render pass, so a
+            // host binding its frame to this never sees the intermediate heights the
+            // convergence loop produces.
+            notifyContentHeightIfChanged(finalSnapshot.totalHeight)
             publishSnapshot(finalSnapshot, viewport: finalViewport)
         }
+    }
+
+    /// Emits `onContentHeightChange` when the settled document height actually moved.
+    private func notifyContentHeightIfChanged(_ height: Double) {
+        guard contentHeight != height else { return }
+        contentHeight = height
+        onContentHeightChange?(height)
     }
 
     private func enqueueSurfaceSyncRequest(_ request: SurfaceSyncRequest) {
