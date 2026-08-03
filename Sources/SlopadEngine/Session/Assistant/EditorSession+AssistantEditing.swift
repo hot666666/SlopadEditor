@@ -19,7 +19,7 @@ extension EditorSession {
         let document = documentSnapshot
         return EditorDocumentContextSnapshot(
             source: EditorDocumentSource(
-                sessionEpoch: documentContextEpoch,
+                sessionEpoch: sessionEpoch,
                 revision: document.revision,
                 selection: selection
             ),
@@ -40,7 +40,7 @@ extension EditorSession {
             throw .activeComposition
         }
         guard
-            patch.source.sessionEpoch == documentContextEpoch,
+            patch.source.sessionEpoch == sessionEpoch,
             patch.source.revision == currentDocumentRevision,
             patch.source.selection == editorModel.selection
         else {

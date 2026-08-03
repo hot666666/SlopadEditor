@@ -58,12 +58,17 @@ private struct DownstreamAppKitHost {
         blockID: BlockID,
         style: AppKitEditorStyle
     ) throws {
+        // A persistence host holds a committed change token and decides later whether it is
+        // still worth writing. Both halves have to be public values.
+        var capturedToken: (epoch: EditorSessionEpoch, revision: EditorDocumentRevision)?
         controller.onSnapshotChanged = { _ in }
         controller.onUpdate = { [weak controller] update in
             guard let revision = update.committedDocumentRevision else { return }
             let documentSnapshot = controller?.documentSnapshot
             _ = documentSnapshot?.revision == revision
+            _ = documentSnapshot?.epoch == update.epoch
             _ = documentSnapshot?.blocks
+            capturedToken = (update.epoch, revision)
         }
         controller.blockChromeRenderer = HostChromeRenderer()
         _ = controller.editorStyle == style
@@ -142,6 +147,8 @@ private struct DownstreamAppKitHost {
         }
         _ = controller.commitActiveComposition()
         controller.scrollDocument(to: 0)
+
+        let tokenBeforeReset = capturedToken
         controller.resetDocument(
             blocks: [
                 EditorBlockInput(
@@ -151,5 +158,11 @@ private struct DownstreamAppKitHost {
             ],
             selection: .caret(blockID: blockID, offset: 0)
         )
+
+        // The replacement Session restarts revisions at zero, so the epoch is the only
+        // thing that tells the host its pending token belongs to a document that is gone.
+        if let tokenBeforeReset {
+            precondition(tokenBeforeReset.epoch != controller.documentSnapshot.epoch)
+        }
     }
 }
