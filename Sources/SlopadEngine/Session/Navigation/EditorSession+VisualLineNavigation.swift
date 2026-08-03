@@ -19,6 +19,12 @@ extension EditorSession {
             ),
             let caretRect = textLayouter.caretRect(
                 for: position,
+                navigationContext: activeTextNavigationSelection().flatMap {
+                    textNavigationContext(
+                        for: $0,
+                        request: currentRendered.textRender.measureRequest
+                    )
+                },
                 in: currentRendered.textRender.measureRequest
             )
         else {
@@ -80,12 +86,22 @@ extension EditorSession {
             x: targetDocumentX - targetRendered.frame.x,
             y: targetLineRect.midY - targetRendered.frame.y
         )
-        let destination = textLayouter.textPosition(
-            at: targetPoint,
-            in: targetRendered.textRender.measureRequest
+        let request = targetRendered.textRender.measureRequest
+        guard
+            let destinationHit = validatedTextHitTest(
+                textLayouter.textHitTest(at: targetPoint, in: request),
+                request: request
+            )
+        else { return nil }
+        let destination = destinationHit.result.position
+        let selection = TextSelection(anchor: destination, focus: destination)
+        let update = handleSelectionChange(.caret(destination))
+        recordTextNavigationContext(
+            destinationHit.result.navigationContext,
+            for: selection,
+            request: request
         )
-
-        return handleSelectionChange(.caret(destination))
+        return update
     }
 }
 

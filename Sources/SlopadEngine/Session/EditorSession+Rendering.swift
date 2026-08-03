@@ -20,7 +20,7 @@ extension EditorSession {
             revision: revision,
             totalHeight: blockLayout.totalHeight,
             visibleBlocks: visibleBlocks,
-            selection: editorModel.selection,
+            selection: activeEditorSelection,
             composition: composition,
             history: historyState,
             activeTextInput: makeActiveTextInput(in: visibleBlocks),
@@ -60,6 +60,13 @@ extension EditorSession {
         return EditorSessionActiveTextInputDescriptor(
             selectedRange: activeSelection.range.clamped(to: contentLength),
             focusOffset: max(0, min(activeSelection.position.offset, contentLength)),
+            focusAffinity: activeSelection.position.affinity,
+            navigationContext: activeTextNavigationSelection().flatMap {
+                textNavigationContext(
+                    for: $0,
+                    request: rendered.textRender.measureRequest
+                )
+            },
             renderDescriptor: rendered.textRender
         )
     }

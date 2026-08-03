@@ -8,34 +8,39 @@ extension EditorSession {
         viewport: EditorViewport
     ) -> EditorUpdate? {
         guard direction.horizontalStep != nil else { return nil }
-        if case .text(let textSelection) = editorModel.selection,
-            let range = textSelection.rangeInSingleBlock
-        {
-            let offset = direction == .left ? range.lowerBound : range.upperBound
-            return handleSelectionChange(
-                .caret(blockID: textSelection.focus.blockID, offset: offset))
-        }
-        guard case .caret(let position) = editorModel.selection else { return nil }
-        let blockID = position.blockID
-        guard let block = editorModel.document.block(blockID) else { return nil }
+        guard
+            let selection = activeTextNavigationSelection(),
+            let request = textNavigationRequest(for: selection, viewport: viewport),
+            let navigationDirection = direction.textNavigationDirection
+        else { return nil }
 
-        switch direction {
-        case .left:
-            if position.offset > 0 {
-                return handleSelectionChange(
-                    .caret(blockID: blockID, offset: position.offset - 1))
-            }
+        switch textLayouter.navigate(
+            selection: selection,
+            context: textNavigationContext(for: selection, request: request),
+            direction: navigationDirection,
+            destination: .character,
+            extending: false,
+            in: request
+        ) {
+        case .selection(let resolvedSelection, let context):
+            return applyTextNavigationSelection(
+                resolvedSelection,
+                context: context,
+                extending: false,
+                request: request
+            )
 
-        case .right:
-            if position.offset < block.content.length {
-                return handleSelectionChange(
-                    .caret(blockID: blockID, offset: position.offset + 1))
-            }
+        case .boundary(let logicalBoundary):
+            guard case .caret = activeEditorSelection else { return nil }
+            textNavigationRuntimeContext = nil
+            return moveAcrossTextBoundaryIfNeeded(
+                logicalBoundary: logicalBoundary,
+                request: request
+            )
 
-        case .up, .down:
+        case .unchanged:
             return nil
         }
-        return moveAcrossTextBoundaryIfNeeded(direction: direction, viewport: viewport)
     }
 
     func moveToTextBoundary(_ direction: EditorNavigationDirection) -> EditorUpdate? {
@@ -49,25 +54,35 @@ extension EditorSession {
         return handleSelectionChange(.caret(blockID: position.blockID, offset: offset))
     }
 
-    func moveByWord(_ direction: EditorNavigationDirection) -> EditorUpdate? {
+    func moveByWord(
+        _ direction: EditorNavigationDirection,
+        viewport: EditorViewport
+    ) -> EditorUpdate? {
         guard direction.horizontalStep != nil else { return nil }
         guard
-            let position = activeTextPosition(),
-            let block = editorModel.document.block(position.blockID)
+            let selection = activeTextNavigationSelection(),
+            let request = textNavigationRequest(for: selection, viewport: viewport),
+            let navigationDirection = direction.textNavigationDirection
         else { return nil }
 
-        let text = block.content.text
-        let offset: Int
-        switch direction {
-        case .left:
-            offset = previousSpaceDelimitedWordBoundary(in: text, from: position.offset)
-        case .right:
-            offset = nextSpaceDelimitedWordBoundary(in: text, from: position.offset)
-        case .up, .down:
+        switch textLayouter.navigate(
+            selection: selection,
+            context: textNavigationContext(for: selection, request: request),
+            direction: navigationDirection,
+            destination: .word,
+            extending: false,
+            in: request
+        ) {
+        case .selection(let resolvedSelection, let context):
+            return applyTextNavigationSelection(
+                resolvedSelection,
+                context: context,
+                extending: false,
+                request: request
+            )
+        case .boundary, .unchanged:
             return nil
         }
-        guard position.offset != offset else { return nil }
-        return handleSelectionChange(.caret(blockID: position.blockID, offset: offset))
     }
 
     func textBoundaryOffset(
@@ -78,6 +93,13 @@ extension EditorSession {
         case .left:
             return 0
         case .right:
+            if
+                let composition,
+                composition.blockID == block.id,
+                let effectiveLength = effectiveTextLength(for: composition)
+            {
+                return effectiveLength
+            }
             return block.content.length
         case .up, .down:
             return nil

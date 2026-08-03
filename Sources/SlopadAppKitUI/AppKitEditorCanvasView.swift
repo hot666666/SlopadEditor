@@ -3,7 +3,7 @@ import AppKit
 // MARK: - AppKitEditorCanvasHandler
 
 @MainActor
-public protocol AppKitEditorCanvasHandler: AnyObject {
+protocol AppKitEditorCanvasHandler: AnyObject {
     func drawCanvas(_ dirtyRect: NSRect)
     func handleMouseDown(documentPoint: CGPoint, clickCount: Int)
     func handleMouseDragged(documentPoint: CGPoint)
@@ -26,20 +26,20 @@ public protocol AppKitEditorCanvasHandler: AnyObject {
 // MARK: - AppKitEditorCanvasView
 
 @MainActor
-public final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
+final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
     // MARK: - Private Types
 
     private enum Accessibility {
         static let canvasIdentifier = "AppKitEditorCanvas"
     }
 
-    // MARK: - Public State
+    // MARK: - State
 
-    public weak var handler: (any AppKitEditorCanvasHandler)?
+    private weak var handler: (any AppKitEditorCanvasHandler)?
 
     // MARK: - Init
 
-    public init(
+    init(
         handler: (any AppKitEditorCanvasHandler)? = nil,
         frame: NSRect = NSRect(x: 0, y: 0, width: 860, height: 900)
     ) {
@@ -49,46 +49,46 @@ public final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputCl
     }
 
     @available(*, unavailable)
-    public required init?(coder: NSCoder) {
+    required init?(coder: NSCoder) {
         fatalError("init(coder:) is not supported")
     }
 
     // MARK: - NSView
 
-    public override var isFlipped: Bool {
+    override var isFlipped: Bool {
         true
     }
 
-    public override var isOpaque: Bool {
+    override var isOpaque: Bool {
         true
     }
 
-    public override var acceptsFirstResponder: Bool {
+    override var acceptsFirstResponder: Bool {
         true
     }
 
-    public override func draw(_ dirtyRect: NSRect) {
+    override func draw(_ dirtyRect: NSRect) {
         handler?.drawCanvas(dirtyRect)
     }
 
-    public override func mouseDown(with event: NSEvent) {
+    override func mouseDown(with event: NSEvent) {
         handler?.handleMouseDown(
             documentPoint: convert(event.locationInWindow, from: nil),
             clickCount: event.clickCount
         )
     }
 
-    public override func mouseDragged(with event: NSEvent) {
+    override func mouseDragged(with event: NSEvent) {
         handler?.handleMouseDragged(documentPoint: convert(event.locationInWindow, from: nil))
     }
 
-    public override func mouseUp(with event: NSEvent) {
+    override func mouseUp(with event: NSEvent) {
         handler?.handleMouseUp(documentPoint: convert(event.locationInWindow, from: nil))
     }
 
     // MARK: - Keyboard
 
-    public override func keyDown(with event: NSEvent) {
+    override func keyDown(with event: NSEvent) {
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let actionModifiers = modifiers.intersection([.command, .control, .option, .shift])
         if let commandSelector = AppKitKeyboardCommandMapper.commandSelector(
@@ -117,7 +117,7 @@ public final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputCl
         interpretKeyEvents([event])
     }
 
-    public override func doCommand(by selector: Selector) {
+    override func doCommand(by selector: Selector) {
         if handler?.handleNativeCommand(selector) == true {
             return
         }
@@ -126,12 +126,12 @@ public final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputCl
 
     // MARK: - NSTextInputClient
 
-    public func insertText(_ string: Any, replacementRange: NSRange) {
+    func insertText(_ string: Any, replacementRange: NSRange) {
         guard let text = Self.plainText(from: string) else { return }
         handler?.insertTextFromNativeSurface(text, replacementRange: replacementRange)
     }
 
-    public func setMarkedText(
+    func setMarkedText(
         _ string: Any,
         selectedRange: NSRange,
         replacementRange: NSRange
@@ -144,23 +144,23 @@ public final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputCl
         )
     }
 
-    public func unmarkText() {
+    func unmarkText() {
         handler?.unmarkTextFromNativeSurface()
     }
 
-    public func selectedRange() -> NSRange {
+    func selectedRange() -> NSRange {
         handler?.nativeSelectedRange() ?? NSRange(location: 0, length: 0)
     }
 
-    public func markedRange() -> NSRange {
+    func markedRange() -> NSRange {
         handler?.nativeMarkedRange() ?? NSRange(location: NSNotFound, length: 0)
     }
 
-    public func hasMarkedText() -> Bool {
+    func hasMarkedText() -> Bool {
         handler?.hasMarkedTextForNativeSurface() ?? false
     }
 
-    public func attributedSubstring(
+    func attributedSubstring(
         forProposedRange range: NSRange,
         actualRange: NSRangePointer?
     ) -> NSAttributedString? {
@@ -168,11 +168,11 @@ public final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputCl
         return handler?.attributedSubstringForNativeSurface(range: range)
     }
 
-    public func validAttributesForMarkedText() -> [NSAttributedString.Key] {
+    func validAttributesForMarkedText() -> [NSAttributedString.Key] {
         [.foregroundColor, .backgroundColor, .underlineStyle]
     }
 
-    public func firstRect(
+    func firstRect(
         forCharacterRange range: NSRange,
         actualRange: NSRangePointer?
     ) -> NSRect {
@@ -180,7 +180,7 @@ public final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputCl
         return handler?.firstRectForNativeSurface(range: range) ?? .zero
     }
 
-    public func characterIndex(for point: NSPoint) -> Int {
+    func characterIndex(for point: NSPoint) -> Int {
         selectedRange().location
     }
 

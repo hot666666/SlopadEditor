@@ -1,0 +1,4 @@
+date,build,os,xcode,scenario,blockCount,frames,avgFPS,avgOperationMs,avgFrameMs,p95FrameMs,avgRenderAndSyncMs,avgDisplayMs,avgDrawMs,over16ms,over33ms
+2026-07-17,release,macOS 27.0 (26A5378n),Xcode 27.0 (27A5194q),style-change,100,60,59.7,7.311,16.749,17.327,0.047,9.390,8.842,33,0
+2026-07-17,release,macOS 27.0 (26A5378n),Xcode 27.0 (27A5194q),style-change,1000,60,71.0,4.130,14.085,14.554,0.053,9.901,9.299,0,0
+2026-07-17,release,macOS 27.0 (26A5378n),Xcode 27.0 (27A5194q),style-change,10000,60,40.2,14.643,24.867,25.506,0.059,10.164,9.542,60,0

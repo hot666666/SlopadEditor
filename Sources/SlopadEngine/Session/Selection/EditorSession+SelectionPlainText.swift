@@ -1,10 +1,11 @@
+import SlopadBlockLayout
 import SlopadCoreModel
 
 // MARK: - Selection Plain Text
 
 extension EditorSession {
     public func selectedPlainText() -> String? {
-        switch editorModel.selection {
+        switch activeEditorSelection {
         case .text(let textSelection) where textSelection.isSingleBlock:
             return selectedTextPlainText(textSelection)
 
@@ -20,7 +21,11 @@ extension EditorSession {
         guard
             let range = selection.rangeInSingleBlock,
             !range.isEmpty,
-            let block = editorModel.document.block(selection.anchor.blockID)
+            let block = blockLayout.effectiveBlock(
+                for: selection.anchor.blockID,
+                document: editorModel.document,
+                composition: composition
+            )
         else {
             return nil
         }

@@ -10,16 +10,17 @@ extension EditorSession {
         clearPointerDragState()
         guard
             let position = textPosition(at: documentPoint, viewport: viewport),
-            let block = editorModel.document.block(position.blockID)
+            let request = textNavigationRequest(for: position, viewport: viewport)
         else {
             return nil
         }
 
-        let wordRange = spaceDelimitedWordRange(
-            in: block.content.text,
-            containing: position.offset
-        )
-        let fullRange = TextRange(0, block.content.length)
+        guard
+            (0...request.text.count).contains(position.offset),
+            let wordRange = textLayouter.wordRange(containing: position, in: request),
+            isValidTextBackendRange(wordRange, in: request)
+        else { return nil }
+        let fullRange = TextRange(0, request.text.count)
         let doubleClickStateMatches =
             textDoubleClickSelection?.blockID == position.blockID
             && textDoubleClickSelection?.wordRange == wordRange

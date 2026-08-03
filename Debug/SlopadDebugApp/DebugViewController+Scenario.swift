@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SlopadAppKitTextKit
 import SlopadEngine
 
 @MainActor
@@ -123,6 +124,10 @@ extension DebugViewController {
             renderAndSyncSurface(makeFirstResponder: true)
             _ = handleNativeCommand(#selector(NSResponder.moveLeft(_:)))
 
+        case "unicode-navigation":
+            replaceIntroText("A👨‍👩‍👧‍👦B", caretOffset: 1)
+            _ = handleNativeCommand(#selector(NSResponder.moveRight(_:)))
+
         case "prefix-list":
             focus(blockID: DebugSeedFixture.intro, offset: 0)
             renderAndSyncSurface(makeFirstResponder: true)
@@ -243,6 +248,14 @@ extension DebugViewController {
                 expectedLocation: (DebugSeedFixture.introText + " typed").count,
                 scenario: scenario
             )
+
+        case "unicode-navigation":
+            try assertActiveTextInput(
+                blockID: DebugSeedFixture.intro,
+                expectedText: "A👨‍👩‍👧‍👦B",
+                scenario: scenario
+            )
+            try assertActiveTextSelection(expectedLocation: 2, scenario: scenario)
 
         case "prefix-list":
             try assertActiveTextInput(
@@ -446,13 +459,11 @@ extension DebugViewController {
             activeInput.selectedRange == TextRange.point(expectedLocation),
             "\(scenario): descriptor selected range \(activeInput.selectedRange) != \(TextRange.point(expectedLocation))"
         )
+        let expectedNativeRange = TextRange.point(expectedLocation)
+            .textKitNSRange(in: activeNativeText)
         try require(
-            activeNativeSelectedRange.location == expectedLocation,
-            "\(scenario): native selected location \(activeNativeSelectedRange.location) != \(expectedLocation)"
-        )
-        try require(
-            activeNativeSelectedRange.length == 0,
-            "\(scenario): native selected length \(activeNativeSelectedRange.length) != 0"
+            activeNativeSelectedRange == expectedNativeRange,
+            "\(scenario): native selected range \(activeNativeSelectedRange) != \(expectedNativeRange)"
         )
     }
 
@@ -468,13 +479,10 @@ extension DebugViewController {
             activeInput.selectedRange == expectedRange,
             "\(scenario): descriptor selected range \(activeInput.selectedRange) != \(expectedRange)"
         )
+        let expectedNativeRange = expectedRange.textKitNSRange(in: activeNativeText)
         try require(
-            activeNativeSelectedRange.location == expectedRange.lowerBound,
-            "\(scenario): native selected location \(activeNativeSelectedRange.location) != \(expectedRange.lowerBound)"
-        )
-        try require(
-            activeNativeSelectedRange.length == expectedRange.length,
-            "\(scenario): native selected length \(activeNativeSelectedRange.length) != \(expectedRange.length)"
+            activeNativeSelectedRange == expectedNativeRange,
+            "\(scenario): native selected range \(activeNativeSelectedRange) != \(expectedNativeRange)"
         )
     }
 
@@ -625,7 +633,7 @@ extension DebugViewController {
         return [
             "rev(doc=\(comparison.documentRevision)",
             "comp=\(comparison.compositionRevision)",
-            "style=\(comparison.styleRevision)",
+            "textLayout=\(comparison.textLayoutRevision)",
             "width=\(debugHUDChangeLabel(comparison.widthChanged, comparison: comparison))",
             "visible=\(debugHUDChangeLabel(comparison.visibleSequenceChanged, comparison: comparison)))",
         ].joined(separator: " ")

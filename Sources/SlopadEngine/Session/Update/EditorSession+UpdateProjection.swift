@@ -17,6 +17,9 @@ extension EditorSession {
         _ command: EditorCommand
     ) -> (previousSelection: EditorSelection?, invalidation: EditorUpdateInvalidation) {
         let result = editorModel.apply(command)
+        if result != nil {
+            textNavigationRuntimeContext = nil
+        }
         let invalidation = markLayoutDirty(for: result?.change)
         return (
             previousSelection: result?.selectionBefore,
@@ -26,6 +29,9 @@ extension EditorSession {
 
     func markLayoutDirty(for change: EditorChange?) -> EditorUpdateInvalidation {
         guard let change else { return EditorUpdateInvalidation() }
+        if change.documentChanged {
+            recordDocumentChange()
+        }
         let invalidations = Self.projectInvalidations(for: change)
         blockLayout.markDirty(invalidations.layout)
         return invalidations.update
@@ -35,21 +41,24 @@ extension EditorSession {
         invalidation: EditorUpdateInvalidation,
         previousSelection: EditorSelection? = nil
     ) -> EditorUpdate {
+        let committedDocumentRevision = takePendingDocumentRevision()
         #if SLOPAD_BENCHMARK_INSTRUMENTATION
         return EditorUpdate(
-            selection: editorModel.selection,
+            selection: activeEditorSelection,
             previousSelection: previousSelection,
             composition: composition,
             history: historyState,
+            committedDocumentRevision: committedDocumentRevision,
             layoutDirty: blockLayout.isDirty,
             invalidation: invalidation
         )
         #else
             return EditorUpdate(
-                selection: editorModel.selection,
+                selection: activeEditorSelection,
                 previousSelection: previousSelection,
                 composition: composition,
                 history: historyState,
+                committedDocumentRevision: committedDocumentRevision,
                 invalidation: invalidation
             )
         #endif
@@ -92,7 +101,10 @@ extension EditorSession {
                 .moveBlocks(let blockIDs):
                 if !blockIDs.isEmpty { return true }
 
-            case .resetDocumentToEmptyParagraph, .splitBlock, .mergeBlocks:
+            case .replaceDocument,
+                .resetDocumentToEmptyParagraph,
+                .splitBlock,
+                .mergeBlocks:
                 return true
             }
         }
@@ -105,6 +117,8 @@ extension EditorSession {
 extension BlockLayoutMutation {
     fileprivate init?(operation: EditorOperation) {
         switch operation {
+        case .replaceDocument:
+            return nil
         case .splitBlock(let original, let created):
             self = .splitBlock(original: original, created: created)
         case .mergeBlocks(let target, let source):

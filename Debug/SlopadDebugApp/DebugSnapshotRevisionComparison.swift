@@ -6,10 +6,10 @@ struct EditorSnapshotRevisionComparison: Hashable, Sendable {
     let hasPreviousRevision: Bool
     let documentRevision: Int
     let compositionRevision: Int
-    let styleRevision: Int
+    let textLayoutRevision: Int
     let documentChanged: Bool
     let compositionChanged: Bool
-    let styleChanged: Bool
+    let textLayoutChanged: Bool
     let widthChanged: Bool
     let visibleSequenceChanged: Bool
 }
@@ -20,10 +20,10 @@ extension EditorSnapshotRevision {
             hasPreviousRevision: previous != nil,
             documentRevision: documentRevision,
             compositionRevision: compositionRevision,
-            styleRevision: styleRevision,
+            textLayoutRevision: textLayoutRevision,
             documentChanged: previous?.documentRevision != documentRevision,
             compositionChanged: previous?.compositionRevision != compositionRevision,
-            styleChanged: previous?.styleRevision != styleRevision,
+            textLayoutChanged: previous?.textLayoutRevision != textLayoutRevision,
             widthChanged: previous?.widthRevision != widthRevision,
             visibleSequenceChanged: previous?.visibleSequenceRevision != visibleSequenceRevision
         )

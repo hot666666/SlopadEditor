@@ -58,7 +58,8 @@ private final class UIBenchmarkAppDelegate: NSObject, NSApplicationDelegate {
         let host = UIBenchmarkHost(
             blockCount: options.blockCount,
             scenario: options.scenario,
-            subtreeNodeCount: options.subtreeNodeCount
+            subtreeNodeCount: options.subtreeNodeCount,
+            activeTextLength: options.activeTextLength
         )
         let window = NSWindow(
             contentRect: NSRect(x: 120, y: 120, width: 920, height: 680),
@@ -82,6 +83,7 @@ private final class UIBenchmarkAppDelegate: NSObject, NSApplicationDelegate {
                 options: UIBenchmarkOptions(
                     scenario: options.scenario,
                     blockCount: options.blockCount,
+                    activeTextLength: options.activeTextLength,
                     frameCount: options.frameCount,
                     outputPath: options.outputPath,
                     subtreeNodeCount: options.subtreeNodeCount
@@ -98,6 +100,7 @@ private final class UIBenchmarkAppDelegate: NSObject, NSApplicationDelegate {
 private struct UIBenchmarkCommandLineOptions {
     var scenario = "scroll"
     var blockCount = 10_000
+    var activeTextLength: Int?
     var frameCount = 120
     var outputPath = "/tmp/slopad-ui-benchmark.csv"
     var subtreeNodeCount: Int?
@@ -113,6 +116,10 @@ private struct UIBenchmarkCommandLineOptions {
             case "--block-count", "--ui-benchmark-block-count":
                 if let value = iterator.next(), let count = Int(value) {
                     blockCount = max(2, count)
+                }
+            case "--active-text-length", "--ui-benchmark-active-text-length":
+                if let value = iterator.next(), let count = Int(value) {
+                    activeTextLength = max(1, count)
                 }
             case "--frames", "--ui-benchmark-frames":
                 if let value = iterator.next(), let count = Int(value) {

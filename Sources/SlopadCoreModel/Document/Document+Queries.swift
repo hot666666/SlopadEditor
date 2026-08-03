@@ -1,6 +1,36 @@
 // MARK: - Document Queries
 
 extension Document {
+    /// Projects the canonical block tree into parent-before-children public host values.
+    ///
+    /// Sibling order follows the canonical `rootBlockIDs` and `childIDs` arrays.
+    package var editorBlockInputs: [EditorBlockInput] {
+        var inputs: [EditorBlockInput] = []
+        inputs.reserveCapacity(blocks.count)
+        var stack = Array(rootBlockIDs.reversed())
+
+        while let blockID = stack.popLast() {
+            guard let block = blocks[blockID] else {
+                preconditionFailure("Canonical document contains a missing block reference")
+            }
+            inputs.append(
+                EditorBlockInput(
+                    id: block.id,
+                    parentID: block.parentID,
+                    kind: block.kind,
+                    content: block.content
+                )
+            )
+            stack.append(contentsOf: block.childIDs.reversed())
+        }
+
+        return inputs
+    }
+
+    package func hasSameCanonicalContent(as other: Document) -> Bool {
+        rootBlockIDs == other.rootBlockIDs && blocks == other.blocks
+    }
+
     package var estimatedStorageBytes: Int {
         var total = rootBlockIDs.reduce(0) { $0 + $1.rawValue.utf8.count + 16 }
         for block in blocks.values {

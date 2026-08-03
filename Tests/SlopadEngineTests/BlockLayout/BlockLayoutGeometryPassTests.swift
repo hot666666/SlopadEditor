@@ -24,7 +24,7 @@ struct BlockLayoutGeometryPassTests {
         var blockLayout = BlockLayout()
         let expectedBlockIDs = [a, b]
         let expectedHeights = [11.0, 12.0]
-        let expectedStyleRevision = 0
+        let expectedTextLayoutRevision = 0
 
         // When
         _ = runBlockLayoutPass(&blockLayout, input: layoutInput, textLayouter: textLayouter)
@@ -33,7 +33,7 @@ struct BlockLayoutGeometryPassTests {
         // Then
         #expect(currentGeometries.map(\.blockID) == expectedBlockIDs)
         #expect(currentGeometries.map(\.height) == expectedHeights)
-        #expect(blockLayout.styleRevision == expectedStyleRevision)
+        #expect(blockLayout.textLayoutRevision == expectedTextLayoutRevision)
     }
 
     @Test("전체 layout pass가 visible 순서대로 측정하고 current geometry를 만든다")
@@ -64,7 +64,7 @@ struct BlockLayoutGeometryPassTests {
         let expectedRevision = EditorSnapshotRevision(
             documentRevision: document.revision,
             compositionRevision: 0,
-            styleRevision: 0,
+            textLayoutRevision: 0,
             widthRevision: widthRevision,
             visibleSequenceRevision: visibleIndex.revision
         )

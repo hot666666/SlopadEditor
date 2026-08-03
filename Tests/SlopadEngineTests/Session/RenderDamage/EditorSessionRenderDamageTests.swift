@@ -123,8 +123,8 @@ struct EditorSessionRenderDamageTests {
         #expect(rects == expectedRects)
     }
 
-    @Test("style revision 변경은 affected block anchor 없이 viewport 전체를 다시 그린다")
-    func styleRevisionChangeDamagesFullViewport() {
+    @Test("text layout backend 교체는 affected block anchor 없이 viewport 전체를 다시 그린다")
+    func textLayoutBackendReplacementDamagesFullViewport() {
         // Given
         let document = makeFlatDocument([
             Block(id: "a", content: BlockContent(text: "a")),
@@ -139,7 +139,9 @@ struct EditorSessionRenderDamageTests {
         let expectedRects = [EditorRect(x: 0, y: 0, width: 200, height: 100)]
 
         // When
-        let update = session.setLayoutStyleRevision(7)
+        let update = session.replaceTextLayoutBackend(
+            with: DeterministicBlockTextLayouter(lineHeight: 20, verticalPadding: 0)
+        )
         let rects = session.redrawRects(for: update, in: viewport)
 
         // Then

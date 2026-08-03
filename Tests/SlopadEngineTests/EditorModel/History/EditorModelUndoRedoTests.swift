@@ -33,6 +33,60 @@ struct EditorModelUndoRedoTests {
         #expect(textAfterRedo == expectedAfterText)
     }
 
+    @Test("여러 command와 selection 교체를 묶으면 하나의 transaction으로 undo와 redo된다")
+    func groupedStepsFormOneTransaction() throws {
+        // Given
+        let blockID: BlockID = "a"
+        let editor = EditorModel(
+            document: .singleParagraph("", id: blockID),
+            selection: .caret(blockID: blockID, offset: 0)
+        )
+
+        // When
+        let result = editor.apply([
+            .command(.insertText("한글")),
+            .replaceSelection(.caret(blockID: blockID, offset: 1)),
+            .command(.insertText("!")),
+        ])
+        let didUndo = editor.undo()
+        let textAfterUndo = editor.document.block(blockID)?.content.text
+        let selectionAfterUndo = editor.selection
+        let didRedo = editor.redo()
+
+        // Then
+        #expect(result != nil)
+        #expect(didUndo != nil)
+        #expect(textAfterUndo == "")
+        #expect(selectionAfterUndo == .caret(blockID: blockID, offset: 0))
+        #expect(didRedo != nil)
+        #expect(editor.document.block(blockID)?.content.text == "한!글")
+        #expect(editor.selection == .caret(blockID: blockID, offset: 2))
+        #expect(editor.undoStack.count == 1)
+    }
+
+    @Test("묶인 command 중 하나가 실패하면 문서와 selection을 transaction 이전으로 되돌린다")
+    func groupedStepsRollBackOnAbort() {
+        // Given
+        let blockID: BlockID = "a"
+        let editor = EditorModel(
+            document: .singleParagraph("", id: blockID),
+            selection: .caret(blockID: blockID, offset: 0)
+        )
+
+        // When
+        let result = editor.apply([
+            .command(.insertText("A")),
+            .command(.deleteText(blockID: "missing", range: TextRange(0, 1))),
+        ])
+
+        // Then
+        #expect(result == nil)
+        #expect(editor.document.block(blockID)?.content.text == "")
+        #expect(editor.selection == .caret(blockID: blockID, offset: 0))
+        #expect(editor.undoStack.isEmpty)
+        #expect(editor.redoStack.isEmpty)
+    }
+
     @Test("실행 취소 transaction 개수 제한을 넘으면 가장 오래된 항목이 제거된다")
     func givenUndoBudget_whenTransactionLimitsAreExceeded_thenOldestUndoEntriesAreTrimmed() {
         // Given
@@ -62,7 +116,7 @@ struct EditorModelUndoRedoTests {
         #expect(undoStackCountAfterInsertions == expectedUndoStackCount)
         #expect(textAfterFirstUndo == expectedTextAfterFirstUndo)
         #expect(textAfterSecondUndo == expectedTextAfterSecondUndo)
-        #expect(!didUndoEvictedTransaction)
+        #expect(didUndoEvictedTransaction == nil)
     }
 
     @Test("실행 취소 byte 예산을 넘으면 최신 transaction만 보존된다")
@@ -90,7 +144,7 @@ struct EditorModelUndoRedoTests {
         // Then
         #expect(undoStackCountAfterInsertions == expectedUndoStackCount)
         #expect(textAfterUndo == expectedTextAfterUndo)
-        #expect(!didUndoEvictedTransaction)
+        #expect(didUndoEvictedTransaction == nil)
     }
 
     @Test("undo 후 새 command를 적용하면 redo stack이 비워진다")

@@ -83,6 +83,10 @@ public struct BlockContent: Hashable, Codable, Sendable {
 
     package var revision: Int
 
+    package var isCanonical: Bool {
+        marks == BlockContent.normalizedMarks(marks, textLength: text.count)
+    }
+
     init(text: String = "", marks: [InlineMark] = [], revision: Int) {
         self.text = text
         self.marks = BlockContent.normalizedMarks(marks, textLength: text.count)

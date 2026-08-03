@@ -2,47 +2,47 @@ import AppKit
 
 // MARK: - AppKitCommandSelectors
 
-public enum AppKitCommandSelectors {
-    public static let insertNewline = #selector(NSResponder.insertNewline(_:))
-    public static let insertLineBreak = #selector(NSResponder.insertLineBreak(_:))
-    public static let insertNewlineIgnoringFieldEditor =
+enum AppKitCommandSelectors {
+    static let insertNewline = #selector(NSResponder.insertNewline(_:))
+    static let insertLineBreak = #selector(NSResponder.insertLineBreak(_:))
+    static let insertNewlineIgnoringFieldEditor =
         #selector(NSResponder.insertNewlineIgnoringFieldEditor(_:))
-    public static let insertTab = #selector(NSResponder.insertTab(_:))
-    public static let insertBacktab = #selector(NSResponder.insertBacktab(_:))
-    public static let deleteBackward = #selector(NSResponder.deleteBackward(_:))
-    public static let deleteForward = #selector(NSResponder.deleteForward(_:))
-    public static let deleteToBeginningOfLine = #selector(NSResponder.deleteToBeginningOfLine(_:))
-    public static let deleteWordBackward = #selector(NSResponder.deleteWordBackward(_:))
-    public static let moveUp = #selector(NSResponder.moveUp(_:))
-    public static let moveDown = #selector(NSResponder.moveDown(_:))
-    public static let moveLeft = #selector(NSResponder.moveLeft(_:))
-    public static let moveRight = #selector(NSResponder.moveRight(_:))
-    public static let moveToBeginningOfLine = #selector(NSResponder.moveToBeginningOfLine(_:))
-    public static let moveToEndOfLine = #selector(NSResponder.moveToEndOfLine(_:))
-    public static let moveToBeginningOfLineAndModifySelection =
+    static let insertTab = #selector(NSResponder.insertTab(_:))
+    static let insertBacktab = #selector(NSResponder.insertBacktab(_:))
+    static let deleteBackward = #selector(NSResponder.deleteBackward(_:))
+    static let deleteForward = #selector(NSResponder.deleteForward(_:))
+    static let deleteToBeginningOfLine = #selector(NSResponder.deleteToBeginningOfLine(_:))
+    static let deleteWordBackward = #selector(NSResponder.deleteWordBackward(_:))
+    static let moveUp = #selector(NSResponder.moveUp(_:))
+    static let moveDown = #selector(NSResponder.moveDown(_:))
+    static let moveLeft = #selector(NSResponder.moveLeft(_:))
+    static let moveRight = #selector(NSResponder.moveRight(_:))
+    static let moveToBeginningOfLine = #selector(NSResponder.moveToBeginningOfLine(_:))
+    static let moveToEndOfLine = #selector(NSResponder.moveToEndOfLine(_:))
+    static let moveToBeginningOfLineAndModifySelection =
         #selector(NSResponder.moveToBeginningOfLineAndModifySelection(_:))
-    public static let moveToEndOfLineAndModifySelection =
+    static let moveToEndOfLineAndModifySelection =
         #selector(NSResponder.moveToEndOfLineAndModifySelection(_:))
-    public static let moveWordLeft = #selector(NSResponder.moveWordLeft(_:))
-    public static let moveWordRight = #selector(NSResponder.moveWordRight(_:))
-    public static let moveWordLeftAndModifySelection =
+    static let moveWordLeft = #selector(NSResponder.moveWordLeft(_:))
+    static let moveWordRight = #selector(NSResponder.moveWordRight(_:))
+    static let moveWordLeftAndModifySelection =
         #selector(NSResponder.moveWordLeftAndModifySelection(_:))
-    public static let moveWordRightAndModifySelection =
+    static let moveWordRightAndModifySelection =
         #selector(NSResponder.moveWordRightAndModifySelection(_:))
-    public static let moveLeftAndModifySelection =
+    static let moveLeftAndModifySelection =
         #selector(NSResponder.moveLeftAndModifySelection(_:))
-    public static let moveRightAndModifySelection =
+    static let moveRightAndModifySelection =
         #selector(NSResponder.moveRightAndModifySelection(_:))
-    public static let moveUpAndModifySelection = #selector(NSResponder.moveUpAndModifySelection(_:))
-    public static let moveDownAndModifySelection =
+    static let moveUpAndModifySelection = #selector(NSResponder.moveUpAndModifySelection(_:))
+    static let moveDownAndModifySelection =
         #selector(NSResponder.moveDownAndModifySelection(_:))
-    public static let cancelOperation = #selector(NSResponder.cancelOperation(_:))
-    public static let selectAll = #selector(NSResponder.selectAll(_:))
-    public static let copy = NSSelectorFromString("copy:")
-    public static let cut = NSSelectorFromString("cut:")
-    public static let paste = NSSelectorFromString("paste:")
-    public static let undo = NSSelectorFromString("undo:")
-    public static let redo = NSSelectorFromString("redo:")
+    static let cancelOperation = #selector(NSResponder.cancelOperation(_:))
+    static let selectAll = #selector(NSResponder.selectAll(_:))
+    static let copy = NSSelectorFromString("copy:")
+    static let cut = NSSelectorFromString("cut:")
+    static let paste = NSSelectorFromString("paste:")
+    static let undo = NSSelectorFromString("undo:")
+    static let redo = NSSelectorFromString("redo:")
 }
 
 // MARK: - AppKitKeyCode

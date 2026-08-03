@@ -27,17 +27,20 @@ flowchart LR
     Operation["EditorSession.handleInput<br/>avgOperationMs"]
     RenderSync["renderAndSyncSurface<br/>avgRenderAndSyncMs"]
     Render["EditorSession.render"]
-    Layout["BlockLayout<br/>height index + visible range"]
-    TextLayout["SlopadTextKit<br/>text layout/cache"]
+    Layout["BlockLayout<br/>height index + visible range<br/>TextLayout cache"]
+    TextBackend["SlopadAppKitTextKit<br/>TextKit2 fragment layout + geometry"]
     Snapshot["EditorSessionSnapshot<br/>visible blocks + geometry"]
     Surface["canvas resize<br/>active input sync<br/>setNeedsDisplay"]
     Display["displayIfNeeded<br/>avgDisplayMs"]
     Draw["draw(_:)<br/>avgDrawMs"]
-    TextDraw["block renderer<br/>TextKit2 drawing"]
+    Chrome["host block chrome hook"]
+    TextDraw["adapter-owned<br/>TextKit2 fragment drawing<br/>effective live composition included"]
+    Decoration["adapter-owned<br/>text selection + caret"]
 
     Scenario --> Operation --> RenderSync
-    RenderSync --> Render --> Layout --> TextLayout --> Snapshot --> Surface
-    Surface --> Display --> Draw --> TextDraw
+    RenderSync --> Render --> Layout --> Snapshot --> Surface
+    Layout -->|"BlockTextLayoutProtocol"| TextBackend
+    Surface --> Display --> Draw --> Chrome --> TextDraw --> Decoration
 ```
 
 `scroll` is special. The benchmark changes scroll position before the timed frame. Read
@@ -80,6 +83,8 @@ In the frame-budget tables below, the 16.67ms threshold is always based on total
   subtree UI scenarios.
 - `Benchmarks/Baselines/appkit-ui-subtree-storage-compare-20260706.csv`: subtree UI
   side-by-side comparison.
+- `Benchmarks/Baselines/appkit-unicode-navigation-summary-20260717.csv`: document-size
+  and active-text-length sweeps for mixed-script TextKit navigation.
 
 Each scenario ran 60 measured frames at block counts `100`, `1000`, and `10000`.
 
@@ -99,6 +104,10 @@ Each scenario ran 60 measured frames at block counts `100`, `1000`, and `10000`.
   it. Because deletion is destructive, the document is reset before each measured frame.
 - `subtree-reorder`: uses the same tree fixture, selects a visible subtree range, then
   drags it near an outside block.
+- `style-change`: alternates geometry-affecting editor styles through the synchronized
+  public AppKit action.
+- `unicode-navigation`: alternates backend-resolved native word-left/word-right movement
+  in mixed Korean, English, Hebrew, emoji, and combining-mark text.
 
 Subtree scenarios use the same subtree-size rule as the session benchmark.
 
@@ -154,6 +163,91 @@ storages: default RBTree, SLOPAD_HEIGHT_INDEX_ARRAY
 
 Pass `--subtree-node-count N` to inspect subtree-size sensitivity within a fixed document
 size.
+
+## Runtime Style Replacement Follow-up
+
+Date: 2026-07-17
+
+Environment: macOS 27.0 (26A5378n), Xcode 27.0 (27A5194q), arm64, release build
+
+The `style-change` scenario alternates two geometry-affecting `TextKitEditorStyle` values
+through the public `updateEditorStyle(_:)` action on every measured frame. The timed
+operation includes construction of the coherent TextKit layout/render/decoration pipeline,
+engine backend replacement, cache invalidation, and the action's synchronized render. The
+normal runner render immediately afterward is warm, which is why its separate
+`avgRenderAndSyncMs` is close to zero.
+
+| Blocks | Avg operation | Avg frame | P95 frame | Frames >16.67ms | Frames >33.33ms |
+| -----: | ------------: | --------: | --------: | ---------------: | ---------------: |
+|    100 |       7.311ms |  16.749ms |  17.327ms |          33 / 60 |           0 / 60 |
+|   1000 |       4.130ms |  14.085ms |  14.554ms |           0 / 60 |           0 / 60 |
+|  10000 |      14.643ms |  24.867ms |  25.506ms |          60 / 60 |           0 / 60 |
+
+This cost is paid only when a different style is installed; ordinary input, layout, and
+drawing hot paths do not gain a new lock or dynamic backend lookup, and reinstalling an
+equal style is a no-op. At 10,000 blocks the contract is appropriate for infrequent editor
+settings or theme changes, not per-frame font/spacing animation. A future paint-only
+appearance contract should avoid text-layout replacement entirely.
+
+The checked-in aggregate is
+`Benchmarks/Baselines/appkit-runtime-style-summary-20260717.csv`.
+
+## Unicode Navigation Follow-up
+
+Date: 2026-07-17
+
+Environment: macOS 27.0 (26A5378n), Xcode 27.0 (27A5194q), arm64, release build
+
+The `unicode-navigation` scenario alternates native word-left and word-right near the end
+of a mixed-script paragraph. The operation measurement includes Session routing,
+grapheme/UTF-16 conversion, TextKit2 linguistic navigation, result validation, and
+selection application. Identical request/style preparation is memoized, so steady-state
+movement does not rebuild the attributed storage or force full text layout on every key.
+Grapheme/UTF-16 boundary maps are also created lazily for the prepared request and reused
+for constant-time conversion after the cold operation.
+
+Document-size sweep with the default short mixed-script paragraph:
+
+| Blocks | Avg operation | Median operation | P95 operation | Cold first operation |
+| -----: | ------------: | ---------------: | ------------: | -------------------: |
+|    100 |       0.240ms |          0.198ms |       0.251ms |              3.127ms |
+|   1000 |       0.225ms |          0.202ms |       0.238ms |              1.969ms |
+|  10000 |       0.225ms |          0.200ms |       0.242ms |              1.868ms |
+
+The steady input cost is effectively independent of total document size in this sweep;
+10,000 blocks do not cause document-wide navigation work.
+
+Active-paragraph-length sweep at a fixed 100-block document:
+
+| Graphemes | Avg operation | Median operation | P95 operation | Cold first operation | Avg frame | P95 frame |
+| --------: | ------------: | ---------------: | ------------: | -------------------: | --------: | --------: |
+|       100 |       0.249ms |          0.210ms |       0.255ms |              2.243ms |  18.648ms |  19.597ms |
+|      1000 |       0.376ms |          0.324ms |       0.386ms |              4.037ms |  17.383ms |  18.160ms |
+|     10000 |       2.336ms |          1.658ms |       1.774ms |             43.981ms |  66.751ms |  66.844ms |
+
+This is not a zero-cost path. Steady navigation remains below 0.4ms at p95 through 1,000
+graphemes and reaches 1.774ms at p95 for 10,000 graphemes. The request-local index map
+reduced that 10,000-grapheme p95 from the pre-optimization 5.565ms by about 68%. The cold
+first movement still costs 43.981ms because it includes lazy index construction and native
+layout work. The same extreme paragraph spends about 61.122ms per frame in TextKit/AppKit
+drawing, which dominates its 66.751ms average frame. Cold preparation and long-fragment
+drawing therefore remain explicit performance risks even though steady conversion and
+ordinary short-block navigation are bounded.
+
+Example long-text command:
+
+```sh
+swift run -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION \
+  SlopadUIBenchmarkApp \
+  --scenario unicode-navigation \
+  --block-count 100 \
+  --active-text-length 10000 \
+  --frames 60 \
+  --output /tmp/slopad-unicode-navigation-10000.csv
+```
+
+The checked-in aggregate is
+`Benchmarks/Baselines/appkit-unicode-navigation-summary-20260717.csv`.
 
 ## Default UI Results
 

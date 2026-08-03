@@ -2,8 +2,9 @@
 
 This document records repeated failure patterns from Slopad work, especially patterns
 that prevented a task from succeeding in one pass. It is not the source of truth for the
-current structure. Use `README.md` for current structure, `AGENTS.md` for terminology and
-responsibility criteria, `ADR/` for durable decisions, and `docs/ROADMAP.md` for
+current structure. Use `README.md` for the short structural map, `docs/ARCHITECTURE.md`
+for the detailed ownership and extension philosophy, `AGENTS.md` for terminology and
+responsibility criteria, `ADR/` for durable decisions, and `docs/ROADMAP.md` for current
 development direction.
 
 ## Recording Criteria
@@ -93,6 +94,26 @@ Next time:
 - Keep the `textLayouter` name.
 - Keep concrete TextKit/AppKit objects in the backend/adapter, not in engine state.
 - Do not mix block-local text geometry with document-wide y/height indexing.
+
+### Treating an Appearance Hook as a Whole Text Renderer Seam
+
+Symptom: a host appearance callback can skip, replace, or duplicate fragment text
+(including effective marked content), selection, or caret feedback, or it receives
+backend/session details that let it become a second native text pipeline.
+
+Cause: backgrounds and block chrome were treated as equivalent to the coherent text
+layout, geometry, input, and drawing contract.
+
+Next time:
+
+- Keep `AppKitBlockChromeRenderer` clipped, isolated, and limited to backgrounds,
+  borders, gutters, and markers.
+- Keep effective live composition in the TextKit2 fragment text pass, followed by the
+  adapter-owned text selection and caret feedback pass.
+- Treat layout, hit testing, caret/selection geometry, native text geometry, and drawing
+  as one coherent backend contract.
+- If a host needs complete replacement, build a separate platform adapter and backend
+  around `EditorSession`; do not add another high-level paint hook.
 
 ### Moving Engine Semantics into Native View/Input Hosts
 

@@ -6,38 +6,33 @@ import SlopadCoreModel
 extension EditorSession {
     @discardableResult
     func moveAcrossTextBoundaryIfNeeded(
-        direction: EditorNavigationDirection,
-        viewport: EditorViewport
+        logicalBoundary: TextLogicalBoundary,
+        request: BlockMeasureRequest
     ) -> EditorUpdate? {
-        guard let horizontalStep = direction.horizontalStep else { return nil }
-        guard case .caret(let position) = editorModel.selection else { return nil }
-        _ = preparedLayout(for: viewport)
-        guard let currentBlock = editorModel.document.block(position.blockID) else {
-            return nil
-        }
+        guard case .caret(let position) = activeEditorSelection else { return nil }
+        guard position.blockID == request.blockID else { return nil }
 
-        switch direction {
-        case .left:
+        let blockStep: Int
+        switch logicalBoundary {
+        case .start:
             guard position.offset == 0 else { return nil }
-        case .right:
-            guard position.offset == currentBlock.content.length else { return nil }
-        case .up, .down:
-            return nil
+            blockStep = -1
+        case .end:
+            guard position.offset == request.text.count else { return nil }
+            blockStep = 1
         }
 
         guard
             let targetBlockID = blockLayout.visibleBlockID(
                 relativeTo: position.blockID,
-                by: horizontalStep,
+                by: blockStep,
                 document: editorModel.document
             )
         else {
             return nil
         }
-        let targetOffset =
-            horizontalStep < 0
-            ? editorModel.document.block(targetBlockID)?.content.length ?? 0
-            : 0
+        guard let targetBlock = editorModel.document.block(targetBlockID) else { return nil }
+        let targetOffset = logicalBoundary == .start ? targetBlock.content.length : 0
         return handleSelectionChange(.caret(blockID: targetBlockID, offset: targetOffset))
     }
 }

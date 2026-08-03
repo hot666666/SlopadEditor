@@ -9,7 +9,7 @@ public enum EditorInputEvent: Hashable, Sendable {
         case deleteBackward
         case deleteForward
         case deleteToTextStart
-        case deleteWordBackward
+        case deleteWordBackward(viewport: EditorViewport)
         case enter
         case shiftEnter
         case escape
@@ -19,14 +19,14 @@ public enum EditorInputEvent: Hashable, Sendable {
         case moveRight(viewport: EditorViewport)
         case moveToTextStart
         case moveToTextEnd
-        case moveWordLeft
-        case moveWordRight
-        case extendCharacterLeft
-        case extendCharacterRight
+        case moveWordLeft(viewport: EditorViewport)
+        case moveWordRight(viewport: EditorViewport)
+        case extendCharacterLeft(viewport: EditorViewport)
+        case extendCharacterRight(viewport: EditorViewport)
         case extendToTextStart
         case extendToTextEnd
-        case extendWordLeft
-        case extendWordRight
+        case extendWordLeft(viewport: EditorViewport)
+        case extendWordRight(viewport: EditorViewport)
         case moveUp(viewport: EditorViewport)
         case moveDown(viewport: EditorViewport)
         case extendUp(viewport: EditorViewport)

@@ -1,8 +1,8 @@
 import AppKit
 import Foundation
+import SlopadAppKitTextKit
 import SlopadAppKitUI
 import SlopadEngine
-import SlopadTextKit
 
 @MainActor
 final class DebugViewController: NSViewController {
@@ -39,18 +39,6 @@ final class DebugViewController: NSViewController {
 
     var scrollView: NSScrollView {
         editorViewController.scrollView
-    }
-
-    var canvasView: AppKitEditorCanvasView {
-        editorViewController.canvasView
-    }
-
-    var textLayouter: TextKitBlockTextLayouter {
-        editorViewController.textLayouter
-    }
-
-    var textRenderer: TextKitBlockRenderer {
-        editorViewController.textRenderer
     }
 
     var activeNativeText: String {
@@ -213,11 +201,11 @@ final class DebugViewController: NSViewController {
     func resetDocument(blocks: [EditorBlockInput], selection: EditorSelection) {
         previousSnapshot = nil
         debugHUDRevisionComparison = nil
-        editorViewController.resetDocument(blocks: blocks, selection: selection)
+        editorViewController.resetDocumentWithoutRendering(blocks: blocks, selection: selection)
     }
 
     func scrollDocument(to y: Double) {
-        editorViewController.scrollDocument(to: y)
+        editorViewController.scrollDocumentWithoutRendering(to: y)
     }
 
     // MARK: - Setup

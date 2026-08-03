@@ -9,7 +9,7 @@ extension EditorSession {
         viewport: EditorViewport
     ) -> EditorUpdate? {
         guard movement.verticalStep != nil else { return nil }
-        switch editorModel.selection {
+        switch activeEditorSelection {
         case .caret(let position):
             if extending {
                 return handleSelectionChange(.blocks(BlockSelection(blockIDs: [position.blockID])))

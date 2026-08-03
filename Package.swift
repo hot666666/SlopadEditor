@@ -13,8 +13,12 @@ let package = Package(
             targets: ["SlopadEngine"]
         ),
         .library(
-            name: "SlopadTextKit",
-            targets: ["SlopadTextKit"]
+            name: "SlopadAppKit",
+            targets: ["SlopadAppKit"]
+        ),
+        .library(
+            name: "SlopadAppKitTextKit",
+            targets: ["SlopadAppKitTextKit"]
         ),
         .library(
             name: "SlopadAppKitUI",
@@ -56,17 +60,21 @@ let package = Package(
             ]
         ),
         .target(
-            name: "SlopadTextKit",
-            dependencies: [
-                "SlopadCoreModel",
-                "SlopadEngine",
-            ]
+            name: "SlopadAppKitTextKit",
+            dependencies: ["SlopadCoreModel"]
         ),
         .target(
             name: "SlopadAppKitUI",
             dependencies: [
                 "SlopadEngine",
-                "SlopadTextKit",
+                "SlopadAppKitTextKit",
+            ]
+        ),
+        .target(
+            name: "SlopadAppKit",
+            dependencies: [
+                "SlopadEngine",
+                "SlopadAppKitUI",
             ]
         ),
         .executableTarget(
@@ -86,7 +94,7 @@ let package = Package(
             name: "SlopadDebugApp",
             dependencies: [
                 "SlopadEngine",
-                "SlopadTextKit",
+                "SlopadAppKitTextKit",
                 "SlopadAppKitUI",
             ],
             path: "Debug/SlopadDebugApp"
@@ -95,7 +103,7 @@ let package = Package(
             name: "SlopadUIBenchmarkApp",
             dependencies: [
                 "SlopadEngine",
-                "SlopadTextKit",
+                "SlopadAppKitTextKit",
                 "SlopadAppKitUI",
             ],
             path: "Benchmarks/SlopadUIBenchmarkApp"
@@ -111,11 +119,17 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "SlopadTextKitTests",
+            name: "SlopadAppKitTextKitTests",
             dependencies: [
                 "SlopadCoreModel",
+                "SlopadAppKitTextKit",
+            ]
+        ),
+        .testTarget(
+            name: "SlopadAppKitUITests",
+            dependencies: [
                 "SlopadEngine",
-                "SlopadTextKit"
+                "SlopadAppKitUI",
             ]
         )
     ]

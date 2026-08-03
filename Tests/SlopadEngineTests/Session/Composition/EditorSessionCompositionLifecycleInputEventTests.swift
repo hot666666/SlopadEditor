@@ -66,7 +66,7 @@ struct EditorSessionCompositionLifecycleInputEventTests {
         #expect(session.activeTextRange() == TextRange.point(1))
     }
 
-    @Test("조합 입력 취소 이벤트는 문서를 바꾸지 않고 활성 조합 상태만 제거한다")
+    @Test("긴 조합의 유효 선택을 취소하면 canonical 선택을 그대로 복원한다")
     func cancelsCompositionInputEvent() throws {
         // Given
         let blockID: BlockID = "a"
@@ -75,9 +75,17 @@ struct EditorSessionCompositionLifecycleInputEventTests {
             .beginComposition(
                 blockID: blockID,
                 replacementRange: TextRange.point(2),
-                text: "!"
+                text: "긴조합"
             )
         )
+        _ = session.handleInput(
+            .activeTextSelectionChanged(
+                blockID: blockID,
+                selectedRange: TextRange.point(4)
+            )
+        )
+        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 2))
+        #expect(session.activeTextRange() == TextRange.point(4))
 
         // When
         let update = try #require(session.handleInput(.cancelComposition))
@@ -87,7 +95,10 @@ struct EditorSessionCompositionLifecycleInputEventTests {
         #expect(update.composition == nil)
         #expect(update.invalidation.blockIDs == Set([blockID]))
         #expect(update.invalidation.layoutGeometryChanged)
+        #expect(update.selection == .caret(blockID: blockID, offset: 2))
         #expect(session.document.block(blockID)?.content.text == "Hi")
+        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 2))
+        #expect(session.activeTextRange() == TextRange.point(2))
         #expect(session.composition == nil)
     }
 
@@ -113,10 +124,16 @@ struct EditorSessionCompositionLifecycleInputEventTests {
                 .activeTextSelectionChanged(blockID: blockID, selectedRange: TextRange.point(4))
             )
         )
+        let snapshot = session.render(
+            in: EditorViewport(width: 240, scrollY: 0, height: 400)
+        )
 
         // Then
         #expect(update.selection == .caret(blockID: blockID, offset: 4))
         #expect(update.composition == composition)
+        #expect(snapshot.selection == .caret(blockID: blockID, offset: 4))
+        #expect(snapshot.activeTextInput?.selectedRange == TextRange.point(4))
+        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 5))
         #expect(session.activeTextRange() == TextRange.point(4))
         #expect(session.composition == composition)
     }

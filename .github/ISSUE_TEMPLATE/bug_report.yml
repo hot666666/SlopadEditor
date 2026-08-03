@@ -60,7 +60,7 @@ body:
         - SlopadEditorModel
         - SlopadBlockLayout
         - SlopadCoreModel
-        - SlopadTextKit
+        - SlopadAppKitTextKit
         - SlopadDataStructure
         - Debug or benchmark target
     validations:

@@ -250,6 +250,7 @@ enum BenchmarkAction: String, CaseIterable {
     case structuralOutdent
     case heightExpansionHitTest
     case widthChange
+    // Historical CSV identifier; this now measures atomic text-layout backend replacement.
     case styleRevisionChange
 }
 
@@ -426,8 +427,9 @@ func runIteration(action: BenchmarkAction, blockCount: Int) -> IterationResult {
 
     case .styleRevisionChange:
         _ = scenario.session.render(in: scenario.viewport)
+        let replacementLayouter = BenchmarkTextLayouter()
         handleDuration = measureNanoseconds {
-            update = scenario.session.setBenchmarkLayoutStyleRevision(1)
+            update = scenario.session.replaceTextLayoutBackend(with: replacementLayouter)
         }
     }
 

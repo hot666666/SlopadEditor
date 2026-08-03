@@ -139,7 +139,7 @@ private func makeTextLayoutCacheInput(
     visibleBlock: VisibleBlock,
     contentSnapshot: EffectiveDocumentSnapshot,
     availableWidth: Double,
-    styleRevision: Int
+    textLayoutRevision: Int
 ) {
     let kind = BlockKind.paragraph
     var content = BlockContent(text: text)
@@ -155,7 +155,7 @@ private func makeTextLayoutCacheInput(
         visibleBlock: VisibleBlock(blockID: blockID, depth: 0, parentID: nil),
         contentSnapshot: EffectiveDocumentSnapshot(document: document),
         availableWidth: 300,
-        styleRevision: 0
+        textLayoutRevision: 0
     )
 }
 
@@ -165,7 +165,7 @@ private func measure(
         visibleBlock: VisibleBlock,
         contentSnapshot: EffectiveDocumentSnapshot,
         availableWidth: Double,
-        styleRevision: Int
+        textLayoutRevision: Int
     ),
     cache: inout TextLayoutCache,
     textLayouter: any BlockTextLayoutProtocol
@@ -175,7 +175,7 @@ private func measure(
         visibleBlock: input.visibleBlock,
         contentSnapshot: input.contentSnapshot,
         availableWidth: input.availableWidth,
-        styleRevision: input.styleRevision,
+        textLayoutRevision: input.textLayoutRevision,
         textLayouter: textLayouter
     )
 }

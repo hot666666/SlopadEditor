@@ -27,8 +27,9 @@ two internal owners:
 - `SlopadBlockLayout` for visible order, block geometry, layout invalidation, reveal,
   hit-test geometry, and text-layout-backed measurement.
 
-Native surface code, such as the AppKit demo view, receives OS callbacks and delegates
-meaningful editor decisions to `EditorSession`.
+Native surface code, such as the reusable `SlopadAppKitUI` adapter, receives OS callbacks
+and delegates meaningful editor decisions to `EditorSession`. `SlopadDebugApp` consumes
+that adapter as a reference/debug host rather than defining the platform boundary.
 
 ## Consequences
 
@@ -36,6 +37,7 @@ meaningful editor decisions to `EditorSession`.
   `EditorModel` or `BlockLayout`.
 - `EditorSession` may translate semantic changes into layout invalidations, but it should
   not take ownership of canonical document mutation or block height/y storage.
-- Demo/AppKit code can be a reference adapter, not the owner of editor state.
+- Platform UI packages can be reusable adapters, not owners of editor state. Debug and
+  benchmark apps remain outer-edge consumers of those adapters.
 - A second platform implementation should add a new adapter around the same session
   facade, not fork the core semantics.

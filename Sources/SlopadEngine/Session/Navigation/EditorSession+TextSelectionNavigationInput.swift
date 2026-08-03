@@ -13,61 +13,71 @@ extension EditorSession {
     }
 
     func extendTextSelectionByCharacter(
-        _ direction: EditorNavigationDirection
+        _ direction: EditorNavigationDirection,
+        viewport: EditorViewport
     ) -> EditorUpdate? {
         guard direction.horizontalStep != nil else { return nil }
         guard
-            let position = activeTextPosition(),
-            let block = editorModel.document.block(position.blockID)
+            let selection = activeTextNavigationSelection(),
+            let request = textNavigationRequest(for: selection, viewport: viewport),
+            let navigationDirection = direction.textNavigationDirection
         else { return nil }
 
-        let offset: Int
-        switch direction {
-        case .left:
-            guard position.offset > 0 else { return nil }
-            offset = position.offset - 1
-
-        case .right:
-            guard position.offset < block.content.length else { return nil }
-            offset = position.offset + 1
-        case .up, .down:
+        switch textLayouter.navigate(
+            selection: selection,
+            context: textNavigationContext(for: selection, request: request),
+            direction: navigationDirection,
+            destination: .character,
+            extending: true,
+            in: request
+        ) {
+        case .selection(let resolvedSelection, let context):
+            return applyTextNavigationSelection(
+                resolvedSelection,
+                context: context,
+                extending: true,
+                preservingAnchor: selection.anchor,
+                request: request
+            )
+        case .boundary, .unchanged:
             return nil
         }
-        return extendTextSelection(blockID: position.blockID, to: offset)
     }
 
-    func extendTextSelectionByWord(_ direction: EditorNavigationDirection) -> EditorUpdate? {
+    func extendTextSelectionByWord(
+        _ direction: EditorNavigationDirection,
+        viewport: EditorViewport
+    ) -> EditorUpdate? {
         guard direction.horizontalStep != nil else { return nil }
         guard
-            let position = activeTextPosition(),
-            let block = editorModel.document.block(position.blockID)
+            let selection = activeTextNavigationSelection(),
+            let request = textNavigationRequest(for: selection, viewport: viewport),
+            let navigationDirection = direction.textNavigationDirection
         else { return nil }
 
-        let text = block.content.text
-        let offset: Int
-        switch direction {
-        case .left:
-            offset = previousSpaceDelimitedWordBoundary(in: text, from: position.offset)
-        case .right:
-            offset = nextSpaceDelimitedWordBoundary(in: text, from: position.offset)
-        case .up, .down:
+        switch textLayouter.navigate(
+            selection: selection,
+            context: textNavigationContext(for: selection, request: request),
+            direction: navigationDirection,
+            destination: .word,
+            extending: true,
+            in: request
+        ) {
+        case .selection(let resolvedSelection, let context):
+            return applyTextNavigationSelection(
+                resolvedSelection,
+                context: context,
+                extending: true,
+                preservingAnchor: selection.anchor,
+                request: request
+            )
+        case .boundary, .unchanged:
             return nil
         }
-        return extendTextSelection(blockID: position.blockID, to: offset)
     }
 
     private func extendTextSelection(blockID: BlockID, to offset: Int) -> EditorUpdate? {
-        let anchor: TextPosition
-        switch editorModel.selection {
-        case .caret(let position):
-            anchor = position
-
-        case .text(let selection) where selection.isSingleBlock:
-            anchor = selection.anchor
-
-        default:
-            return nil
-        }
+        guard let anchor = activeTextNavigationSelection()?.anchor else { return nil }
 
         let focus = TextPosition(blockID: blockID, offset: offset)
         if anchor == focus {

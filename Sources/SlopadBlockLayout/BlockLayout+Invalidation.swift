@@ -17,12 +17,9 @@ extension BlockLayout {
         dirtyInvalidation.formUnion(invalidation)
     }
 
-    package mutating func setStyleRevision(_ revision: Int) -> Bool {
-        guard styleRevision != revision else { return false }
-        styleRevision = revision
-        cache.invalidateAll()
-        markDirty(BlockLayoutInvalidation(layoutGeometryChanged: true))
-        return true
+    package mutating func advanceTextLayoutRevision() {
+        textLayoutRevision += 1
+        invalidateTextLayoutEnvironment()
     }
 
     package mutating func invalidateMeasurements(blockIDs: Set<BlockID>) {
@@ -35,6 +32,12 @@ extension BlockLayout {
 
     package mutating func invalidateAllMeasurements() {
         cache.invalidateAll()
+        markDirty(BlockLayoutInvalidation(layoutGeometryChanged: true))
+    }
+
+    private mutating func invalidateTextLayoutEnvironment() {
+        cache.invalidateAll()
+        measurementsByBlockID.removeAll(keepingCapacity: true)
         markDirty(BlockLayoutInvalidation(layoutGeometryChanged: true))
     }
 }

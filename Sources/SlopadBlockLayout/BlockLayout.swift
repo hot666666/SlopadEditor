@@ -4,7 +4,7 @@ import SlopadCoreModel
 
 package struct BlockLayout {
     var widthRevision: Int?
-    var styleRevision: Int
+    var textLayoutRevision: Int
     var dirtyInvalidation: BlockLayoutInvalidation
     var currentRevision: EditorSnapshotRevision?
     #if SLOPAD_BENCHMARK_INSTRUMENTATION
@@ -16,17 +16,14 @@ package struct BlockLayout {
     var measurementsByBlockID: [BlockID: BlockMeasurement]
     var heightIndex: BlockHeightIndexStorage
 
-    package init(styleRevision: Int = 0) {
-        self.init(cache: TextLayoutCache(), styleRevision: styleRevision)
+    package init() {
+        self.init(cache: TextLayoutCache())
     }
 
-    private init(
-        cache: TextLayoutCache,
-        styleRevision: Int = 0
-    ) {
+    private init(cache: TextLayoutCache) {
         self.cache = cache
         self.heightIndex = BlockHeightIndexStorage()
-        self.styleRevision = styleRevision
+        self.textLayoutRevision = 0
         self.visibleIndex = nil
         self.markerSequence = nil
         self.widthRevision = nil

@@ -1,0 +1,7 @@
+axis,scale,documentBlocks,activeTextLength,frames,avgOperationMs,medianOperationMs,p95OperationMs,coldFirstOperationMs,avgFrameMs,p95FrameMs,avgRenderAndSyncMs,avgDisplayMs,avgDrawMs,framesOver16_67,framesOver33_33
+document-blocks,100,100,,60,0.240,0.198,0.251,3.127,18.622,19.502,0.123,18.258,17.461,60,0
+document-blocks,1000,1000,,60,0.225,0.202,0.238,1.969,19.752,20.357,0.138,19.389,18.557,60,0
+document-blocks,10000,10000,,60,0.225,0.200,0.242,1.868,19.880,20.590,0.146,19.509,18.649,60,0
+active-text-graphemes,100,100,100,60,0.249,0.210,0.255,2.243,18.648,19.597,0.134,18.264,17.478,60,0
+active-text-graphemes,1000,100,1000,60,0.376,0.324,0.386,4.037,17.383,18.160,0.307,16.699,15.993,60,0
+active-text-graphemes,10000,100,10000,60,2.336,1.658,1.774,43.981,66.751,66.844,2.274,62.140,61.122,60,60

@@ -8,9 +8,10 @@ extension EditorSession {
         at documentPoint: EditorPoint,
         viewport: EditorViewport
     ) -> EditorUpdate? {
-        guard let position = textPosition(at: documentPoint, viewport: viewport) else {
+        guard let hit = textHitTest(at: documentPoint, viewport: viewport) else {
             return nil
         }
+        let position = hit.result.position
         let shouldPreserveDoubleClickSelection =
             textDoubleClickSelection?.blockID == position.blockID
             && textDoubleClickSelection?.wordRange.contains(position.offset) == true
@@ -20,7 +21,14 @@ extension EditorSession {
             textDoubleClickSelection = nil
         }
         textSelectionDragAnchor = position
-        return handleSelectionChange(.caret(position))
+        let selection = TextSelection(anchor: position, focus: position)
+        let update = handleSelectionChange(.caret(position))
+        recordTextNavigationContext(
+            hit.result.navigationContext,
+            for: selection,
+            request: hit.request
+        )
+        return update
     }
 
     func updateTextPointerSelection(
@@ -38,7 +46,7 @@ extension EditorSession {
             return update
         }
         guard
-            let focus = textPosition(
+            let focusHit = textHitTest(
                 in: anchor.blockID,
                 at: documentPoint,
                 viewport: viewport
@@ -46,10 +54,24 @@ extension EditorSession {
         else {
             return nil
         }
+        let focus = focusHit.result.position
+        let selection = TextSelection(anchor: anchor, focus: focus)
         if anchor == focus {
-            return handleSelectionChange(.caret(focus))
+            let update = handleSelectionChange(.caret(focus))
+            recordTextNavigationContext(
+                focusHit.result.navigationContext,
+                for: selection,
+                request: focusHit.request
+            )
+            return update
         }
-        return handleSelectionChange(.text(TextSelection(anchor: anchor, focus: focus)))
+        let update = handleSelectionChange(.text(selection))
+        recordTextNavigationContext(
+            focusHit.result.navigationContext,
+            for: selection,
+            request: focusHit.request
+        )
+        return update
     }
 
     func endTextPointerSelection() -> EditorUpdate? {
@@ -59,7 +81,7 @@ extension EditorSession {
     }
 
     private func selectedTextRangeContains(_ position: TextPosition) -> Bool {
-        guard case .text(let selection) = editorModel.selection,
+        guard case .text(let selection) = activeEditorSelection,
             selection.isSingleBlock,
             selection.focus.blockID == position.blockID,
             let range = selection.rangeInSingleBlock,

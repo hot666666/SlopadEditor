@@ -7,10 +7,35 @@ extension EditorSession {
         deleteBackward { _, _ in 0 }
     }
 
-    func deleteBackwardToPreviousWordBoundary() -> EditorUpdate? {
-        deleteBackward { block, offset in
-            previousSpaceDelimitedWordBoundary(in: block.content.text, from: offset)
+    func deleteBackwardToPreviousWordBoundary(
+        viewport: EditorViewport
+    ) -> EditorUpdate? {
+        guard
+            let selection = activeTextNavigationSelection(),
+            let request = textNavigationRequest(for: selection, viewport: viewport),
+            let range = textLayouter.deletionRange(
+                for: selection,
+                direction: .backward,
+                destination: .word,
+                in: request
+            ),
+            isValidTextDeletionRange(
+                range,
+                for: selection,
+                direction: .backward,
+                destination: .word,
+                in: request
+            ),
+            !range.isEmpty
+        else { return nil }
+
+        if composition != nil {
+            return commitCompositionAndApply(
+                .deleteText(blockID: request.blockID, range: range),
+                effectiveSelection: selection
+            )
         }
+        return handleCommand(.deleteText(blockID: request.blockID, range: range))
     }
 
     private func deleteBackward(

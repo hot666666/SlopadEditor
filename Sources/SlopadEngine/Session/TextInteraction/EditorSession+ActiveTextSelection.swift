@@ -3,8 +3,15 @@ import SlopadCoreModel
 // MARK: - EditorSession ActiveTextSelection
 
 extension EditorSession {
+    var activeEditorSelection: EditorSelection {
+        guard composition != nil, let compositionSelection else {
+            return editorModel.selection
+        }
+        return editorSelection(for: compositionSelection)
+    }
+
     func activeTextSelection() -> (position: TextPosition, range: TextRange)? {
-        switch editorModel.selection {
+        switch activeEditorSelection {
         case .inactive:
             return nil
 
@@ -31,5 +38,12 @@ extension EditorSession {
 
     func activeTextRange() -> TextRange? {
         activeTextSelection()?.range
+    }
+
+    func editorSelection(for textSelection: TextSelection) -> EditorSelection {
+        if textSelection.rangeInSingleBlock?.isEmpty == true {
+            return .caret(textSelection.focus)
+        }
+        return .text(textSelection)
     }
 }

@@ -2,7 +2,7 @@ import AppKit
 
 // MARK: - AppKitDragAutoscrollKind
 
-package enum AppKitDragAutoscrollKind {
+enum AppKitDragAutoscrollKind {
     case blockDrag
     case blockSelectionRectangle
     case blockSelectionExtension
@@ -11,7 +11,7 @@ package enum AppKitDragAutoscrollKind {
 // MARK: - AppKitDragAutoscrollController
 
 @MainActor
-package final class AppKitDragAutoscrollController {
+final class AppKitDragAutoscrollController {
     // MARK: - Private Types
 
     private enum UX {
@@ -43,7 +43,7 @@ package final class AppKitDragAutoscrollController {
 
     // MARK: - Init
 
-    package init(
+    init(
         visibleBounds: @escaping @MainActor () -> CGRect,
         documentHeight: @escaping @MainActor () -> CGFloat,
         scrollToY: @escaping @MainActor (CGFloat) -> Void,
@@ -57,7 +57,7 @@ package final class AppKitDragAutoscrollController {
 
     // MARK: - Public
 
-    package func update(
+    func update(
         kind: AppKitDragAutoscrollKind,
         documentPoint: CGPoint
     ) {
@@ -77,7 +77,7 @@ package final class AppKitDragAutoscrollController {
         }
     }
 
-    package func stop() {
+    func stop() {
         context = nil
         stopTimer()
     }

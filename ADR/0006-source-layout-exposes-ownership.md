@@ -55,13 +55,19 @@ Target-specific placement:
     selection, composition, interaction, geometry, and layout.
 - `Sources/SlopadDataStructure`
   - Pure data structures only. No editor, block, layout, or platform vocabulary.
-- `Sources/SlopadTextKit`
+- `Sources/SlopadAppKitTextKit`
   - TextKit2 backend implementation and interop only.
+- `Sources/SlopadAppKitUI`
+  - Public controller, style consumption, and chrome contract remain easy to identify.
+    Native input routing, fragment/feedback drawing, active input, drag autoscroll, and
+    surface synchronization helpers remain target-internal unless a real cross-target
+    development consumer proves package access is required.
 
 ## Consequences
 
-- A developer can scan directories and see the owner chain:
-  `Session -> EditorModel / BlockLayout -> TextLayout / HeightIndex -> DataStructure`.
+- A developer can scan directories and follow the owner chain from the platform adapter
+  through `Session -> EditorModel / BlockLayout`, then into owner-local
+  `TextLayout / HeightIndex -> DataStructure` implementation.
 - Moving a file is valid only when the owner/read-intent changes or the current placement
   hides the real interface.
 - A helper that is consumed by one owner stays local to that owner instead of being

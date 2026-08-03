@@ -1,10 +1,10 @@
-# 0005 - Keep Benchmarks as Development Targets, Not Public Products
+# 0005 - Keep Benchmark APIs out of the Public Library Surface
 
 Date: 2026-07-08
 
 ## Status
 
-Accepted
+Accepted, amended 2026-07-16
 
 ## Context
 
@@ -21,8 +21,13 @@ can exercise package access without widening regular public API.
 Keep `SlopadHeightBenchmark` and `SlopadSessionBenchmark` as executable targets under
 `Benchmarks/`, but do not list them as SwiftPM products.
 
-The public package products are the engine/runtime library, the TextKit backend library,
-and the AppKit demo executable.
+Keep `SlopadUIBenchmarkApp` as a named executable product because the standard AppKit UI
+verification workflow builds and runs it directly. It is still a development harness and
+does not define a reusable library contract.
+
+The reusable library products are `SlopadEngine`, `SlopadAppKitTextKit`, and
+`SlopadAppKitUI`. `SlopadDebugApp` and `SlopadUIBenchmarkApp` are executable products that
+consume those libraries from the outer edge.
 
 ## Consequences
 
@@ -40,5 +45,7 @@ and the AppKit demo executable.
   ```
 
 - Do not add benchmark-only types to public API to make benchmark code easier to write.
+- A benchmark executable product is a runnable development entry point, not evidence that
+  its helpers or policies belong in a public library surface.
 - Treat benchmark baselines and docs as development evidence, not consumer-facing product
   surface.

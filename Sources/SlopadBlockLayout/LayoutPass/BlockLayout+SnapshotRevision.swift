@@ -12,7 +12,7 @@ extension BlockLayout {
         EditorSnapshotRevision(
             documentRevision: contentSnapshot.revision,
             compositionRevision: contentSnapshot.compositionRevision,
-            styleRevision: styleRevision,
+            textLayoutRevision: textLayoutRevision,
             widthRevision:
                 widthRevision ?? Int(truncatingIfNeeded: availableWidth.bitPattern),
             visibleSequenceRevision: visibleIndex.revision

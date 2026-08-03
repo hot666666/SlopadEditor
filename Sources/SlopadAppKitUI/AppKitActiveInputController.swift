@@ -34,11 +34,6 @@ final class AppKitActiveInputController {
         }
     }
 
-    private enum BackwardTextDeletionBoundary {
-        case textStart
-        case wordBoundary
-    }
-
     private enum TextBoundaryDirection {
         case start
         case end
@@ -62,6 +57,7 @@ final class AppKitActiveInputController {
     private var sessionSelectedRange: SlopadEngine.TextRange?
     private var markedRange: NSRange?
     private var markedReplacementRange: NSRange?
+    private var markedDocumentText: String?
 
     // MARK: - Init
 
@@ -73,6 +69,10 @@ final class AppKitActiveInputController {
 
     var activeText: String {
         text
+    }
+
+    var activeBlockID: BlockID? {
+        activeTextHostBlockID
     }
 
     var activeSelectedRange: NSRange {
@@ -105,6 +105,7 @@ final class AppKitActiveInputController {
             }
             markedRange = nil
             markedReplacementRange = nil
+            markedDocumentText = nil
         }
         activeTextHostBlockID = nextTextHostBlockID
     }
@@ -116,13 +117,17 @@ final class AppKitActiveInputController {
         sessionSelectedRange = nil
         markedRange = nil
         markedReplacementRange = nil
+        markedDocumentText = nil
     }
 
     // MARK: - Native Text Input
 
     func insertText(_ insertedText: String, replacementRange: NSRange) {
         guard syncGuard.shouldForwardNativeCallback, let activeTextHostBlockID else { return }
-        let documentText = owner?.documentTextForNativeInput(blockID: activeTextHostBlockID) ?? text
+        let documentText =
+            markedDocumentText
+            ?? owner?.documentTextForNativeInput(blockID: activeTextHostBlockID)
+            ?? text
         let replacementRange =
             replacementRange.location == NSNotFound
             ? (markedReplacementRange ?? selectedRange)
@@ -143,7 +148,11 @@ final class AppKitActiveInputController {
         replacementRange: NSRange
     ) {
         guard syncGuard.shouldForwardNativeCallback, let activeTextHostBlockID else { return }
-        let documentText = owner?.documentTextForNativeInput(blockID: activeTextHostBlockID) ?? text
+        let isBeginningComposition = markedRange == nil
+        let documentText =
+            markedDocumentText
+            ?? owner?.documentTextForNativeInput(blockID: activeTextHostBlockID)
+            ?? text
         let replacementRange = normalizedReplacementRange(
             replacementRange.location == NSNotFound
                 ? (markedReplacementRange ?? selectedRange)
@@ -153,31 +162,59 @@ final class AppKitActiveInputController {
         let replacementTextRange =
             replacementRange.slopadTextRange(in: documentText)
             ?? SlopadEngine.TextRange.point(documentText.count)
+        let markedSelectedRange = normalizedMarkedSelectionRange(
+            markedSelectedRange,
+            in: markedText
+        )
 
         text = replacingText(documentText, in: replacementRange, with: markedText)
         markedRange = NSRange(location: replacementRange.location, length: markedText.utf16.count)
         markedReplacementRange = replacementRange
+        markedDocumentText = documentText
         selectedRange = NSRange(
             location: replacementRange.location + markedSelectedRange.location,
             length: markedSelectedRange.length
         )
         sessionSelectedRange = nil
 
-        owner?.handleNativeInputEvent(
-            .updateComposition(
+        let compositionEvent: EditorInputEvent =
+            isBeginningComposition
+            ? .beginComposition(
                 blockID: activeTextHostBlockID,
                 replacementRange: replacementTextRange,
                 text: markedText
             )
-        )
+            : .updateComposition(
+                blockID: activeTextHostBlockID,
+                replacementRange: replacementTextRange,
+                text: markedText
+            )
+        owner?.handleNativeInputEvent(compositionEvent)
+        if let effectiveSelectedRange = selectedRange.slopadTextRange(in: text) {
+            let update = owner?.handleNativeInputEvent(
+                .activeTextSelectionChanged(
+                    blockID: activeTextHostBlockID,
+                    selectedRange: effectiveSelectedRange
+                )
+            )
+            if update != nil {
+                sessionSelectedRange = effectiveSelectedRange
+            }
+        }
         requestRender(makeFirstResponder: true, preserveNativeSurface: true)
     }
 
     func unmarkText() {
         markedRange = nil
         markedReplacementRange = nil
-        clearComposition()
+        markedDocumentText = nil
+        sessionSelectedRange = nil
+        owner?.handleNativeInputEvent(.commitComposition)
         syncSelectionFromNativeSurface()
+        requestRender(
+            makeFirstResponder: true,
+            preserveNativeSurface: false
+        )
     }
 
     func replaceText(
@@ -200,6 +237,7 @@ final class AppKitActiveInputController {
             self.sessionSelectedRange = nil
             self.markedRange = nil
             self.markedReplacementRange = nil
+            self.markedDocumentText = nil
         }
         owner?.handleNativeInputEvent(
             .command(
@@ -244,10 +282,10 @@ final class AppKitActiveInputController {
             owner?.handleNativeInputEvent(.command(.deleteForward))
 
         case AppKitCommandSelectors.deleteToBeginningOfLine:
-            return deleteBackward(to: .textStart)
+            return handleInputCommand(.deleteToTextStart)
 
         case AppKitCommandSelectors.deleteWordBackward:
-            return deleteBackward(to: .wordBoundary)
+            return handleViewportInputCommand { .deleteWordBackward(viewport: $0) }
 
         case AppKitCommandSelectors.insertTab:
             handleBlockIndentCommand(.indent)
@@ -282,22 +320,22 @@ final class AppKitActiveInputController {
             return extendToTextBoundary(.end)
 
         case AppKitCommandSelectors.moveWordLeft:
-            return handleInputCommand(.moveWordLeft)
+            return handleViewportInputCommand { .moveWordLeft(viewport: $0) }
 
         case AppKitCommandSelectors.moveWordRight:
-            return handleInputCommand(.moveWordRight)
+            return handleViewportInputCommand { .moveWordRight(viewport: $0) }
 
         case AppKitCommandSelectors.moveWordLeftAndModifySelection:
-            return handleInputCommand(.extendWordLeft)
+            return handleViewportInputCommand { .extendWordLeft(viewport: $0) }
 
         case AppKitCommandSelectors.moveWordRightAndModifySelection:
-            return handleInputCommand(.extendWordRight)
+            return handleViewportInputCommand { .extendWordRight(viewport: $0) }
 
         case AppKitCommandSelectors.moveLeftAndModifySelection:
-            return handleInputCommand(.extendCharacterLeft)
+            return handleViewportInputCommand { .extendCharacterLeft(viewport: $0) }
 
         case AppKitCommandSelectors.moveRightAndModifySelection:
-            return handleInputCommand(.extendCharacterRight)
+            return handleViewportInputCommand { .extendCharacterRight(viewport: $0) }
 
         case AppKitCommandSelectors.moveUpAndModifySelection:
             return handleViewportInputCommand { .extendUp(viewport: $0) }
@@ -336,18 +374,6 @@ final class AppKitActiveInputController {
     }
 
     // MARK: - Command Helpers
-
-    @discardableResult
-    private func deleteBackward(to boundary: BackwardTextDeletionBoundary) -> Bool {
-        let command: EditorInputEvent.Command
-        switch boundary {
-        case .textStart:
-            command = .deleteToTextStart
-        case .wordBoundary:
-            command = .deleteWordBackward
-        }
-        return handleInputCommand(command)
-    }
 
     @discardableResult
     private func moveToTextBoundary(_ direction: TextBoundaryDirection) -> Bool {
@@ -429,6 +455,7 @@ extension AppKitActiveInputController {
         sessionSelectedRange = nil
         markedRange = nil
         markedReplacementRange = nil
+        markedDocumentText = nil
 
         owner?.handleNativeInputEvent(
             .command(
@@ -492,6 +519,16 @@ extension AppKitActiveInputController {
         }
         let maxLength = text.utf16.count
         let location = min(max(range.location, 0), maxLength)
+        let length = min(max(range.length, 0), maxLength - location)
+        return NSRange(location: location, length: length)
+    }
+
+    private func normalizedMarkedSelectionRange(_ range: NSRange, in markedText: String) -> NSRange {
+        let maxLength = markedText.utf16.count
+        let location =
+            range.location == NSNotFound
+            ? maxLength
+            : min(max(range.location, 0), maxLength)
         let length = min(max(range.length, 0), maxLength - location)
         return NSRange(location: location, length: length)
     }

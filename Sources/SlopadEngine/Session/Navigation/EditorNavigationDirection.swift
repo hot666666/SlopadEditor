@@ -1,3 +1,5 @@
+import SlopadCoreModel
+
 // MARK: - EditorNavigationDirection
 
 enum EditorNavigationDirection {
@@ -23,6 +25,17 @@ enum EditorNavigationDirection {
             return -1
         case .right:
             return 1
+        case .up, .down:
+            return nil
+        }
+    }
+
+    var textNavigationDirection: TextNavigationDirection? {
+        switch self {
+        case .left:
+            return .left
+        case .right:
+            return .right
         case .up, .down:
             return nil
         }

@@ -26,6 +26,7 @@ SCENARIOS=(
   click-tail
   move-down
   move-right
+  unicode-navigation
   prefix-list
   prefix-heading
   native-insert

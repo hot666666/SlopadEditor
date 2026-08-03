@@ -16,7 +16,7 @@ extension BlockLayout {
                 visibleBlock: visibleBlock,
                 contentSnapshot: contentSnapshot,
                 availableWidth: availableWidth,
-                styleRevision: styleRevision,
+                textLayoutRevision: textLayoutRevision,
                 textLayouter: textLayouter
             )
             if result.usedCache {
@@ -31,7 +31,7 @@ extension BlockLayout {
                 visibleBlock: visibleBlock,
                 contentSnapshot: contentSnapshot,
                 availableWidth: availableWidth,
-                styleRevision: styleRevision,
+                textLayoutRevision: textLayoutRevision,
                 textLayouter: textLayouter
             )
         #endif

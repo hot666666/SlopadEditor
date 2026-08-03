@@ -1,13 +1,14 @@
 import AppKit
 import Foundation
+import SlopadAppKitTextKit
 import SlopadAppKitUI
 import SlopadEngine
-import SlopadTextKit
 
 @MainActor
 struct UIBenchmarkOptions {
     var scenario: String
     var blockCount: Int
+    var activeTextLength: Int?
     var frameCount: Int
     var outputPath: String
     var subtreeNodeCount: Int?
@@ -24,6 +25,8 @@ private enum UIBenchmarkScenario: String {
     case blockReorder = "block-reorder"
     case subtreeDelete = "subtree-delete"
     case subtreeReorder = "subtree-reorder"
+    case styleChange = "style-change"
+    case unicodeNavigation = "unicode-navigation"
 
     init(argument: String) {
         self = UIBenchmarkScenario(rawValue: argument) ?? .scroll
@@ -34,7 +37,7 @@ private enum UIBenchmarkScenario: String {
         case .subtreeDelete, .subtreeReorder:
             return true
         case .scroll, .nativeInsert, .composition, .heightExpansion, .blockSelection,
-            .blockReorder, .mixed:
+            .blockReorder, .styleChange, .unicodeNavigation, .mixed:
             return false
         }
     }
@@ -44,7 +47,7 @@ private enum UIBenchmarkScenario: String {
         case .subtreeDelete:
             return true
         case .scroll, .nativeInsert, .composition, .heightExpansion, .blockSelection,
-            .blockReorder, .subtreeReorder, .mixed:
+            .blockReorder, .subtreeReorder, .styleChange, .unicodeNavigation, .mixed:
             return false
         }
     }
@@ -59,9 +62,11 @@ enum UIBenchmarkFixture {
     fileprivate static func makeBlocks(
         count: Int,
         scenario: UIBenchmarkScenario,
-        subtreeNodeCount: Int? = nil
+        subtreeNodeCount: Int? = nil,
+        activeTextLength: Int? = nil
     ) -> (blocks: [EditorBlockInput], firstBlockID: BlockID) {
         let blockCount = max(2, count)
+        let targetIndex = benchmarkTargetIndex(blockCount: blockCount)
         let resolvedSubtreeNodeCount = self.subtreeNodeCount(
             for: blockCount,
             override: subtreeNodeCount
@@ -88,7 +93,14 @@ enum UIBenchmarkFixture {
                     id: blockID,
                     parentID: parentID,
                     kind: kind(for: index),
-                    content: BlockContent(text: text(for: index))
+                    content: BlockContent(
+                        text: scenario == .unicodeNavigation
+                            ? unicodeNavigationText(
+                                for: index,
+                                length: index == targetIndex ? activeTextLength : nil
+                            )
+                            : text(for: index)
+                    )
                 )
             )
         }
@@ -107,6 +119,20 @@ enum UIBenchmarkFixture {
             : ""
         return
             "Benchmark block \(index). Native UI render path measures real AppKit drawing and scroll invalidation.\(suffix)"
+    }
+
+    static func unicodeNavigationText(for index: Int, length: Int? = nil) -> String {
+        let base = "한글단어와 punctuation \(index) — English שלום עולם 👨‍👩‍👧‍👦 e\u{301} 끝"
+        guard let length else { return base }
+
+        let targetLength = max(1, length)
+        let repeatedUnit = Array(base + " ")
+        var characters: [Character] = []
+        characters.reserveCapacity(targetLength)
+        while characters.count < targetLength {
+            characters.append(contentsOf: repeatedUnit.prefix(targetLength - characters.count))
+        }
+        return String(characters)
     }
 
     static func subtreeNodeCount(for blockCount: Int) -> Int {
@@ -153,6 +179,10 @@ enum UIBenchmarkFixture {
         return .paragraph
     }
 
+    private static func benchmarkTargetIndex(blockCount: Int) -> Int {
+        max(1, min(blockCount - 2, blockCount / 2))
+    }
+
     private static func subtreeParentID(
         for index: Int,
         blockCount: Int,
@@ -181,7 +211,6 @@ enum UIBenchmarkFixture {
 final class UIBenchmarkHost {
     // MARK: - Dependencies
 
-    let editorStyle = TextKitEditorStyle()
     let editorViewController: AppKitEditorViewController
 
     // MARK: - State
@@ -193,12 +222,18 @@ final class UIBenchmarkHost {
     init(
         blockCount: Int,
         scenario: String,
-        subtreeNodeCount: Int?
+        subtreeNodeCount: Int?,
+        activeTextLength: Int?
     ) {
+        let resolvedScenario = UIBenchmarkScenario(argument: scenario)
+        let editorStyle = TextKitEditorStyle(
+            languageIdentifier: resolvedScenario == .unicodeNavigation ? "ko-KR" : nil
+        )
         let fixture = UIBenchmarkFixture.makeBlocks(
             count: blockCount,
-            scenario: UIBenchmarkScenario(argument: scenario),
-            subtreeNodeCount: subtreeNodeCount
+            scenario: resolvedScenario,
+            subtreeNodeCount: subtreeNodeCount,
+            activeTextLength: activeTextLength
         )
         editorViewController = AppKitEditorViewController(
             blocks: fixture.blocks,
@@ -226,6 +261,10 @@ final class UIBenchmarkHost {
 
     var scrollView: NSScrollView {
         editorViewController.scrollView
+    }
+
+    var editorStyle: TextKitEditorStyle {
+        editorViewController.editorStyle
     }
 
     func renderAndSyncSurface(
@@ -257,22 +296,28 @@ final class UIBenchmarkHost {
     }
 
     func resetDocument(blocks: [EditorBlockInput], selection: EditorSelection) {
-        editorViewController.resetDocument(blocks: blocks, selection: selection)
+        editorViewController.resetDocumentWithoutRendering(blocks: blocks, selection: selection)
     }
 
     func scrollDocument(to y: Double) {
-        editorViewController.scrollDocument(to: y)
+        editorViewController.scrollDocumentWithoutRendering(to: y)
+    }
+
+    func updateEditorStyle(_ style: TextKitEditorStyle) {
+        editorViewController.updateEditorStyle(style)
     }
 
     fileprivate func resetUIBenchmarkDocument(
         blockCount: Int,
         scenario: UIBenchmarkScenario,
-        subtreeNodeCount: Int?
+        subtreeNodeCount: Int?,
+        activeTextLength: Int?
     ) {
         let fixture = UIBenchmarkFixture.makeBlocks(
             count: blockCount,
             scenario: scenario,
-            subtreeNodeCount: subtreeNodeCount
+            subtreeNodeCount: subtreeNodeCount,
+            activeTextLength: activeTextLength
         )
         resetDocument(
             blocks: fixture.blocks,
@@ -521,7 +566,8 @@ enum UIBenchmarkRunner {
                 viewController.resetUIBenchmarkDocument(
                     blockCount: options.blockCount,
                     scenario: scenario,
-                    subtreeNodeCount: options.subtreeNodeCount
+                    subtreeNodeCount: options.subtreeNodeCount,
+                    activeTextLength: options.activeTextLength
                 )
                 prepare(scenario: scenario, options: options, viewController: viewController)
             }
@@ -592,15 +638,20 @@ enum UIBenchmarkRunner {
         centerBlock(target, viewController: viewController)
 
         switch scenario {
-        case .nativeInsert, .composition, .heightExpansion, .mixed:
+        case .nativeInsert, .composition, .heightExpansion, .unicodeNavigation, .mixed:
             let targetIndex = targetBlockIndex(blockCount: options.blockCount)
             viewController.focus(
                 blockID: target,
-                offset: UIBenchmarkFixture.text(for: targetIndex).count
+                offset: scenario == .unicodeNavigation
+                    ? UIBenchmarkFixture.unicodeNavigationText(
+                        for: targetIndex,
+                        length: options.activeTextLength
+                    ).count
+                    : UIBenchmarkFixture.text(for: targetIndex).count
             )
             viewController.renderAndSyncSurface(makeFirstResponder: true)
 
-        case .blockSelection, .blockReorder, .subtreeDelete, .subtreeReorder:
+        case .blockSelection, .blockReorder, .subtreeDelete, .subtreeReorder, .styleChange:
             viewController.renderAndSyncSurface(makeFirstResponder: false)
 
         case .scroll:
@@ -618,7 +669,7 @@ enum UIBenchmarkRunner {
         case .scroll, .mixed:
             break
         case .nativeInsert, .composition, .heightExpansion, .blockSelection, .blockReorder,
-            .subtreeDelete, .subtreeReorder:
+            .subtreeDelete, .subtreeReorder, .styleChange, .unicodeNavigation:
             return Double(viewController.scrollView.contentView.bounds.origin.y)
         }
 
@@ -670,6 +721,23 @@ enum UIBenchmarkRunner {
             reorderSubtree(frame: frame, options: options, viewController: viewController)
             return "subtreeReorder"
 
+        case .styleChange:
+            updateStyle(frame: frame, viewController: viewController)
+            return "updateEditorStyle"
+
+        case .unicodeNavigation:
+            let viewport = viewController.currentViewport()
+            if frame.isMultiple(of: 2) {
+                _ = viewController.handleNativeInputEvent(
+                    .command(.moveWordLeft(viewport: viewport))
+                )
+                return "moveWordLeft"
+            }
+            _ = viewController.handleNativeInputEvent(
+                .command(.moveWordRight(viewport: viewport))
+            )
+            return "moveWordRight"
+
         case .mixed:
             switch frame % 6 {
             case 0:
@@ -691,6 +759,22 @@ enum UIBenchmarkRunner {
                 return "blockReorder"
             }
         }
+    }
+
+    private static func updateStyle(
+        frame: Int,
+        viewController: UIBenchmarkHost
+    ) {
+        let usesAlternateStyle = frame.isMultiple(of: 2)
+        viewController.updateEditorStyle(
+            TextKitEditorStyle(
+                fontSize: usesAlternateStyle ? 16 : 15,
+                lineHeightMultiple: usesAlternateStyle ? 1.3 : 1.25,
+                gutterWidth: usesAlternateStyle ? 44 : 40,
+                contentHorizontalPadding: usesAlternateStyle ? 16 : 14,
+                blockIndentWidth: usesAlternateStyle ? 22 : 20
+            )
+        )
     }
 
     private static func insertText(

@@ -13,10 +13,15 @@ struct EditorSessionTextSelectionNavigationInputEventTests {
             document: .singleParagraph("Hello", id: blockID),
             selection: .caret(blockID: blockID, offset: 3)
         )
+        let viewport = EditorViewport(width: 320, scrollY: 0, height: 240)
 
         // When
-        let leftUpdate = try #require(session.handleInput(.command(.extendCharacterLeft)))
-        let rightUpdate = try #require(session.handleInput(.command(.extendCharacterRight)))
+        let leftUpdate = try #require(
+            session.handleInput(.command(.extendCharacterLeft(viewport: viewport)))
+        )
+        let rightUpdate = try #require(
+            session.handleInput(.command(.extendCharacterRight(viewport: viewport)))
+        )
 
         // Then
         #expect(
@@ -73,10 +78,15 @@ struct EditorSessionTextSelectionNavigationInputEventTests {
             document: .singleParagraph("alpha beta gamma", id: blockID),
             selection: .caret(blockID: blockID, offset: 8)
         )
+        let viewport = EditorViewport(width: 320, scrollY: 0, height: 240)
 
         // When
-        let leftUpdate = try #require(session.handleInput(.command(.extendWordLeft)))
-        let rightUpdate = try #require(session.handleInput(.command(.extendWordRight)))
+        let leftUpdate = try #require(
+            session.handleInput(.command(.extendWordLeft(viewport: viewport)))
+        )
+        let rightUpdate = try #require(
+            session.handleInput(.command(.extendWordRight(viewport: viewport)))
+        )
 
         // Then
         #expect(
@@ -107,15 +117,20 @@ struct EditorSessionTextSelectionNavigationInputEventTests {
             document: .singleParagraph("alpha beta gamma", id: blockID),
             selection: .caret(blockID: blockID, offset: 16)
         )
+        let viewport = EditorViewport(width: 320, scrollY: 0, height: 240)
 
         // When
-        let firstUpdate = try #require(session.handleInput(.command(.extendWordLeft)))
+        let firstUpdate = try #require(
+            session.handleInput(.command(.extendWordLeft(viewport: viewport)))
+        )
         let echoUpdate = try #require(
             session.handleInput(
                 .activeTextSelectionChanged(blockID: blockID, selectedRange: TextRange(11, 16))
             )
         )
-        let secondUpdate = try #require(session.handleInput(.command(.extendWordLeft)))
+        let secondUpdate = try #require(
+            session.handleInput(.command(.extendWordLeft(viewport: viewport)))
+        )
 
         // Then
         let firstSelection = TextSelection(

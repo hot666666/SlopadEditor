@@ -5,8 +5,8 @@ import SlopadCoreModel
 
 @Suite("BlockLayout revision 전파")
 struct BlockLayoutRevisionPropagationTests {
-    @Test("style revision 변경이 layout snapshot revision에 반영된다")
-    func styleRevisionChangeUpdatesEditorSnapshotRevision() {
+    @Test("text layout revision 변경이 layout snapshot revision에 반영된다")
+    func textLayoutRevisionChangeUpdatesEditorSnapshotRevision() {
         // Given
         let document = Document.singleParagraph("A", id: "a")
         let visibleIndex = VisibleBlockIndex(document: document)
@@ -17,8 +17,7 @@ struct BlockLayoutRevisionPropagationTests {
         )
         let textLayouter = RecordingBlockTextLayouter()
         var blockLayout = BlockLayout()
-        let baseStyleRevision = 0
-        let changedStyleRevision = 1
+        let baseTextLayoutRevision = 0
 
         // When
         let baseRevision = runBlockLayoutPass(
@@ -26,7 +25,7 @@ struct BlockLayoutRevisionPropagationTests {
             input: layoutInput,
             textLayouter: textLayouter
         )
-        _ = blockLayout.setStyleRevision(changedStyleRevision)
+        blockLayout.advanceTextLayoutRevision()
         let changedRevision = runBlockLayoutPass(
             &blockLayout,
             input: layoutInput,
@@ -34,8 +33,37 @@ struct BlockLayoutRevisionPropagationTests {
         )
 
         // Then
-        #expect(baseRevision.styleRevision == baseStyleRevision)
-        #expect(changedRevision.styleRevision == changedStyleRevision)
+        #expect(baseRevision.textLayoutRevision == baseTextLayoutRevision)
+        #expect(changedRevision.textLayoutRevision == baseTextLayoutRevision + 1)
+    }
+
+    @Test("text layout revision 변경은 lazy layout의 기존 backend 측정값을 제거한다")
+    func textLayoutRevisionClearsLazyMeasurements() {
+        // Given
+        let blockCount = 600
+        let document = makeFlatDocument(
+            (0..<blockCount).map { index in
+                Block(id: BlockID("block-\(index)"), content: BlockContent(text: "x"))
+            }
+        )
+        let viewport = EditorViewport(width: 300, scrollY: 0, height: 120)
+        let textLayouter = RecordingBlockTextLayouter(fallbackBaseHeight: 35)
+        var blockLayout = BlockLayout()
+        _ = blockLayout.prepare(
+            document: document,
+            composition: nil,
+            viewport: viewport,
+            textLayouter: textLayouter
+        )
+        let measuredBeforeChange = blockLayout.measurementsByBlockID
+
+        // When
+        blockLayout.advanceTextLayoutRevision()
+
+        // Then
+        #expect(!measuredBeforeChange.isEmpty)
+        #expect(blockLayout.measurementsByBlockID.isEmpty)
+        #expect(blockLayout.isDirty)
     }
 
     @Test("width revision 변경이 layout snapshot revision에 반영된다")

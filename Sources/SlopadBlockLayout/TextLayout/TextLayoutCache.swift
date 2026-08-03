@@ -8,7 +8,7 @@ struct TextLayoutCache {
         let contentRevision: Int
         let compositionRevision: Int
         let availableWidth: Double
-        let styleRevision: Int
+        let textLayoutRevision: Int
         let depth: Int
         let blockChromeSignature: String
 
@@ -17,7 +17,7 @@ struct TextLayoutCache {
             visibleBlock: VisibleBlock,
             contentSnapshot: EffectiveDocumentSnapshot,
             availableWidth: Double,
-            styleRevision: Int
+            textLayoutRevision: Int
         ) {
             blockID = block.id
             contentRevision = block.content.revision
@@ -26,7 +26,7 @@ struct TextLayoutCache {
                 ? contentSnapshot.compositionRevision
                 : 0
             self.availableWidth = availableWidth
-            self.styleRevision = styleRevision
+            self.textLayoutRevision = textLayoutRevision
             depth = visibleBlock.depth
             blockChromeSignature = block.kind.layoutChromeSignature
         }
@@ -39,7 +39,7 @@ struct TextLayoutCache {
         visibleBlock: VisibleBlock,
         contentSnapshot: EffectiveDocumentSnapshot,
         availableWidth: Double,
-        styleRevision: Int,
+        textLayoutRevision: Int,
         textLayouter: any BlockTextLayoutProtocol
     ) -> BlockMeasurement {
         measured(
@@ -47,7 +47,7 @@ struct TextLayoutCache {
             visibleBlock: visibleBlock,
             contentSnapshot: contentSnapshot,
             availableWidth: availableWidth,
-            styleRevision: styleRevision,
+            textLayoutRevision: textLayoutRevision,
             textLayouter: textLayouter
         ).measurement
     }
@@ -58,7 +58,7 @@ struct TextLayoutCache {
             visibleBlock: VisibleBlock,
             contentSnapshot: EffectiveDocumentSnapshot,
             availableWidth: Double,
-            styleRevision: Int,
+            textLayoutRevision: Int,
             textLayouter: any BlockTextLayoutProtocol
         ) -> (measurement: BlockMeasurement, usedCache: Bool) {
             measured(
@@ -66,7 +66,7 @@ struct TextLayoutCache {
                 visibleBlock: visibleBlock,
                 contentSnapshot: contentSnapshot,
                 availableWidth: availableWidth,
-                styleRevision: styleRevision,
+                textLayoutRevision: textLayoutRevision,
                 textLayouter: textLayouter
             )
         }
@@ -77,7 +77,7 @@ struct TextLayoutCache {
         visibleBlock: VisibleBlock,
         contentSnapshot: EffectiveDocumentSnapshot,
         availableWidth: Double,
-        styleRevision: Int,
+        textLayoutRevision: Int,
         textLayouter: any BlockTextLayoutProtocol
     ) -> (measurement: BlockMeasurement, usedCache: Bool) {
         let key = MeasurementKey(
@@ -85,7 +85,7 @@ struct TextLayoutCache {
             visibleBlock: visibleBlock,
             contentSnapshot: contentSnapshot,
             availableWidth: availableWidth,
-            styleRevision: styleRevision
+            textLayoutRevision: textLayoutRevision
         )
         if let cached = measurements[key] {
             return (cached, true)

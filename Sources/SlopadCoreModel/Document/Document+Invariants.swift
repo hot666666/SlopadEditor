@@ -34,25 +34,40 @@ extension Document {
         var visited: Set<BlockID> = []
         var visiting: Set<BlockID> = []
 
-        func visit(_ blockID: BlockID, parentID: BlockID?) {
+        enum TraversalFrame {
+            case enter(blockID: BlockID, parentID: BlockID?)
+            case exit(blockID: BlockID)
+        }
+
+        var traversalStack = rootBlockIDs.reversed().map {
+            TraversalFrame.enter(blockID: $0, parentID: nil)
+        }
+        while let frame = traversalStack.popLast() {
+            if case .exit(let blockID) = frame {
+                visiting.remove(blockID)
+                visited.insert(blockID)
+                continue
+            }
+            guard case .enter(let blockID, let parentID) = frame else { continue }
+
             let key = "\(parentID?.rawValue ?? "root")->\(blockID.rawValue)"
             if seenEdges.contains(key) {
                 violations.append(.duplicateChild(parent: parentID, child: blockID))
-                return
+                continue
             }
             seenEdges.insert(key)
 
             guard let block = document.blocks[blockID] else {
                 violations.append(.missingBlockReference(parent: parentID, child: blockID))
-                return
+                continue
             }
             if visiting.contains(blockID) {
                 violations.append(.cycleDetected(blockID))
-                return
+                continue
             }
             if visited.contains(blockID) {
                 violations.append(.duplicateChild(parent: parentID, child: blockID))
-                return
+                continue
             }
 
             if block.parentID != parentID {
@@ -66,15 +81,10 @@ extension Document {
             }
 
             visiting.insert(blockID)
-            for childID in block.childIDs {
-                visit(childID, parentID: blockID)
+            traversalStack.append(.exit(blockID: blockID))
+            for childID in block.childIDs.reversed() {
+                traversalStack.append(.enter(blockID: childID, parentID: blockID))
             }
-            visiting.remove(blockID)
-            visited.insert(blockID)
-        }
-
-        for rootID in document.rootBlockIDs {
-            visit(rootID, parentID: nil)
         }
 
         for blockID in document.blocks.keys where !visited.contains(blockID) {
@@ -104,17 +114,12 @@ extension Document {
         var output: [BlockID] = []
         let limit = max(1, document.blocks.count * 2 + document.rootBlockIDs.count + 1)
 
-        func visit(_ blockID: BlockID) {
-            guard output.count < limit else { return }
+        var stack = Array(document.rootBlockIDs.reversed())
+        while let blockID = stack.popLast(), output.count < limit {
             output.append(blockID)
-            guard let block = document.blocks[blockID] else { return }
-            for childID in block.childIDs {
-                visit(childID)
+            if let block = document.blocks[blockID] {
+                stack.append(contentsOf: block.childIDs.reversed())
             }
-        }
-
-        for rootID in document.rootBlockIDs {
-            visit(rootID)
         }
         return output
     }
@@ -123,17 +128,13 @@ extension Document {
         var output: [BlockID] = []
         var visited: Set<BlockID> = []
 
-        func visit(_ blockID: BlockID) {
-            guard visited.insert(blockID).inserted else { return }
+        var stack = Array(document.rootBlockIDs.reversed())
+        while let blockID = stack.popLast() {
+            guard visited.insert(blockID).inserted else { continue }
             output.append(blockID)
-            guard let block = document.blocks[blockID] else { return }
-            for childID in block.childIDs {
-                visit(childID)
+            if let block = document.blocks[blockID] {
+                stack.append(contentsOf: block.childIDs.reversed())
             }
-        }
-
-        for rootID in document.rootBlockIDs {
-            visit(rootID)
         }
         return output
     }

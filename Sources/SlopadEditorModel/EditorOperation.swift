@@ -3,6 +3,7 @@ import SlopadCoreModel
 // MARK: - EditorOperation
 
 package enum EditorOperation {
+    case replaceDocument
     case splitBlock(original: BlockID, created: BlockID)
     case mergeBlocks(target: BlockID, source: BlockID)
     case refreshMarker

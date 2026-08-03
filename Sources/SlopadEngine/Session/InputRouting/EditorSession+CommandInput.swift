@@ -33,9 +33,9 @@ extension EditorSession {
             guard canRouteTextCommand() else { return nil }
             return deleteBackwardToTextStart()
 
-        case .deleteWordBackward:
+        case .deleteWordBackward(let viewport):
             guard canRouteTextCommand() else { return nil }
-            return deleteBackwardToPreviousWordBoundary()
+            return deleteBackwardToPreviousWordBoundary(viewport: viewport)
 
         case .enter:
             return handleEnterInputCommand()
@@ -69,21 +69,21 @@ extension EditorSession {
             guard canRouteTextCommand() else { return nil }
             return moveToTextBoundary(.right)
 
-        case .moveWordLeft:
+        case .moveWordLeft(let viewport):
             guard canRouteTextCommand() else { return nil }
-            return moveByWord(.left)
+            return moveByWord(.left, viewport: viewport)
 
-        case .moveWordRight:
+        case .moveWordRight(let viewport):
             guard canRouteTextCommand() else { return nil }
-            return moveByWord(.right)
+            return moveByWord(.right, viewport: viewport)
 
-        case .extendCharacterLeft:
+        case .extendCharacterLeft(let viewport):
             guard canRouteTextCommand() else { return nil }
-            return extendTextSelectionByCharacter(.left)
+            return extendTextSelectionByCharacter(.left, viewport: viewport)
 
-        case .extendCharacterRight:
+        case .extendCharacterRight(let viewport):
             guard canRouteTextCommand() else { return nil }
-            return extendTextSelectionByCharacter(.right)
+            return extendTextSelectionByCharacter(.right, viewport: viewport)
 
         case .extendToTextStart:
             guard canRouteTextCommand() else { return nil }
@@ -93,13 +93,13 @@ extension EditorSession {
             guard canRouteTextCommand() else { return nil }
             return extendTextSelection(to: .right)
 
-        case .extendWordLeft:
+        case .extendWordLeft(let viewport):
             guard canRouteTextCommand() else { return nil }
-            return extendTextSelectionByWord(.left)
+            return extendTextSelectionByWord(.left, viewport: viewport)
 
-        case .extendWordRight:
+        case .extendWordRight(let viewport):
             guard canRouteTextCommand() else { return nil }
-            return extendTextSelectionByWord(.right)
+            return extendTextSelectionByWord(.right, viewport: viewport)
 
         case .moveUp(let viewport):
             return handleVerticalMovementInputCommand(.up, extending: false, viewport: viewport)
@@ -168,8 +168,18 @@ extension EditorSession {
     }
 
     private func handleCutSelectionInputCommand() -> EditorUpdate? {
-        switch editorModel.selection {
+        switch activeEditorSelection {
         case .text(let textSelection) where textSelection.isSingleBlock:
+            if
+                composition != nil,
+                let range = textSelection.rangeInSingleBlock,
+                !range.isEmpty
+            {
+                return commitCompositionAndApply(
+                    .deleteText(blockID: textSelection.anchor.blockID, range: range),
+                    effectiveSelection: textSelection
+                )
+            }
             return handleCommand(.handleBackspace)
 
         case .blocks:
@@ -182,7 +192,11 @@ extension EditorSession {
 
     private func handleUndoInputCommand() -> EditorUpdate? {
         let previousSelection = editorModel.selection
-        guard editorModel.undo() else { return nil }
+        guard let change = editorModel.undo() else { return nil }
+        if change.documentChanged {
+            recordDocumentChange()
+        }
+        textNavigationRuntimeContext = nil
         blockLayout.invalidateAllMeasurements()
         return makeEditorUpdate(
             invalidation: EditorUpdateInvalidation(
@@ -195,7 +209,11 @@ extension EditorSession {
 
     private func handleRedoInputCommand() -> EditorUpdate? {
         let previousSelection = editorModel.selection
-        guard editorModel.redo() else { return nil }
+        guard let change = editorModel.redo() else { return nil }
+        if change.documentChanged {
+            recordDocumentChange()
+        }
+        textNavigationRuntimeContext = nil
         blockLayout.invalidateAllMeasurements()
         return makeEditorUpdate(
             invalidation: EditorUpdateInvalidation(

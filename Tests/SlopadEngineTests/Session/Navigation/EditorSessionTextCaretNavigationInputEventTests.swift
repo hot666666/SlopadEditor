@@ -31,11 +31,18 @@ struct EditorSessionTextCaretNavigationInputEventTests {
             document: .singleParagraph("alpha beta gamma", id: blockID),
             selection: .caret(blockID: blockID, offset: 8)
         )
+        let viewport = EditorViewport(width: 320, scrollY: 0, height: 240)
 
         // When
-        let leftUpdate = try #require(session.handleInput(.command(.moveWordLeft)))
-        let rightUpdate = try #require(session.handleInput(.command(.moveWordRight)))
-        let nextRightUpdate = try #require(session.handleInput(.command(.moveWordRight)))
+        let leftUpdate = try #require(
+            session.handleInput(.command(.moveWordLeft(viewport: viewport)))
+        )
+        let rightUpdate = try #require(
+            session.handleInput(.command(.moveWordRight(viewport: viewport)))
+        )
+        let nextRightUpdate = try #require(
+            session.handleInput(.command(.moveWordRight(viewport: viewport)))
+        )
 
         // Then
         #expect(leftUpdate.selection == .caret(blockID: blockID, offset: 6))

@@ -1,14 +1,12 @@
 import AppKit
 import Foundation
+import SlopadAppKitTextKit
 import SlopadEngine
-import SlopadTextKit
 
 // MARK: - AppKitEditorViewController
 
 @MainActor
 public final class AppKitEditorViewController: NSViewController {
-    // MARK: - Private Types
-
     private enum UX {
         static let initialViewSize = NSSize(width: 920, height: 680)
         static let minimumViewportDimension: CGFloat = 1
@@ -22,28 +20,187 @@ public final class AppKitEditorViewController: NSViewController {
         static let blockSelectionStrokeWidth: CGFloat = 1
         static let lineFragmentHitOutsetX: CGFloat = 4
         static let lineFragmentHitOutsetY: CGFloat = 3
+        static let maximumSurfaceConvergencePassCount = 32
+        static let maximumSurfaceFallbackPassCount = 4
+        static let fallbackScrollableOverflow: CGFloat = 1
+    }
+
+    private struct SurfaceSyncRequest: Equatable {
+        enum NativePolicy: Equatable {
+            case synchronize
+            case preserve
+        }
+
+        enum ViewportAction: Equatable {
+            case none
+            case revealSelection
+            case scrollTo(Double)
+        }
+
+        var nativePolicy: NativePolicy
+        var makeFirstResponder: Bool
+        var viewportAction: ViewportAction
+        var nativeStateIsAuthoritative: Bool
+
+        static func synchronizeNative(
+            makeFirstResponder: Bool,
+            scrollSelectionIntoView: Bool
+        ) -> Self {
+            Self(
+                nativePolicy: .synchronize,
+                makeFirstResponder: makeFirstResponder,
+                viewportAction: scrollSelectionIntoView ? .revealSelection : .none,
+                nativeStateIsAuthoritative: false
+            )
+        }
+
+        static func preserveNativeSurface(
+            makeFirstResponder: Bool = false,
+            scrollSelectionIntoView: Bool = false,
+            scrollTargetY: Double? = nil,
+            nativeStateIsAuthoritative: Bool = false
+        ) -> Self {
+            Self(
+                nativePolicy: .preserve,
+                makeFirstResponder: makeFirstResponder,
+                viewportAction: scrollTargetY.map(ViewportAction.scrollTo)
+                    ?? (scrollSelectionIntoView ? .revealSelection : .none),
+                nativeStateIsAuthoritative: nativeStateIsAuthoritative
+            )
+        }
+
+        mutating func merge(_ newerRequest: Self) {
+            switch newerRequest.nativePolicy {
+            case .synchronize:
+                nativePolicy = .synchronize
+                nativeStateIsAuthoritative = false
+            case .preserve where nativePolicy == .preserve:
+                nativeStateIsAuthoritative =
+                    nativeStateIsAuthoritative || newerRequest.nativeStateIsAuthoritative
+            case .preserve where newerRequest.nativeStateIsAuthoritative:
+                nativePolicy = .preserve
+                nativeStateIsAuthoritative = true
+            case .preserve:
+                break
+            }
+            makeFirstResponder = makeFirstResponder || newerRequest.makeFirstResponder
+            if newerRequest.viewportAction != .none {
+                viewportAction = newerRequest.viewportAction
+            }
+        }
+    }
+
+    private struct SnapshotVisibleBlockKey: Equatable {
+        let markerKind: BlockMarkerKind
+        let frame: EditorRect
+        let textFrame: EditorRect
+        let measureRequest: BlockMeasureRequest
+    }
+
+    private struct SnapshotActiveTextInputKey: Equatable {
+        let selectedRangeLowerBound: Int
+        let selectedRangeUpperBound: Int
+        let focusOffset: Int
+        let focusAffinity: TextAffinity
+        let navigationContext: TextNavigationContext?
+        let measureRequest: BlockMeasureRequest
+    }
+
+    private struct SnapshotPublicationKey: Equatable {
+        let viewport: EditorViewport
+        let revision: EditorSnapshotRevision
+        let totalHeight: Double
+        let visibleBlocks: [SnapshotVisibleBlockKey]
+        let selection: EditorSelection
+        let composition: TextComposition?
+        let canUndo: Bool
+        let canRedo: Bool
+        let activeTextInput: SnapshotActiveTextInputKey?
+        let dropIndicator: EditorRect?
+        let blockSelectionRectangle: EditorRect?
+
+        init(viewport: EditorViewport, snapshot: EditorSessionSnapshot) {
+            self.viewport = viewport
+            self.revision = snapshot.revision
+            self.totalHeight = snapshot.totalHeight
+            self.visibleBlocks = snapshot.visibleBlocks.map { block in
+                SnapshotVisibleBlockKey(
+                    markerKind: block.markerKind,
+                    frame: block.frame,
+                    textFrame: block.textRender.frame,
+                    measureRequest: block.textRender.measureRequest
+                )
+            }
+            self.selection = snapshot.selection
+            self.composition = snapshot.composition
+            self.canUndo = snapshot.history.canUndo
+            self.canRedo = snapshot.history.canRedo
+            self.activeTextInput = snapshot.activeTextInput.map { activeTextInput in
+                SnapshotActiveTextInputKey(
+                    selectedRangeLowerBound: activeTextInput.selectedRange.lowerBound,
+                    selectedRangeUpperBound: activeTextInput.selectedRange.upperBound,
+                    focusOffset: activeTextInput.focusOffset,
+                    focusAffinity: activeTextInput.focusAffinity,
+                    navigationContext: activeTextInput.navigationContext,
+                    measureRequest: activeTextInput.renderDescriptor.measureRequest
+                )
+            }
+            self.dropIndicator = snapshot.blockDragState?.dropIndicator
+            self.blockSelectionRectangle = snapshot.blockSelectionRectangleState?.rect
+        }
     }
 
     // MARK: - Public State
 
-    public let editorStyle: TextKitEditorStyle
-    public let textLayouter: TextKitBlockTextLayouter
-    public let textRenderer: TextKitBlockRenderer
-    public let scrollView = NSScrollView()
-    public private(set) var session: EditorSession
+    public var editorStyle: AppKitEditorStyle {
+        textSystem.style
+    }
+    /// Complete committed canonical content, independent of the current viewport.
+    /// `resetDocument` replaces the Session and starts this snapshot's revision at zero.
+    public var documentSnapshot: EditorDocumentSnapshot {
+        session.documentSnapshot
+    }
+
+    /// Captures the complete canonical document, exact selection, and selected content
+    /// for a later compare-and-swap `applyDocumentPatch(_:)` call.
+    ///
+    /// Native marked text and Session composition must be committed before capture.
+    public func documentContextSnapshot()
+        throws(EditorDocumentTransactionError) -> EditorDocumentContextSnapshot
+    {
+        guard !hasActiveNativeMarkedText else {
+            throw .activeComposition
+        }
+        return try session.documentContextSnapshot()
+    }
     public private(set) var snapshot: EditorSessionSnapshot?
-    public var blockRenderer: any AppKitBlockRenderer
+    public var blockChromeRenderer: any AppKitBlockChromeRenderer
     public var onSnapshotChanged: ((EditorSessionSnapshot) -> Void)?
     public var onUpdate: ((EditorUpdate) -> Void)?
-    public var onDrawOverlay: ((NSRect, EditorSessionSnapshot) -> Void)?
-    public var onDrawCompleted: ((NSRect, UInt64) -> Void)?
 
-    public var canvasView: AppKitEditorCanvasView {
+    // MARK: - Package State
+
+    package let scrollView = NSScrollView()
+    package private(set) var session: EditorSession
+    package var onDrawOverlay: ((NSRect, EditorSessionSnapshot) -> Void)?
+    package var onDrawCompleted: ((NSRect, UInt64) -> Void)?
+
+    var canvasView: AppKitEditorCanvasView {
         editorCanvasView
     }
 
     // MARK: - Private State
 
+    private var textSystem: AppKitTextSystem
+    private var textLayouter: TextKitBlockTextLayouter {
+        textSystem.textLayouter
+    }
+    private var textRenderer: TextKitBlockRenderer {
+        textSystem.textRenderer
+    }
+    private var textInputDecorationRenderer: AppKitTextInputDecorationRenderer {
+        textSystem.textInputDecorationRenderer
+    }
     private lazy var editorCanvasView = AppKitEditorCanvasView(handler: self)
     private lazy var activeInputController = AppKitActiveInputController(owner: self)
     private lazy var dragAutoscrollController = AppKitDragAutoscrollController(
@@ -61,6 +218,9 @@ public final class AppKitEditorViewController: NSViewController {
         }
     )
     private var isAdjustingScrollPosition = false
+    private var isSynchronizingSurface = false
+    private var pendingSurfaceSyncRequest: SurfaceSyncRequest?
+    private var activeSnapshotPublicationKey: SnapshotPublicationKey?
     private let focusOnAppear: Bool
 
     // MARK: - Init
@@ -68,19 +228,18 @@ public final class AppKitEditorViewController: NSViewController {
     public init(
         blocks: [EditorBlockInput],
         selection: EditorSelection? = nil,
-        style: TextKitEditorStyle = TextKitEditorStyle(),
-        blockRenderer: any AppKitBlockRenderer = AppKitDefaultBlockRenderer(),
+        style: AppKitEditorStyle = AppKitEditorStyle(),
+        blockChromeRenderer: any AppKitBlockChromeRenderer = AppKitDefaultBlockChromeRenderer(),
         focusOnAppear: Bool = false
     ) {
-        self.editorStyle = style
-        self.textLayouter = TextKitBlockTextLayouter(style: style)
-        self.textRenderer = TextKitBlockRenderer(style: style)
+        let textSystem = AppKitTextSystem(style: style)
+        self.textSystem = textSystem
         self.session = EditorSession(
             blocks: blocks,
             selection: selection,
-            textLayouter: self.textLayouter
+            textLayouter: textSystem.textLayouter
         )
-        self.blockRenderer = blockRenderer
+        self.blockChromeRenderer = blockChromeRenderer
         self.focusOnAppear = focusOnAppear
         super.init(nibName: nil, bundle: nil)
     }
@@ -115,24 +274,12 @@ public final class AppKitEditorViewController: NSViewController {
         makeFirstResponder: Bool,
         scrollSelectionIntoView: Bool = false
     ) {
-        var viewport = currentViewport()
-        var nextSnapshot = session.render(in: viewport)
-        setSnapshot(nextSnapshot)
-        resizeCanvas(for: nextSnapshot)
-
-        if scrollSelectionIntoView {
-            scrollActiveSelectionIntoView(viewport: viewport)
-            let scrolledViewport = currentViewport()
-            if scrolledViewport != viewport {
-                viewport = scrolledViewport
-                nextSnapshot = session.render(in: viewport)
-                setSnapshot(nextSnapshot)
-                resizeCanvas(for: nextSnapshot)
-            }
-        }
-
-        syncNativeSurface(snapshot: nextSnapshot, makeFirstResponder: makeFirstResponder)
-        invalidateVisibleCanvas()
+        requestSurfaceSync(
+            .synchronizeNative(
+                makeFirstResponder: makeFirstResponder,
+                scrollSelectionIntoView: scrollSelectionIntoView
+            )
+        )
     }
 
     public func focus(blockID: BlockID, offset: Int) {
@@ -145,10 +292,38 @@ public final class AppKitEditorViewController: NSViewController {
         renderAndSyncSurface(makeFirstResponder: true, scrollSelectionIntoView: true)
     }
 
+    /// Replaces the adapter-owned TextKit layout and drawing pipeline from one style.
+    ///
+    /// The operation synchronizes the Session snapshot and canvas before returning while
+    /// preserving live marked text, native selection, viewport, and responder ownership.
+    public func updateEditorStyle(_ style: AppKitEditorStyle) {
+        guard style != editorStyle else { return }
+
+        let replacementTextSystem = AppKitTextSystem(style: style)
+        _ = session.replaceTextLayoutBackend(with: replacementTextSystem.textLayouter)
+        textSystem = replacementTextSystem
+        renderCanvasPreservingNativeSurface(
+            nativeStateIsAuthoritative: hasActiveNativeMarkedText
+        )
+    }
+
     public func resetDocument(
         blocks: [EditorBlockInput],
         selection: EditorSelection? = nil
     ) {
+        let shouldKeepFirstResponder = view.window?.firstResponder === editorCanvasView
+        resetDocumentWithoutRendering(blocks: blocks, selection: selection)
+        renderAndSyncSurface(
+            makeFirstResponder: shouldKeepFirstResponder,
+            scrollSelectionIntoView: true
+        )
+    }
+
+    package func resetDocumentWithoutRendering(
+        blocks: [EditorBlockInput],
+        selection: EditorSelection? = nil
+    ) {
+        dragAutoscrollController.stop()
         session = EditorSession(
             blocks: blocks,
             selection: selection,
@@ -159,7 +334,7 @@ public final class AppKitEditorViewController: NSViewController {
     }
 
     @discardableResult
-    public func handleInputWithoutRendering(_ inputEvent: EditorInputEvent) -> EditorUpdate? {
+    package func handleInputWithoutRendering(_ inputEvent: EditorInputEvent) -> EditorUpdate? {
         handleNativeInputEvent(inputEvent)
     }
 
@@ -180,8 +355,63 @@ public final class AppKitEditorViewController: NSViewController {
         )
     }
 
+    /// Performs one programmatic editor action and synchronizes the native surface before
+    /// returning. Viewport-bearing engine commands use the adapter's current viewport.
     @discardableResult
-    public func handleInput(
+    public func perform(
+        _ action: AppKitEditorAction,
+        makeFirstResponder: Bool = true,
+        scrollSelectionIntoView: Bool = true
+    ) -> EditorUpdate? {
+        _ = commitActiveComposition()
+        return handleInput(
+            action.inputEvent(viewport: currentViewport()),
+            makeFirstResponder: makeFirstResponder,
+            scrollSelectionIntoView: scrollSelectionIntoView
+        )
+    }
+
+    /// Applies one canonical full-document post-image and synchronizes the AppKit surface.
+    ///
+    /// The source must still match the controller's Session instance, committed document
+    /// revision, and exact selection. A successful mutation publishes exactly one
+    /// `onUpdate` callback before this method returns. An exact semantic no-op publishes
+    /// no callback and returns `nil`.
+    @discardableResult
+    public func applyDocumentPatch(
+        _ patch: EditorDocumentPatch
+    ) throws(EditorDocumentTransactionError) -> EditorUpdate? {
+        guard !hasActiveNativeMarkedText else {
+            throw .activeComposition
+        }
+        guard let update = try session.applyDocumentPatch(patch) else { return nil }
+
+        onUpdate?(update)
+        let shouldKeepFirstResponder = view.window?.firstResponder === editorCanvasView
+        renderAndSyncSurface(
+            makeFirstResponder: shouldKeepFirstResponder,
+            scrollSelectionIntoView: true
+        )
+        return update
+    }
+
+    /// Commits live marked text while preserving viewport and responder ownership.
+    ///
+    /// The committed update is delivered to `onUpdate` before this method returns, so the
+    /// matching complete value can be read immediately from `documentSnapshot`.
+    @discardableResult
+    public func commitActiveComposition() -> EditorUpdate? {
+        guard hasActiveNativeMarkedText || snapshot?.composition != nil else { return nil }
+        let shouldKeepFirstResponder = view.window?.firstResponder === editorCanvasView
+        return handleInput(
+            .commitComposition,
+            makeFirstResponder: shouldKeepFirstResponder,
+            scrollSelectionIntoView: false
+        )
+    }
+
+    @discardableResult
+    package func handleInput(
         _ inputEvent: EditorInputEvent,
         makeFirstResponder: Bool = true,
         scrollSelectionIntoView: Bool = true
@@ -194,15 +424,22 @@ public final class AppKitEditorViewController: NSViewController {
         return update
     }
 
-    public func renderPreservingNativeSurface() {
-        renderCanvasPreservingNativeSurface()
+    package func renderPreservingNativeSurface() {
+        renderCanvasPreservingNativeSurface(nativeStateIsAuthoritative: true)
     }
 
     public func scrollDocument(to y: Double) {
+        renderCanvasPreservingNativeSurface(
+            scrollTargetY: max(0, y),
+            nativeStateIsAuthoritative: hasActiveNativeMarkedText
+        )
+    }
+
+    package func scrollDocumentWithoutRendering(to y: Double) {
         scrollDocument(to: CGFloat(max(0, y)), visibleBounds: currentViewportBounds())
     }
 
-    public func currentViewport() -> EditorViewport {
+    package func currentViewport() -> EditorViewport {
         let bounds = currentViewportBounds()
         let width = max(Double(bounds.width), Double(UX.minimumViewportDimension))
         let height = max(Double(bounds.height), Double(UX.minimumViewportDimension))
@@ -213,23 +450,23 @@ public final class AppKitEditorViewController: NSViewController {
         )
     }
 
-    public var activeNativeText: String {
+    package var activeNativeText: String {
         activeInputController.activeText
     }
 
-    public var activeNativeSelectedRange: NSRange {
+    package var activeNativeSelectedRange: NSRange {
         activeInputController.activeSelectedRange
     }
 
-    public var activeNativeMarkedRange: NSRange {
+    var activeNativeMarkedRange: NSRange {
         activeInputController.activeMarkedRange
     }
 
-    public var hasActiveNativeMarkedText: Bool {
+    package var hasActiveNativeMarkedText: Bool {
         activeInputController.hasMarkedText
     }
 
-    public func hideActiveNativeSurface() {
+    package func hideActiveNativeSurface() {
         activeInputController.hide()
     }
 
@@ -273,8 +510,12 @@ public final class AppKitEditorViewController: NSViewController {
     }
 
     @objc private func scrollViewContentBoundsDidChange(_ notification: Notification) {
-        guard !isAdjustingScrollPosition else { return }
-        renderAndSyncSurface(makeFirstResponder: hasActiveTextInput)
+        guard !isAdjustingScrollPosition, !isSynchronizingSurface else { return }
+        if hasActiveNativeMarkedText {
+            renderCanvasPreservingNativeSurface(nativeStateIsAuthoritative: true)
+        } else {
+            renderAndSyncSurface(makeFirstResponder: hasActiveTextInput)
+        }
     }
 
     private func currentViewportBounds() -> CGRect {
@@ -294,16 +535,18 @@ public final class AppKitEditorViewController: NSViewController {
     }
 
     private func resizeCanvas(for snapshot: EditorSessionSnapshot) {
+        editorCanvasView.setFrameSize(canvasSize(for: snapshot))
+    }
+
+    private func canvasSize(for snapshot: EditorSessionSnapshot) -> NSSize {
         let bounds = currentViewportBounds()
         let documentHeight = max(
             CGFloat(snapshot.totalHeight) + UX.documentBottomPadding,
             bounds.height
         )
-        editorCanvasView.setFrameSize(
-            NSSize(
-                width: max(UX.minimumViewportDimension, bounds.width),
-                height: documentHeight
-            )
+        return NSSize(
+            width: max(UX.minimumViewportDimension, bounds.width),
+            height: documentHeight
         )
     }
 
@@ -311,25 +554,266 @@ public final class AppKitEditorViewController: NSViewController {
         editorCanvasView.setNeedsDisplay(scrollView.contentView.bounds)
     }
 
-    private func renderCanvasPreservingNativeSurface() {
-        let nextSnapshot = session.render(in: currentViewport())
-        setSnapshot(nextSnapshot)
-        resizeCanvas(for: nextSnapshot)
-        invalidateVisibleCanvas()
+    private func renderCanvasPreservingNativeSurface(
+        makeFirstResponder: Bool = false,
+        scrollSelectionIntoView: Bool = false,
+        scrollTargetY: Double? = nil,
+        nativeStateIsAuthoritative: Bool = false
+    ) {
+        requestSurfaceSync(
+            .preserveNativeSurface(
+                makeFirstResponder: makeFirstResponder,
+                scrollSelectionIntoView: scrollSelectionIntoView,
+                scrollTargetY: scrollTargetY,
+                nativeStateIsAuthoritative: nativeStateIsAuthoritative
+            )
+        )
     }
 
-    private func setSnapshot(_ nextSnapshot: EditorSessionSnapshot) {
+    private func requestSurfaceSync(_ request: SurfaceSyncRequest) {
+        if isSynchronizingSurface {
+            enqueueSurfaceSyncRequest(request)
+            return
+        }
+
+        isSynchronizingSurface = true
+        var nextRequest: SurfaceSyncRequest? = request
+        var finalViewport: EditorViewport?
+        var finalSnapshot: EditorSessionSnapshot?
+        var convergencePassCount = 0
+
+        while let currentRequest = nextRequest {
+            pendingSurfaceSyncRequest = nil
+            let renderedSurface = performSurfaceSync(currentRequest)
+            finalViewport = renderedSurface.viewport
+            finalSnapshot = renderedSurface.snapshot
+            convergencePassCount += 1
+
+            if convergencePassCount >= UX.maximumSurfaceConvergencePassCount,
+                var fallbackRequest = pendingSurfaceSyncRequest
+            {
+                fallbackRequest.makeFirstResponder = false
+                pendingSurfaceSyncRequest = nil
+                let fallbackSurface = performSurfaceSync(fallbackRequest)
+                finalViewport = fallbackSurface.viewport
+                finalSnapshot = fallbackSurface.snapshot
+                pendingSurfaceSyncRequest = nil
+                break
+            }
+            nextRequest = pendingSurfaceSyncRequest
+        }
+
+        isSynchronizingSurface = false
+        if let finalViewport, let finalSnapshot {
+            publishSnapshot(finalSnapshot, viewport: finalViewport)
+        }
+    }
+
+    private func enqueueSurfaceSyncRequest(_ request: SurfaceSyncRequest) {
+        guard var pendingSurfaceSyncRequest else {
+            self.pendingSurfaceSyncRequest = request
+            return
+        }
+        pendingSurfaceSyncRequest.merge(request)
+        self.pendingSurfaceSyncRequest = pendingSurfaceSyncRequest
+    }
+
+    private func performSurfaceSync(
+        _ request: SurfaceSyncRequest
+    ) -> (viewport: EditorViewport, snapshot: EditorSessionSnapshot) {
+        var renderedSurface = renderAndResizeCanvas()
+
+        switch request.viewportAction {
+        case .scrollTo(let scrollTargetY):
+            for _ in 0..<UX.maximumSurfaceConvergencePassCount {
+                scrollDocument(
+                    to: CGFloat(scrollTargetY),
+                    visibleBounds: currentViewportBounds()
+                )
+                guard currentViewport() != renderedSurface.viewport else { break }
+                renderedSurface = renderAndResizeCanvas()
+            }
+
+        case .revealSelection:
+            scrollActiveSelectionIntoView(viewport: renderedSurface.viewport)
+            if currentViewport() != renderedSurface.viewport {
+                renderedSurface = renderAndResizeCanvas()
+            }
+
+        case .none:
+            break
+        }
+
+        let isReentrantDuplicate = isActiveSnapshotPublication(renderedSurface)
+        let shouldSyncPreservedNativeSurface =
+            !request.nativeStateIsAuthoritative
+            && nativeSurfaceNeedsSynchronization(renderedSurface.snapshot)
+        switch request.nativePolicy {
+        case .synchronize where !isReentrantDuplicate:
+            syncNativeSurface(
+                snapshot: renderedSurface.snapshot,
+                makeFirstResponder: request.makeFirstResponder
+            )
+        case .preserve where shouldSyncPreservedNativeSurface:
+            syncNativeSurface(
+                snapshot: renderedSurface.snapshot,
+                makeFirstResponder: request.makeFirstResponder
+            )
+        case .synchronize, .preserve:
+            focusNativeSurfaceIfRequested(
+                snapshot: renderedSurface.snapshot,
+                makeFirstResponder: request.makeFirstResponder
+            )
+        }
+
+        invalidateVisibleCanvas()
+        return renderedSurface
+    }
+
+    private func isActiveSnapshotPublication(
+        _ renderedSurface: (viewport: EditorViewport, snapshot: EditorSessionSnapshot)
+    ) -> Bool {
+        guard let activeSnapshotPublicationKey else { return false }
+        let isSameSnapshot = activeSnapshotPublicationKey
+            == SnapshotPublicationKey(
+                viewport: renderedSurface.viewport,
+                snapshot: renderedSurface.snapshot
+            )
+        return isSameSnapshot && nativeSurfaceMatches(renderedSurface.snapshot)
+    }
+
+    private func nativeSurfaceNeedsSynchronization(_ snapshot: EditorSessionSnapshot) -> Bool {
+        snapshot.activeTextInput != nil && !nativeSurfaceMatches(snapshot)
+    }
+
+    private func nativeSurfaceMatches(_ snapshot: EditorSessionSnapshot) -> Bool {
+        guard let activeTextInput = snapshot.activeTextInput else {
+            return activeInputController.activeBlockID == nil
+        }
+
+        let request = activeTextInput.renderDescriptor.measureRequest
+        guard
+            activeInputController.activeBlockID == request.blockID,
+            activeInputController.activeText == request.text
+        else { return false }
+
+        if activeInputController.hasMarkedText {
+            return snapshot.composition != nil
+        }
+        return activeInputController.activeSelectedRange
+            == activeTextInput.selectedRange.textKitNSRange(in: request.text)
+    }
+
+    private func publishSnapshot(
+        _ snapshot: EditorSessionSnapshot,
+        viewport: EditorViewport
+    ) {
+        guard let onSnapshotChanged else { return }
+        let publicationKey = SnapshotPublicationKey(viewport: viewport, snapshot: snapshot)
+        guard activeSnapshotPublicationKey != publicationKey else { return }
+
+        let previousPublicationKey = activeSnapshotPublicationKey
+        activeSnapshotPublicationKey = publicationKey
+        defer { activeSnapshotPublicationKey = previousPublicationKey }
+        onSnapshotChanged(snapshot)
+    }
+
+    private func renderAndResizeCanvas() -> (
+        viewport: EditorViewport,
+        snapshot: EditorSessionSnapshot
+    ) {
+        var viewport = currentViewport()
+        for _ in 0..<UX.maximumSurfaceConvergencePassCount {
+            let nextSnapshot = session.render(in: viewport)
+            snapshot = nextSnapshot
+            resizeCanvas(for: nextSnapshot)
+
+            let adjustedViewport = currentViewport()
+            guard adjustedViewport != viewport else {
+                return (viewport, nextSnapshot)
+            }
+            viewport = adjustedViewport
+        }
+        return renderSurfaceFallback()
+    }
+
+    private func renderSurfaceFallback() -> (
+        viewport: EditorViewport,
+        snapshot: EditorSessionSnapshot
+    ) {
+        scrollDocument(to: 0, visibleBounds: currentViewportBounds())
+        var viewport = currentViewport()
+        var minimumCanvasHeight = max(
+            UX.minimumViewportDimension,
+            currentViewportBounds().height + UX.fallbackScrollableOverflow
+        )
+
+        for _ in 0..<UX.maximumSurfaceFallbackPassCount {
+            let nextSnapshot = session.render(in: viewport)
+            snapshot = nextSnapshot
+            var nextCanvasSize = canvasSize(for: nextSnapshot)
+            minimumCanvasHeight = max(minimumCanvasHeight, nextCanvasSize.height)
+            nextCanvasSize.height = minimumCanvasHeight
+            editorCanvasView.setFrameSize(nextCanvasSize)
+            scrollView.tile()
+            scrollDocument(to: 0, visibleBounds: currentViewportBounds())
+
+            let adjustedViewport = currentViewport()
+            guard adjustedViewport != viewport else {
+                return (viewport, nextSnapshot)
+            }
+            viewport = adjustedViewport
+        }
+
+        return renderSurfaceWithPersistentVerticalScroller()
+    }
+
+    private func renderSurfaceWithPersistentVerticalScroller() -> (
+        viewport: EditorViewport,
+        snapshot: EditorSessionSnapshot
+    ) {
+        scrollView.autohidesScrollers = false
+        scrollView.tile()
+        scrollDocument(to: 0, visibleBounds: currentViewportBounds())
+
+        let viewport = currentViewport()
+        let nextSnapshot = session.render(in: viewport)
         snapshot = nextSnapshot
-        onSnapshotChanged?(nextSnapshot)
+        resizeCanvas(for: nextSnapshot)
+        scrollView.tile()
+        scrollDocument(to: 0, visibleBounds: currentViewportBounds())
+
+        let adjustedViewport = currentViewport()
+        guard adjustedViewport != viewport else {
+            return (viewport, nextSnapshot)
+        }
+
+        let adjustedSnapshot = session.render(in: adjustedViewport)
+        snapshot = adjustedSnapshot
+        resizeCanvas(for: adjustedSnapshot)
+        scrollView.tile()
+        scrollDocument(to: 0, visibleBounds: currentViewportBounds())
+        precondition(
+            currentViewport() == adjustedViewport,
+            "A persistent vertical scroller must stabilize the editor viewport"
+        )
+        return (adjustedViewport, adjustedSnapshot)
     }
 
     private func syncNativeSurface(snapshot: EditorSessionSnapshot, makeFirstResponder: Bool) {
         activeInputController.sync(activeTextInput: snapshot.activeTextInput)
+        focusNativeSurfaceIfRequested(
+            snapshot: snapshot,
+            makeFirstResponder: makeFirstResponder
+        )
+    }
 
-        guard snapshot.activeTextInput != nil else { return }
-        if makeFirstResponder {
-            view.window?.makeFirstResponder(editorCanvasView)
-        }
+    private func focusNativeSurfaceIfRequested(
+        snapshot: EditorSessionSnapshot,
+        makeFirstResponder: Bool
+    ) {
+        guard makeFirstResponder, snapshot.activeTextInput != nil else { return }
+        view.window?.makeFirstResponder(editorCanvasView)
     }
 
     private func scrollActiveSelectionIntoView(viewport: EditorViewport) {
@@ -362,10 +846,14 @@ public final class AppKitEditorViewController: NSViewController {
     }
 
     private func scrollDocument(to targetY: CGFloat, visibleBounds: CGRect) {
+        let maximumY = max(0, editorCanvasView.frame.height - visibleBounds.height)
+        let clampedTargetY = min(max(0, targetY), maximumY)
         isAdjustingScrollPosition = true
-        scrollView.contentView.scroll(to: NSPoint(x: visibleBounds.origin.x, y: targetY))
+        defer { isAdjustingScrollPosition = false }
+        scrollView.contentView.scroll(
+            to: NSPoint(x: visibleBounds.origin.x, y: clampedTargetY)
+        )
         scrollView.reflectScrolledClipView(scrollView.contentView)
-        isAdjustingScrollPosition = false
     }
 }
 
@@ -374,7 +862,7 @@ public final class AppKitEditorViewController: NSViewController {
 extension AppKitEditorViewController: AppKitEditorCanvasHandler {
     // MARK: - Drawing
 
-    public func drawCanvas(_ dirtyRect: NSRect) {
+    func drawCanvas(_ dirtyRect: NSRect) {
         let drawStart = DispatchTime.now().uptimeNanoseconds
         defer {
             onDrawCompleted?(
@@ -391,18 +879,35 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
         let selectedBlockIDs = selectedBlockIDs(in: snapshot)
         let activeTextBlockID = snapshot.activeTextInput?.renderDescriptor.measureRequest.blockID
         for rendered in snapshot.visibleBlocks {
-            blockRenderer.drawBlock(
-                AppKitBlockRenderContext(
-                    renderedBlock: rendered,
-                    snapshot: snapshot,
-                    style: editorStyle,
-                    textLayouter: textLayouter,
-                    textRenderer: textRenderer,
-                    dirtyRect: dirtyRect,
-                    graphicsContext: cgContext,
-                    isActive: rendered.id == activeTextBlockID,
-                    isSelected: selectedBlockIDs.contains(rendered.id)
+            let isActive = rendered.id == activeTextBlockID
+            let blockFrame = CGRect(editorRect: rendered.frame)
+            do {
+                cgContext.saveGState()
+                defer { cgContext.restoreGState() }
+                cgContext.clip(to: blockFrame)
+                blockChromeRenderer.drawChrome(
+                    AppKitBlockChromeRenderContext(
+                        blockID: rendered.id,
+                        kind: rendered.kind,
+                        markerKind: rendered.markerKind,
+                        depth: rendered.depth,
+                        blockFrame: blockFrame,
+                        style: editorStyle,
+                        graphicsContext: cgContext,
+                        isActive: isActive,
+                        isSelected: selectedBlockIDs.contains(rendered.id)
+                    )
                 )
+            }
+        }
+
+        for rendered in snapshot.visibleBlocks {
+            textRenderer.draw(rendered.textRender, context: cgContext)
+        }
+        if let activeTextInput = snapshot.activeTextInput {
+            textInputDecorationRenderer.draw(
+                activeTextInput,
+                graphicsContext: cgContext
             )
         }
         drawBlockSelectionRectangle(snapshot.blockSelectionRectangleState?.rect)
@@ -412,7 +917,7 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
 
     // MARK: - Mouse Events
 
-    public func handleMouseDown(documentPoint: CGPoint, clickCount: Int) {
+    package func handleMouseDown(documentPoint: CGPoint, clickCount: Int) {
         dragAutoscrollController.stop()
         if clickCount >= 2 {
             handleMouseDoubleClick(documentPoint: documentPoint)
@@ -421,7 +926,7 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
         }
     }
 
-    public func handleMouseDragged(documentPoint: CGPoint) {
+    package func handleMouseDragged(documentPoint: CGPoint) {
         if snapshot?.blockDragState != nil {
             guard applyDragUpdate(kind: .blockDrag, documentPoint: documentPoint) else { return }
             dragAutoscrollController.update(kind: .blockDrag, documentPoint: documentPoint)
@@ -468,7 +973,7 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
         )
     }
 
-    public func handleMouseUp(documentPoint: CGPoint) {
+    package func handleMouseUp(documentPoint: CGPoint) {
         dragAutoscrollController.stop()
         let viewport = currentViewport()
         let point = EditorPoint(x: Double(documentPoint.x), y: Double(documentPoint.y))
@@ -486,17 +991,17 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
 
     // MARK: - Native Commands
 
-    public func handleNativeCommand(_ commandSelector: Selector) -> Bool {
+    package func handleNativeCommand(_ commandSelector: Selector) -> Bool {
         activeInputController.handleCommand(commandSelector)
     }
 
     // MARK: - Native Text Surface
 
-    public func insertTextFromNativeSurface(_ text: String, replacementRange: NSRange) {
+    package func insertTextFromNativeSurface(_ text: String, replacementRange: NSRange) {
         activeInputController.insertText(text, replacementRange: replacementRange)
     }
 
-    public func setMarkedTextFromNativeSurface(
+    package func setMarkedTextFromNativeSurface(
         _ text: String,
         selectedRange: NSRange,
         replacementRange: NSRange
@@ -508,29 +1013,29 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
         )
     }
 
-    public func unmarkTextFromNativeSurface() {
+    package func unmarkTextFromNativeSurface() {
         activeInputController.unmarkText()
     }
 
-    public func nativeSelectedRange() -> NSRange {
+    func nativeSelectedRange() -> NSRange {
         activeInputController.activeSelectedRange
     }
 
-    public func nativeMarkedRange() -> NSRange {
+    func nativeMarkedRange() -> NSRange {
         activeInputController.activeMarkedRange
     }
 
-    public func hasMarkedTextForNativeSurface() -> Bool {
+    func hasMarkedTextForNativeSurface() -> Bool {
         activeInputController.hasMarkedText
     }
 
-    public func attributedSubstringForNativeSurface(range: NSRange) -> NSAttributedString? {
+    func attributedSubstringForNativeSurface(range: NSRange) -> NSAttributedString? {
         let text = activeInputController.activeText
         guard let swiftRange = Range(range, in: text) else { return nil }
         return NSAttributedString(string: String(text[swiftRange]))
     }
 
-    public func firstRectForNativeSurface(range: NSRange) -> NSRect {
+    func firstRectForNativeSurface(range: NSRange) -> NSRect {
         guard
             let activeTextInput = snapshot?.activeTextInput,
             let caretRect = caretRect(for: activeTextInput)
@@ -560,7 +1065,11 @@ extension AppKitEditorViewController: AppKitActiveInputOwner {
 
     func handleActiveInputRenderRequest(_ request: AppKitActiveInputRenderRequest) {
         if request.preserveNativeSurface {
-            renderCanvasPreservingNativeSurface()
+            renderCanvasPreservingNativeSurface(
+                makeFirstResponder: request.makeFirstResponder,
+                scrollSelectionIntoView: request.scrollSelectionIntoView,
+                nativeStateIsAuthoritative: true
+            )
         } else {
             renderAndSyncSurface(
                 makeFirstResponder: request.makeFirstResponder,
@@ -809,10 +1318,15 @@ extension AppKitEditorViewController {
 
     private func caretRect(for descriptor: EditorSessionActiveTextInputDescriptor) -> CGRect? {
         let request = descriptor.renderDescriptor.measureRequest
-        let position = TextPosition(blockID: request.blockID, offset: descriptor.focusOffset)
+        let position = TextPosition(
+            blockID: request.blockID,
+            offset: descriptor.focusOffset,
+            affinity: descriptor.focusAffinity
+        )
         guard
             let localRect = textLayouter.caretRect(
                 for: position,
+                navigationContext: descriptor.navigationContext,
                 in: descriptor.renderDescriptor
             )
         else { return nil }

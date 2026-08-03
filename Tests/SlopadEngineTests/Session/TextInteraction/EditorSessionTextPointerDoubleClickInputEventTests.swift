@@ -150,4 +150,120 @@ struct EditorSessionTextPointerDoubleClickInputEventTests {
                 )
         )
     }
+
+    @Test("본문 double-click은 backend가 계산한 단어 범위를 선택한다")
+    func selectsBackendWordRange() throws {
+        // Given
+        let blockID: BlockID = "a"
+        let layouter = SpyBlockTextLayouter()
+        layouter.measurementsByBlockID = [blockID: BlockMeasurement(height: 10)]
+        layouter.textPositionsByBlockID[blockID] = TextPosition(blockID: blockID, offset: 2)
+        layouter.wordRangeResolver = { _ in TextRange(1, 3) }
+        let session = EditorSession(
+            document: .singleParagraph("你好世界", id: blockID),
+            selection: .caret(blockID: blockID, offset: 2),
+            textLayouter: layouter
+        )
+        let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)
+
+        // When
+        let update = try #require(
+            session.handleInput(
+                .pointer(
+                    .selectWordOrAllText(
+                        documentPoint: EditorPoint(x: 20, y: 5),
+                        viewport: viewport
+                    )
+                )
+            )
+        )
+
+        // Then
+        let request = try #require(layouter.wordRangeRequests.last)
+        #expect(request.position == TextPosition(blockID: blockID, offset: 2))
+        #expect(request.measureRequest.text == "你好世界")
+        #expect(request.measureRequest.availableWidth == viewport.width)
+        #expect(
+            update.selection
+                == .text(
+                    TextSelection(
+                        anchor: TextPosition(blockID: blockID, offset: 1),
+                        focus: TextPosition(blockID: blockID, offset: 3)
+                    )
+                )
+        )
+    }
+
+    @Test("backend가 텍스트 범위 밖 단어 범위를 반환하면 선택을 변경하지 않는다")
+    func rejectsInvalidBackendWordRange() {
+        // Given
+        let blockID: BlockID = "a"
+        let layouter = SpyBlockTextLayouter()
+        layouter.measurementsByBlockID = [blockID: BlockMeasurement(height: 10)]
+        layouter.textPositionsByBlockID[blockID] = TextPosition(blockID: blockID, offset: 2)
+        layouter.wordRangeResolver = { _ in TextRange(0, 5) }
+        let session = EditorSession(
+            document: .singleParagraph("你好世界", id: blockID),
+            selection: .caret(blockID: blockID, offset: 2),
+            textLayouter: layouter
+        )
+        let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)
+
+        // When
+        let update = session.handleInput(
+            .pointer(
+                .selectWordOrAllText(
+                    documentPoint: EditorPoint(x: 20, y: 5),
+                    viewport: viewport
+                )
+            )
+        )
+
+        // Then
+        #expect(update == nil)
+        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 2))
+    }
+
+    @Test("backend가 음수 또는 역전된 단어 범위를 반환하면 선택을 변경하지 않는다")
+    func rejectsMalformedBackendWordRanges() {
+        // Given
+        let blockID: BlockID = "a"
+        let layouter = SpyBlockTextLayouter()
+        layouter.measurementsByBlockID = [blockID: BlockMeasurement(height: 10)]
+        layouter.textPositionsByBlockID[blockID] = TextPosition(blockID: blockID, offset: 2)
+        var backendRange = TextRange(0, 2)
+        backendRange.lowerBound = -1
+        layouter.wordRangeResolver = { _ in backendRange }
+        let session = EditorSession(
+            document: .singleParagraph("abcd", id: blockID),
+            selection: .caret(blockID: blockID, offset: 2),
+            textLayouter: layouter
+        )
+        let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)
+
+        // When
+        let negativeRangeUpdate = session.handleInput(
+            .pointer(
+                .selectWordOrAllText(
+                    documentPoint: EditorPoint(x: 20, y: 5),
+                    viewport: viewport
+                )
+            )
+        )
+        backendRange = TextRange(0, 2)
+        backendRange.lowerBound = 3
+        let reversedRangeUpdate = session.handleInput(
+            .pointer(
+                .selectWordOrAllText(
+                    documentPoint: EditorPoint(x: 20, y: 5),
+                    viewport: viewport
+                )
+            )
+        )
+
+        // Then
+        #expect(negativeRangeUpdate == nil)
+        #expect(reversedRangeUpdate == nil)
+        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 2))
+    }
 }

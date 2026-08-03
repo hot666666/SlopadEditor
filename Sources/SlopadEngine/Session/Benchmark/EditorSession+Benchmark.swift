@@ -16,10 +16,6 @@ extension EditorSession {
         editorModel.document.blocks.count
     }
 
-    @discardableResult
-    package func setBenchmarkLayoutStyleRevision(_ revision: Int) -> EditorUpdate {
-        setLayoutStyleRevision(revision)
-    }
 }
 
 // MARK: - EditorSessionBenchmarkMetrics

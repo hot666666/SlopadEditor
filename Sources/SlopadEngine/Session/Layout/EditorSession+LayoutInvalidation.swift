@@ -3,11 +3,24 @@ import SlopadCoreModel
 // MARK: - Layout Invalidation
 
 extension EditorSession {
+    /// Replaces the coherent text-layout backend and invalidates every derived measurement.
+    ///
+    /// A platform adapter that also owns text drawing must replace its drawing backend from
+    /// the same configuration before publishing the next rendered surface.
     @discardableResult
-    func setLayoutStyleRevision(_ revision: Int) -> EditorUpdate {
-        guard blockLayout.setStyleRevision(revision) else {
-            return makeEditorUpdate(invalidation: EditorUpdateInvalidation())
+    public func replaceTextLayoutBackend(
+        with textLayouter: any BlockTextLayoutProtocol
+    ) -> EditorUpdate {
+        self.textLayouter = textLayouter
+        textNavigationRuntimeContext = nil
+        if let blockDrag {
+            self.blockDrag = (
+                blockIDs: blockDrag.blockIDs,
+                dropTarget: nil,
+                dropIndicator: nil
+            )
         }
+        blockLayout.advanceTextLayoutRevision()
         return makeEditorUpdate(
             invalidation: EditorUpdateInvalidation(layoutGeometryChanged: true)
         )
