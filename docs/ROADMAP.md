@@ -53,6 +53,10 @@ platform extension philosophy.
 - `Fixtures/DownstreamAppKitHost` compile-checks the intended downstream API with one
   `SlopadAppKit` product dependency and one regular import, and executes the public
   context/patch round trip without underlying-module access.
+- `Fixtures/DownstreamSwiftUIHost` does the same for `SlopadSwiftUI`, covering what a
+  window-filling fixture cannot see: embedding as one subview, identity-guarded document
+  replacement, committed-change filtering, focus binding, and the composition flush before
+  a host reads the document to persist it.
 - [Architecture](ARCHITECTURE.md) records the compiler dependency graph, runtime owner
   flow, chrome-only AppKit extension boundary, and complete adapter/backend replacement
   path.
@@ -125,9 +129,14 @@ Priority order:
   - When a host needs a different native pipeline or policy model, use a separate platform
     adapter with a coherent backend instead of widening the default high-level paint
     surface.
-  - Contract regression gate: the downstream fixture continues to build without
-    `@testable`, direct underlying-product dependencies, package-only controller state,
-    raw callbacks, or development hooks.
+  - Add a host-facing capability only when it passes all three parts of the ADR 0012
+    exposure test; "a host would find this convenient" is not sufficient.
+  - Contract regression gate: **both** `Fixtures/DownstreamAppKitHost` and
+    `Fixtures/DownstreamSwiftUIHost` continue to build without `@testable`, direct
+    underlying-product dependencies, package-only controller state, raw callbacks, or
+    development hooks. A fixture that compiles while avoiding the difficult path is not a
+    gate, so each exercises the full mount → edit → observe → flush → replace → unmount
+    sequence.
   - Completion signal: downstream hosts can use synchronized actions plus chrome/style
     customization without reaching into native adapter internals, `EditorModel`,
     `BlockLayout`, layout cache, or canonical `Document`.
