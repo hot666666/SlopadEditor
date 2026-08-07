@@ -2,22 +2,125 @@
 
 public struct BlockContent: Hashable, Codable, Sendable {
     public struct InlineMark: Hashable, Codable, Sendable {
+        /// Format-neutral inline meaning.
+        ///
+        /// The core owns this vocabulary. A format adapter maps its syntax onto these cases
+        /// and reports what it cannot express as a diagnostic; a text backend interprets
+        /// them as visual effects. Neither may extend the set — that is a core decision.
+        ///
+        /// The names are semantic rather than presentational for the same reason HTML
+        /// distinguishes `<strong>` from `<b>`: a neutral vocabulary cannot be stated in the
+        /// terms of one renderer.
         public enum Kind: Hashable, Codable, Sendable, Comparable {
-            case bold
-            case italic
+            case strong
+            case emphasis
             case code
+            case strikethrough
             case link(destination: String)
+
+            /// Identifies the case while ignoring any associated value.
+            ///
+            /// Removal matches on this rather than on the whole value, so "remove the link
+            /// here" does not require knowing where the link points.
+            package var caseIdentity: CaseIdentity {
+                switch self {
+                case .strong: .strong
+                case .emphasis: .emphasis
+                case .code: .code
+                case .strikethrough: .strikethrough
+                case .link: .link
+                }
+            }
+
+            package enum CaseIdentity: Hashable, Sendable {
+                case strong
+                case emphasis
+                case code
+                case strikethrough
+                case link
+            }
 
             public static func < (lhs: Kind, rhs: Kind) -> Bool {
                 func sortKey(_ kind: Kind) -> String {
                     switch kind {
-                    case .bold: "bold"
-                    case .italic: "italic"
+                    case .strong: "strong"
+                    case .emphasis: "emphasis"
                     case .code: "code"
+                    case .strikethrough: "strikethrough"
                     case .link(let destination): "link:\(destination)"
                     }
                 }
                 return sortKey(lhs) < sortKey(rhs)
+            }
+
+            // MARK: - Coding
+
+            // Written by hand rather than synthesized so that documents encoded before
+            // `.strong`/`.emphasis` were named that way still decode. The emitted shape is
+            // identical to what synthesis produced — `{"strong":{}}`, and
+            // `{"link":{"destination":…}}` — so only the reading side is widened.
+
+            private enum CodingKeys: String, CodingKey {
+                case strong
+                case emphasis
+                case code
+                case strikethrough
+                case link
+                /// Superseded by ``strong``. Decoded, never written.
+                case bold
+                /// Superseded by ``emphasis``. Decoded, never written.
+                case italic
+            }
+
+            private enum LinkCodingKeys: String, CodingKey {
+                case destination
+            }
+
+            private enum EmptyCodingKeys: CodingKey {}
+
+            public init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                guard container.allKeys.count == 1, let key = container.allKeys.first else {
+                    throw DecodingError.dataCorrupted(
+                        DecodingError.Context(
+                            codingPath: container.codingPath,
+                            debugDescription:
+                                "Expected exactly one inline mark kind, found \(container.allKeys.count)."
+                        ))
+                }
+                switch key {
+                case .strong, .bold:
+                    self = .strong
+                case .emphasis, .italic:
+                    self = .emphasis
+                case .code:
+                    self = .code
+                case .strikethrough:
+                    self = .strikethrough
+                case .link:
+                    let nested = try container.nestedContainer(
+                        keyedBy: LinkCodingKeys.self, forKey: .link)
+                    self = .link(destination: try nested.decode(String.self, forKey: .destination))
+                }
+            }
+
+            public func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                switch self {
+                case .strong:
+                    _ = container.nestedContainer(keyedBy: EmptyCodingKeys.self, forKey: .strong)
+                case .emphasis:
+                    _ = container.nestedContainer(keyedBy: EmptyCodingKeys.self, forKey: .emphasis)
+                case .code:
+                    _ = container.nestedContainer(keyedBy: EmptyCodingKeys.self, forKey: .code)
+                case .strikethrough:
+                    _ = container.nestedContainer(
+                        keyedBy: EmptyCodingKeys.self, forKey: .strikethrough)
+                case .link(let destination):
+                    var nested = container.nestedContainer(
+                        keyedBy: LinkCodingKeys.self, forKey: .link)
+                    try nested.encode(destination, forKey: .destination)
+                }
             }
         }
 

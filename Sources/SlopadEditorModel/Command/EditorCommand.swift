@@ -12,6 +12,9 @@ package enum EditorCommand {
     case mergeBlocks(target: BlockID, source: BlockID)
     case setBlockKind(blockID: BlockID, kind: BlockKind)
     case applyTextStyle(blockID: BlockID, range: TextRange, style: BlockContent.InlineMark.Kind)
+    case removeTextStyle(
+        blockID: BlockID, range: TextRange, style: BlockContent.InlineMark.Kind.CaseIdentity)
+    case toggleTextStyle(blockID: BlockID, range: TextRange, style: BlockContent.InlineMark.Kind)
     case clearTextStyles(blockID: BlockID, range: TextRange)
     case indentBlock(BlockSelection)
     case outdentBlock(BlockSelection)

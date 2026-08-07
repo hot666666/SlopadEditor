@@ -101,6 +101,16 @@ extension EditorModel {
             try setBlockKind(
                 blockID: blockID, kind: kind, operations: &operations, changed: &changed)
 
+        case .removeTextStyle(let blockID, let range, let style):
+            try removeTextStyle(
+                blockID: blockID, range: range, style: style, operations: &operations,
+                changed: &changed)
+
+        case .toggleTextStyle(let blockID, let range, let style):
+            try toggleTextStyle(
+                blockID: blockID, range: range, style: style, operations: &operations,
+                changed: &changed)
+
         case .applyTextStyle(let blockID, let range, let style):
             try applyTextStyle(
                 blockID: blockID, range: range, style: style, operations: &operations,

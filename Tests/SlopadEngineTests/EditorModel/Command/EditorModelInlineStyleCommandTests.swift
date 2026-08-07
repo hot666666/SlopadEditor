@@ -13,11 +13,11 @@ struct EditorModelInlineStyleCommandTests {
             document: .singleParagraph("Hello", id: blockID),
             selection: .caret(blockID: blockID, offset: 0)
         )
-        let expectedMarks = [BlockContent.InlineMark(kind: .bold, range: TextRange(1, 4))]
+        let expectedMarks = [BlockContent.InlineMark(kind: .strong, range: TextRange(1, 4))]
 
         // When
         _ = editor.apply(
-            .applyTextStyle(blockID: blockID, range: TextRange(1, 4), style: .bold)
+            .applyTextStyle(blockID: blockID, range: TextRange(1, 4), style: .strong)
         )
 
         // Then
@@ -34,8 +34,8 @@ struct EditorModelInlineStyleCommandTests {
             content: BlockContent(
                 text: "Hello",
                 marks: [
-                    BlockContent.InlineMark(kind: .bold, range: TextRange(0, 5)),
-                    BlockContent.InlineMark(kind: .italic, range: TextRange(1, 4)),
+                    BlockContent.InlineMark(kind: .strong, range: TextRange(0, 5)),
+                    BlockContent.InlineMark(kind: .emphasis, range: TextRange(1, 4)),
                 ]
             )
         ).get()
@@ -44,8 +44,8 @@ struct EditorModelInlineStyleCommandTests {
             selection: .caret(blockID: blockID, offset: 0)
         )
         let expectedMarks = [
-            BlockContent.InlineMark(kind: .bold, range: TextRange(0, 1)),
-            BlockContent.InlineMark(kind: .bold, range: TextRange(4, 5)),
+            BlockContent.InlineMark(kind: .strong, range: TextRange(0, 1)),
+            BlockContent.InlineMark(kind: .strong, range: TextRange(4, 5)),
         ]
 
         // When

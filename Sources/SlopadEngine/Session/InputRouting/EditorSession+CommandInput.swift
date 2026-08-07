@@ -56,6 +56,16 @@ extension EditorSession {
         case .outdent:
             return handleOutdentInputCommand()
 
+        case .toggleInlineStyle(let style):
+            guard let target = inlineStyleTarget() else { return nil }
+            return handleCommand(
+                .toggleTextStyle(blockID: target.blockID, range: target.range, style: style))
+
+        case .clearInlineStyles:
+            guard let target = inlineStyleTarget() else { return nil }
+            return handleCommand(
+                .clearTextStyles(blockID: target.blockID, range: target.range))
+
         case .moveLeft(let viewport):
             guard canRouteTextCommand() else { return nil }
             return moveHorizontally(direction: .left, viewport: viewport)
@@ -125,6 +135,20 @@ extension EditorSession {
         case .redo:
             return handleRedoInputCommand()
         }
+    }
+
+    /// The block and range an inline style command applies to.
+    ///
+    /// Returns `nil` for a caret-only selection. Applying a style with nothing selected
+    /// means remembering it for the next keystroke, which is editing state the model does
+    /// not carry yet, and silently doing nothing would be worse than refusing.
+    ///
+    /// Live composition is refused as well: marking text that the input method may still
+    /// replace would attach marks to characters that are about to disappear.
+    private func inlineStyleTarget() -> (blockID: BlockID, range: TextRange)? {
+        guard composition == nil, canRouteTextCommand() else { return nil }
+        guard let selection = activeTextSelection(), !selection.range.isEmpty else { return nil }
+        return (blockID: selection.position.blockID, range: selection.range)
     }
 
     func canRouteTextCommand() -> Bool {

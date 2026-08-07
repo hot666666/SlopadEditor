@@ -44,7 +44,7 @@ struct DocumentMutationTests {
         )
         try document.replaceContent(
             blockID: blockID,
-            content: BlockContent(text: "abcd", marks: [BlockContent.InlineMark(kind: .bold, range: TextRange(1, 3))])
+            content: BlockContent(text: "abcd", marks: [BlockContent.InlineMark(kind: .strong, range: TextRange(1, 3))])
         ).get()
 
         // When
@@ -53,9 +53,9 @@ struct DocumentMutationTests {
         // Then
         #expect(split.splitOffset == 2)
         #expect(document.blocks[blockID]?.content.text == "ab")
-        #expect(document.blocks[blockID]?.content.marks == [BlockContent.InlineMark(kind: .bold, range: TextRange(1, 2))])
+        #expect(document.blocks[blockID]?.content.marks == [BlockContent.InlineMark(kind: .strong, range: TextRange(1, 2))])
         #expect(document.blocks["b"]?.content.text == "cd")
-        #expect(document.blocks["b"]?.content.marks == [BlockContent.InlineMark(kind: .bold, range: TextRange(0, 1))])
+        #expect(document.blocks["b"]?.content.marks == [BlockContent.InlineMark(kind: .strong, range: TextRange(0, 1))])
     }
 
     @Test("descendant 아래로 이동을 요청하면 cycle 생성이 거부된다")

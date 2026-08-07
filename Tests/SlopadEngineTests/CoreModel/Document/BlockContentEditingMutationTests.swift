@@ -9,7 +9,7 @@ struct BlockContentEditingMutationTests {
         // Given
         var content = BlockContent(
             text: "abcd",
-            marks: [BlockContent.InlineMark(kind: .bold, range: TextRange(1, 3))]
+            marks: [BlockContent.InlineMark(kind: .strong, range: TextRange(1, 3))]
         )
 
         // When
@@ -17,7 +17,7 @@ struct BlockContentEditingMutationTests {
 
         // Then
         #expect(content.text == "abXcd")
-        #expect(content.marks == [BlockContent.InlineMark(kind: .bold, range: TextRange(1, 4))])
+        #expect(content.marks == [BlockContent.InlineMark(kind: .strong, range: TextRange(1, 4))])
         #expect(content.revision == 1)
     }
 
@@ -26,7 +26,7 @@ struct BlockContentEditingMutationTests {
         // Given
         var content = BlockContent(
             text: "abcd",
-            marks: [BlockContent.InlineMark(kind: .bold, range: TextRange(0, 4))]
+            marks: [BlockContent.InlineMark(kind: .strong, range: TextRange(0, 4))]
         )
 
         // When
@@ -34,7 +34,7 @@ struct BlockContentEditingMutationTests {
 
         // Then
         #expect(content.text == "ad")
-        #expect(content.marks == [BlockContent.InlineMark(kind: .bold, range: TextRange(0, 2))])
+        #expect(content.marks == [BlockContent.InlineMark(kind: .strong, range: TextRange(0, 2))])
         #expect(content.revision == 1)
     }
 
@@ -44,7 +44,7 @@ struct BlockContentEditingMutationTests {
         var content = BlockContent(text: "abcd")
 
         // When
-        content.addMark(kind: .bold, range: TextRange.point(2))
+        content.addMark(kind: .strong, range: TextRange.point(2))
 
         // Then
         #expect(content.marks.isEmpty)
