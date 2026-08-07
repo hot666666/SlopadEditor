@@ -12,7 +12,16 @@ Use repository documents by purpose:
 * `docs/ROADMAP.md` — roadmap and open risks
 * `docs/LESSONS_LEARNED.md` — repeated structural failure patterns
 
-Read only documents relevant to the task. Current source and tests take precedence over old plans, handoffs, or prior conversation.
+Read only documents relevant to the task.
+
+Two different questions have two different authorities:
+
+* **What the code does today** — current source and tests are authoritative. Do not trust a stale plan, handoff, or prior conversation over them.
+* **What the code should become** — `docs/ROADMAP.md`, `ADR/`, and the tracking issue are authoritative.
+
+When source and an intent document disagree about *intent*, that is a planning defect, not a signal to ignore the document. Correct the document first (or open an issue), then change code. Do not silently follow either side.
+
+`Slopad_Semantic_Editor_Architecture_Handoff.md` is a background record, not a work order.
 
 ## Architecture Rules
 
