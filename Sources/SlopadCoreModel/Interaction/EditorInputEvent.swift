@@ -16,6 +16,15 @@ public enum EditorInputEvent: Hashable, Sendable {
         case clearSelection
         case indent
         case outdent
+        /// Applies `style` to the active text selection, or removes it when the selection
+        /// already carries that style throughout.
+        ///
+        /// Requires a non-empty text selection. A caret-only selection is refused, because
+        /// remembering a style for the next keystroke is editing state rather than a
+        /// document change.
+        case toggleInlineStyle(BlockContent.InlineMark.Kind)
+        /// Removes every inline mark from the active text selection.
+        case clearInlineStyles
         case moveLeft(viewport: EditorViewport)
         case moveRight(viewport: EditorViewport)
         case moveToTextStart

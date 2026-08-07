@@ -20,6 +20,11 @@ public enum AppKitEditorAction: Hashable, Sendable {
     case clearSelection
     case indent
     case outdent
+    /// Applies an inline style to the selected text, or removes it when the selection
+    /// already carries that style throughout. Requires a non-empty text selection.
+    case toggleInlineStyle(BlockContent.InlineMark.Kind)
+    /// Removes every inline mark from the selected text.
+    case clearInlineStyles
     case moveLeft
     case moveRight
     case moveToTextStart
@@ -69,6 +74,10 @@ public enum AppKitEditorAction: Hashable, Sendable {
             command = .indent
         case .outdent:
             command = .outdent
+        case .toggleInlineStyle(let style):
+            command = .toggleInlineStyle(style)
+        case .clearInlineStyles:
+            command = .clearInlineStyles
         case .moveLeft:
             command = .moveLeft(viewport: viewport)
         case .moveRight:

@@ -687,7 +687,7 @@ struct TextKitTextNavigationTests {
         let request = makeNavigationRequest(
             text: text,
             inlineRuns: [
-                BlockContent.InlineRun(range: TextRange(0, text.count), text: text, marks: [.bold])
+                BlockContent.InlineRun(range: TextRange(0, text.count), text: text, marks: [.strong])
             ]
         )
 

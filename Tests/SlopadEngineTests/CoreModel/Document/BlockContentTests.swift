@@ -10,9 +10,9 @@ struct BlockContentTests {
         let content = BlockContent(
             text: "abcd",
             marks: [
-                BlockContent.InlineMark(kind: .bold, range: TextRange(0, 2)),
-                BlockContent.InlineMark(kind: .bold, range: TextRange(2, 4)),
-                BlockContent.InlineMark(kind: .italic, range: TextRange(1, 3))
+                BlockContent.InlineMark(kind: .strong, range: TextRange(0, 2)),
+                BlockContent.InlineMark(kind: .strong, range: TextRange(2, 4)),
+                BlockContent.InlineMark(kind: .emphasis, range: TextRange(1, 3))
             ]
         )
 
@@ -21,11 +21,11 @@ struct BlockContentTests {
         let inlineRuns = content.inlineRuns
 
         // Then
-        #expect(marks.contains(BlockContent.InlineMark(kind: .bold, range: TextRange(0, 4))))
+        #expect(marks.contains(BlockContent.InlineMark(kind: .strong, range: TextRange(0, 4))))
         #expect(inlineRuns == [
-            BlockContent.InlineRun(range: TextRange(0, 1), text: "a", marks: [.bold]),
-            BlockContent.InlineRun(range: TextRange(1, 3), text: "bc", marks: [.bold, .italic]),
-            BlockContent.InlineRun(range: TextRange(3, 4), text: "d", marks: [.bold])
+            BlockContent.InlineRun(range: TextRange(0, 1), text: "a", marks: [.strong]),
+            BlockContent.InlineRun(range: TextRange(1, 3), text: "bc", marks: [.strong, .emphasis]),
+            BlockContent.InlineRun(range: TextRange(3, 4), text: "d", marks: [.strong])
         ])
     }
 

@@ -2,18 +2,51 @@
 
 public struct BlockContent: Hashable, Codable, Sendable {
     public struct InlineMark: Hashable, Codable, Sendable {
+        /// Format-neutral inline meaning.
+        ///
+        /// The core owns this vocabulary. A format adapter maps its syntax onto these cases
+        /// and reports what it cannot express as a diagnostic; a text backend interprets
+        /// them as visual effects. Neither may extend the set — that is a core decision.
+        ///
+        /// The names are semantic rather than presentational for the same reason HTML
+        /// distinguishes `<strong>` from `<b>`: a neutral vocabulary cannot be stated in the
+        /// terms of one renderer.
         public enum Kind: Hashable, Codable, Sendable, Comparable {
-            case bold
-            case italic
+            case strong
+            case emphasis
             case code
+            case strikethrough
             case link(destination: String)
+
+            /// Identifies the case while ignoring any associated value.
+            ///
+            /// Removal matches on this rather than on the whole value, so "remove the link
+            /// here" does not require knowing where the link points.
+            public var caseIdentity: CaseIdentity {
+                switch self {
+                case .strong: .strong
+                case .emphasis: .emphasis
+                case .code: .code
+                case .strikethrough: .strikethrough
+                case .link: .link
+                }
+            }
+
+            public enum CaseIdentity: Hashable, Sendable {
+                case strong
+                case emphasis
+                case code
+                case strikethrough
+                case link
+            }
 
             public static func < (lhs: Kind, rhs: Kind) -> Bool {
                 func sortKey(_ kind: Kind) -> String {
                     switch kind {
-                    case .bold: "bold"
-                    case .italic: "italic"
+                    case .strong: "strong"
+                    case .emphasis: "emphasis"
                     case .code: "code"
+                    case .strikethrough: "strikethrough"
                     case .link(let destination): "link:\(destination)"
                     }
                 }

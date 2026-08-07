@@ -15,7 +15,7 @@ struct EditorSessionAssistantEditorContractTests {
         let rootContent = BlockContent(
             text: "A한글🙂Z",
             marks: [
-                BlockContent.InlineMark(kind: .bold, range: TextRange(0, 4)),
+                BlockContent.InlineMark(kind: .strong, range: TextRange(0, 4)),
                 BlockContent.InlineMark(
                     kind: .link(destination: "https://example.com"),
                     range: TextRange(2, 5)
@@ -24,7 +24,7 @@ struct EditorSessionAssistantEditorContractTests {
         )
         let childContent = BlockContent(
             text: "둘째🚀끝",
-            marks: [BlockContent.InlineMark(kind: .italic, range: TextRange(1, 4))]
+            marks: [BlockContent.InlineMark(kind: .emphasis, range: TextRange(1, 4))]
         )
         let selection = TextSelection(
             anchor: TextPosition(blockID: child, offset: 3),
@@ -62,7 +62,7 @@ struct EditorSessionAssistantEditorContractTests {
         #expect(
             projectedText.fragments[0].content.marks
                 == [
-                    BlockContent.InlineMark(kind: .bold, range: TextRange(0, 3)),
+                    BlockContent.InlineMark(kind: .strong, range: TextRange(0, 3)),
                     BlockContent.InlineMark(
                         kind: .link(destination: "https://example.com"),
                         range: TextRange(1, 4)
@@ -73,7 +73,7 @@ struct EditorSessionAssistantEditorContractTests {
         #expect(projectedText.fragments[1].kind == .todo(isChecked: true))
         #expect(
             projectedText.fragments[1].content.marks
-                == [BlockContent.InlineMark(kind: .italic, range: TextRange(1, 3))]
+                == [BlockContent.InlineMark(kind: .emphasis, range: TextRange(1, 3))]
         )
     }
 
@@ -251,18 +251,18 @@ struct EditorSessionAssistantEditorContractTests {
         let context = try session.documentContextSnapshot()
         var truncatedContent = BlockContent(
             text: "abcd",
-            marks: [BlockContent.InlineMark(kind: .bold, range: TextRange(0, 4))]
+            marks: [BlockContent.InlineMark(kind: .strong, range: TextRange(0, 4))]
         )
         truncatedContent.text = "a"
         var overlappingContent = BlockContent(text: "abcd")
         overlappingContent.marks = [
-            BlockContent.InlineMark(kind: .bold, range: TextRange(0, 3)),
-            BlockContent.InlineMark(kind: .bold, range: TextRange(2, 4)),
+            BlockContent.InlineMark(kind: .strong, range: TextRange(0, 3)),
+            BlockContent.InlineMark(kind: .strong, range: TextRange(2, 4)),
         ]
         var unsortedContent = BlockContent(text: "abcd")
         unsortedContent.marks = [
-            BlockContent.InlineMark(kind: .italic, range: TextRange(2, 4)),
-            BlockContent.InlineMark(kind: .bold, range: TextRange(0, 1)),
+            BlockContent.InlineMark(kind: .emphasis, range: TextRange(2, 4)),
+            BlockContent.InlineMark(kind: .strong, range: TextRange(0, 1)),
         ]
         let invalidCases: [([EditorBlockInput], EditorSelection, EditorDocumentTransactionError)] = [
             ([], .inactive, .emptyDocument),

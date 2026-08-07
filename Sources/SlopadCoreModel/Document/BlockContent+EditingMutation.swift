@@ -44,10 +44,23 @@ extension BlockContent {
     }
 
     package mutating func clearMarks(in range: TextRange) {
+        clearMarks(matching: nil, in: range)
+    }
+
+    /// Removes marks overlapping `range`, keeping the portions that fall outside it.
+    ///
+    /// `caseIdentity` selects which marks to remove and ignores associated values, so
+    /// removing `.link` clears a link regardless of its destination. Passing `nil` removes
+    /// every kind.
+    package mutating func clearMarks(
+        matching caseIdentity: BlockContent.InlineMark.Kind.CaseIdentity?,
+        in range: TextRange
+    ) {
         let clamped = range.clamped(to: text.count)
         guard !clamped.isEmpty else { return }
         marks = marks.flatMap { mark -> [InlineMark] in
             guard mark.range.intersects(clamped) else { return [mark] }
+            if let caseIdentity, mark.kind.caseIdentity != caseIdentity { return [mark] }
 
             var remaining: [InlineMark] = []
             if mark.range.lowerBound < clamped.lowerBound {
@@ -68,6 +81,30 @@ extension BlockContent {
         }
         normalizeMarks()
         revision += 1
+    }
+
+    /// Whether every character in `range` already carries a mark of this case.
+    ///
+    /// Toggling uses full coverage rather than any overlap so that applying a style to a
+    /// partially styled selection completes it instead of clearing it.
+    package func coversEntirely(
+        _ caseIdentity: BlockContent.InlineMark.Kind.CaseIdentity,
+        in range: TextRange
+    ) -> Bool {
+        let clamped = range.clamped(to: text.count)
+        guard !clamped.isEmpty else { return false }
+        let covering = marks
+            .filter { $0.kind.caseIdentity == caseIdentity }
+            .map(\.range)
+            .sorted { $0.lowerBound < $1.lowerBound }
+
+        var reached = clamped.lowerBound
+        for range in covering {
+            guard range.lowerBound <= reached else { break }
+            reached = max(reached, range.upperBound)
+            if reached >= clamped.upperBound { return true }
+        }
+        return reached >= clamped.upperBound
     }
 
     private mutating func normalizeMarks() {
