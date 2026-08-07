@@ -323,6 +323,39 @@ public final class AppKitEditorViewController: NSViewController {
         onFocusChange?(isFocused)
     }
 
+    // MARK: - Unhandled Actions
+
+    /// Called when the engine refused a semantic action, so the host can take it over.
+    ///
+    /// Return `true` if the host consumed the action, `false` to fall back to the editor's
+    /// default handling for it. `handleEscapeInputCommand` is the motivating case: Escape
+    /// walks caret → blocks → inactive and then returns nothing, and until now there was no
+    /// signal at all that the editor had run out of things to do with it.
+    ///
+    /// This is a result notification, not a policy hook — it reports what the engine
+    /// already decided and never gets to change that decision. Native key, pointer and IME
+    /// callbacks stay adapter-owned.
+    public var onUnhandledAction: ((AppKitEditorAction) -> Bool)?
+
+    /// Guards against a callback that performs another action which is also refused.
+    private var isReportingUnhandledAction = false
+
+    /// Reports a refused action and answers whether it ended up handled.
+    ///
+    /// `defaultHandled` is what the call site did before this callback existed, so a host
+    /// that never sets `onUnhandledAction` observes no behavior change anywhere.
+    func reportUnhandledAction(
+        _ action: AppKitEditorAction,
+        defaultHandled: Bool
+    ) -> Bool {
+        guard let onUnhandledAction, !isReportingUnhandledAction else {
+            return defaultHandled
+        }
+        isReportingUnhandledAction = true
+        defer { isReportingUnhandledAction = false }
+        return onUnhandledAction(action)
+    }
+
     // MARK: - Public Actions
 
     package func renderAndSyncSurface(
@@ -419,11 +452,17 @@ public final class AppKitEditorViewController: NSViewController {
         scrollSelectionIntoView: Bool = true
     ) -> EditorUpdate? {
         _ = commitActiveComposition()
-        return handleInput(
+        let update = handleInput(
             action.inputEvent(viewport: currentViewport()),
             makeFirstResponder: makeFirstResponder,
             scrollSelectionIntoView: scrollSelectionIntoView
         )
+        if update == nil {
+            // No responder chain to fall back to on a programmatic action, so the callback
+            // is the only escalation path here.
+            _ = reportUnhandledAction(action, defaultHandled: false)
+        }
+        return update
     }
 
     /// Applies one canonical full-document post-image and synchronizes the AppKit surface.

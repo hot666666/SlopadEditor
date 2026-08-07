@@ -198,4 +198,8 @@ private final class CompositionRecordingOwner: AppKitActiveInputOwner {
     func currentViewport() -> EditorViewport {
         EditorViewport(width: 320, scrollY: 0, height: 240)
     }
+
+    func reportUnhandledAction(_ action: AppKitEditorAction, defaultHandled: Bool) -> Bool {
+        controller.reportUnhandledAction(action, defaultHandled: defaultHandled)
+    }
 }

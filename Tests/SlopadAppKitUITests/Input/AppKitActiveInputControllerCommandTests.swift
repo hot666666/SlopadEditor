@@ -61,6 +61,8 @@ private final class CommandRecordingOwner: AppKitActiveInputOwner {
     private let controller: AppKitEditorViewController
     private let viewport: EditorViewport
     private(set) var receivedEvents: [EditorInputEvent] = []
+    private(set) var unhandledActions: [AppKitEditorAction] = []
+    var unhandledActionResult: Bool?
 
     init(viewport: EditorViewport) {
         self.viewport = viewport
@@ -92,5 +94,10 @@ private final class CommandRecordingOwner: AppKitActiveInputOwner {
 
     func currentViewport() -> EditorViewport {
         viewport
+    }
+
+    func reportUnhandledAction(_ action: AppKitEditorAction, defaultHandled: Bool) -> Bool {
+        unhandledActions.append(action)
+        return unhandledActionResult ?? defaultHandled
     }
 }
