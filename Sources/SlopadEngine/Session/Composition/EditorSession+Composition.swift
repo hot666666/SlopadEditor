@@ -93,22 +93,21 @@ extension EditorSession {
         else { return nil }
 
         let previousSelection = activeEditorSelection
-        guard
-            let result = editorModel.apply([
-                .command(
-                    .replaceText(
-                        blockID: currentComposition.blockID,
-                        range: currentComposition.replacementRange,
-                        text: currentComposition.text
-                    )
-                ),
-                .replaceSelection(editorSelection(for: effectiveSelection)),
-                .command(command),
-            ])
-        else { return nil }
+        let result = editorModel.apply([
+            .command(
+                .replaceText(
+                    blockID: currentComposition.blockID,
+                    range: currentComposition.replacementRange,
+                    text: currentComposition.text
+                )
+            ),
+            .replaceSelection(editorSelection(for: effectiveSelection)),
+            .command(command),
+        ])
+        guard let outcome = result.outcome else { return nil }
 
         var invalidation = clearComposition(currentComposition)
-        invalidation.formUnion(markLayoutDirty(for: result.change))
+        invalidation.formUnion(markLayoutDirty(for: outcome.change))
         return makeEditorUpdate(
             invalidation: invalidation,
             previousSelection: previousSelection

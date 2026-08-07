@@ -28,7 +28,7 @@ struct EditorModelEnterKeyCommandTests {
         let result = editor.apply(.handleEnter)
 
         // Then
-        let change = try #require(result?.change)
+        let change = try #require(result.outcome?.change)
         let createdID = try #require(createdBlockID(in: change))
         #expect(editor.document.blocks[blockID]?.content.text == expectedOriginalText)
         #expect(editor.document.blocks[createdID]?.content.text == expectedCreatedText)

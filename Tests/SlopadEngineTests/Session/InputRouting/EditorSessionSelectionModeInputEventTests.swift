@@ -182,7 +182,7 @@ struct EditorSessionSelectionModeInputEventTests {
         let enter = session.handleInput(.command(.enter))
         let delete = session.handleInput(.command(.deleteBackward))
         let indent = session.handleInput(.command(.indent))
-        let arrow = session.handleInput(.command(.moveDown(viewport: viewport)))
+        let arrow = session.handleInput(.command(.navigate(.moveDown(viewport: viewport))))
 
         // Then
         #expect(enter == nil)

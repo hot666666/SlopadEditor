@@ -9,13 +9,18 @@ public enum EditorInputEvent: Hashable, Sendable {
         case deleteBackward
         case deleteForward
         case deleteToTextStart
-        case deleteWordBackward(viewport: EditorViewport)
         case enter
         case shiftEnter
         case escape
         case clearSelection
         case indent
         case outdent
+        /// Movement whose result depends on where text actually landed on screen.
+        ///
+        /// Split out so the rest of ``Command`` is provably viewport-free: a caller with no
+        /// layout — an agent, a slash menu, a test — can drive editing through every other
+        /// case and the compiler will tell it where that stops being possible.
+        case navigate(Navigation)
         /// Applies `style` to the active text selection, or removes it when the selection
         /// already carries that style throughout.
         ///
@@ -25,25 +30,32 @@ public enum EditorInputEvent: Hashable, Sendable {
         case toggleInlineStyle(BlockContent.InlineMark.Kind)
         /// Removes every inline mark from the active text selection.
         case clearInlineStyles
-        case moveLeft(viewport: EditorViewport)
-        case moveRight(viewport: EditorViewport)
         case moveToTextStart
         case moveToTextEnd
-        case moveWordLeft(viewport: EditorViewport)
-        case moveWordRight(viewport: EditorViewport)
-        case extendCharacterLeft(viewport: EditorViewport)
-        case extendCharacterRight(viewport: EditorViewport)
         case extendToTextStart
         case extendToTextEnd
-        case extendWordLeft(viewport: EditorViewport)
-        case extendWordRight(viewport: EditorViewport)
-        case moveUp(viewport: EditorViewport)
-        case moveDown(viewport: EditorViewport)
-        case extendUp(viewport: EditorViewport)
-        case extendDown(viewport: EditorViewport)
         case selectAll
         case undo
         case redo
+
+        // MARK: - Navigation
+
+        /// Movement resolved against laid-out text rather than document order.
+        public enum Navigation: Hashable, Sendable {
+            case deleteWordBackward(viewport: EditorViewport)
+            case moveLeft(viewport: EditorViewport)
+            case moveRight(viewport: EditorViewport)
+            case moveWordLeft(viewport: EditorViewport)
+            case moveWordRight(viewport: EditorViewport)
+            case extendCharacterLeft(viewport: EditorViewport)
+            case extendCharacterRight(viewport: EditorViewport)
+            case extendWordLeft(viewport: EditorViewport)
+            case extendWordRight(viewport: EditorViewport)
+            case moveUp(viewport: EditorViewport)
+            case moveDown(viewport: EditorViewport)
+            case extendUp(viewport: EditorViewport)
+            case extendDown(viewport: EditorViewport)
+        }
     }
 
     public enum Pointer: Hashable, Sendable {

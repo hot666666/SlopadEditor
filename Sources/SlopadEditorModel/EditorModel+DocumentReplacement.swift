@@ -17,10 +17,7 @@ extension EditorModel {
     package func replaceDocument(
         with blockInputs: [EditorBlockInput],
         selection selectionAfter: EditorSelection
-    ) throws(EditorDocumentReplacementError) -> (
-        selectionBefore: EditorSelection,
-        change: EditorChange
-    )? {
+    ) throws(EditorDocumentReplacementError) -> EditorCommandResult {
         do {
             try Document.validateCanonicalReplacement(
                 blockInputs: blockInputs,
@@ -39,7 +36,7 @@ extension EditorModel {
         let documentChanged = !beforeDocument.hasSameCanonicalContent(as: candidateDocument)
 
         guard documentChanged || beforeSelection != selectionAfter else {
-            return nil
+            return .notApplicable
         }
 
         var afterDocument = candidateDocument
@@ -65,7 +62,8 @@ extension EditorModel {
         trimUndoStackToBudget()
         redoStack.removeAll()
         assertDocumentValidInDebug()
-        return (selectionBefore: beforeSelection, change: change)
+        let outcome = EditorCommandOutcome(selectionBefore: beforeSelection, change: change)
+        return documentChanged ? .document(outcome) : .selectionOnly(outcome)
     }
 }
 

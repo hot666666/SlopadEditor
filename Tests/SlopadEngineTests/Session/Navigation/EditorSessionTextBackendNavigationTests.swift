@@ -43,7 +43,7 @@ struct EditorSessionTextBackendNavigationTests {
 
         // When
         let update = try #require(
-            session.handleInput(.command(.moveWordRight(viewport: viewport)))
+            session.handleInput(.command(.navigate(.moveWordRight(viewport: viewport))))
         )
 
         // Then
@@ -83,7 +83,7 @@ struct EditorSessionTextBackendNavigationTests {
 
         // When
         let update = try #require(
-            session.handleInput(.command(.moveRight(viewport: viewport)))
+            session.handleInput(.command(.navigate(.moveRight(viewport: viewport))))
         )
 
         // Then
@@ -109,7 +109,7 @@ struct EditorSessionTextBackendNavigationTests {
 
         // When
         let update = try #require(
-            session.handleInput(.command(.moveLeft(viewport: viewport)))
+            session.handleInput(.command(.navigate(.moveLeft(viewport: viewport))))
         )
 
         // Then
@@ -130,7 +130,7 @@ struct EditorSessionTextBackendNavigationTests {
         let viewport = EditorViewport(width: 320, scrollY: 0, height: 240)
 
         // When
-        let update = session.handleInput(.command(.moveLeft(viewport: viewport)))
+        let update = session.handleInput(.command(.navigate(.moveLeft(viewport: viewport))))
 
         // Then
         #expect(update == nil)
@@ -157,10 +157,10 @@ struct EditorSessionTextBackendNavigationTests {
 
         // When
         let firstUpdate = try #require(
-            session.handleInput(.command(.moveRight(viewport: viewport)))
+            session.handleInput(.command(.navigate(.moveRight(viewport: viewport))))
         )
         let snapshot = session.render(in: viewport)
-        let secondUpdate = session.handleInput(.command(.moveRight(viewport: viewport)))
+        let secondUpdate = session.handleInput(.command(.navigate(.moveRight(viewport: viewport))))
 
         // Then
         #expect(firstUpdate.selection == .caret(blockID: blockID, offset: 1))
@@ -186,7 +186,7 @@ struct EditorSessionTextBackendNavigationTests {
             textLayouter: layouter
         )
         let viewport = EditorViewport(width: 320, scrollY: 0, height: 240)
-        _ = try #require(session.handleInput(.command(.moveRight(viewport: viewport))))
+        _ = try #require(session.handleInput(.command(.navigate(.moveRight(viewport: viewport)))))
         #expect(session.textNavigationRuntimeContext != nil)
 
         // When
@@ -218,7 +218,7 @@ struct EditorSessionTextBackendNavigationTests {
             textLayouter: layouter
         )
         let viewport = EditorViewport(width: 320, scrollY: 0, height: 240)
-        _ = try #require(session.handleInput(.command(.moveRight(viewport: viewport))))
+        _ = try #require(session.handleInput(.command(.navigate(.moveRight(viewport: viewport)))))
         #expect(session.textNavigationRuntimeContext != nil)
 
         // When
@@ -255,7 +255,7 @@ struct EditorSessionTextBackendNavigationTests {
                 context: nil
             )
         }
-        let wrongBlockUpdate = session.handleInput(.command(.moveLeft(viewport: viewport)))
+        let wrongBlockUpdate = session.handleInput(.command(.navigate(.moveLeft(viewport: viewport))))
         layouter.navigationResolver = { request in
             let position = TextPosition(
                 blockID: request.measureRequest.blockID,
@@ -266,7 +266,7 @@ struct EditorSessionTextBackendNavigationTests {
                 context: nil
             )
         }
-        let invalidOffsetUpdate = session.handleInput(.command(.moveLeft(viewport: viewport)))
+        let invalidOffsetUpdate = session.handleInput(.command(.navigate(.moveLeft(viewport: viewport))))
 
         // Then
         #expect(wrongBlockUpdate == nil)
@@ -296,7 +296,7 @@ struct EditorSessionTextBackendNavigationTests {
         let viewport = EditorViewport(width: 320, scrollY: 0, height: 240)
 
         // When
-        let update = session.handleInput(.command(.moveRight(viewport: viewport)))
+        let update = session.handleInput(.command(.navigate(.moveRight(viewport: viewport))))
 
         // Then
         #expect(update == nil)
@@ -337,7 +337,7 @@ struct EditorSessionTextBackendNavigationTests {
 
         // When
         let update = try #require(
-            session.handleInput(.command(.extendCharacterRight(viewport: viewport)))
+            session.handleInput(.command(.navigate(.extendCharacterRight(viewport: viewport))))
         )
 
         // Then

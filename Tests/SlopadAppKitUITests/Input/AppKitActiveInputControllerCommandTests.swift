@@ -14,31 +14,31 @@ struct AppKitActiveInputControllerCommandTests {
         let cases: [(selector: Selector, expectedEvent: EditorInputEvent)] = [
             (
                 #selector(NSResponder.moveWordLeft(_:)),
-                .command(.moveWordLeft(viewport: viewport))
+                .command(.navigate(.moveWordLeft(viewport: viewport)))
             ),
             (
                 #selector(NSResponder.moveWordRight(_:)),
-                .command(.moveWordRight(viewport: viewport))
+                .command(.navigate(.moveWordRight(viewport: viewport)))
             ),
             (
                 #selector(NSResponder.moveLeftAndModifySelection(_:)),
-                .command(.extendCharacterLeft(viewport: viewport))
+                .command(.navigate(.extendCharacterLeft(viewport: viewport)))
             ),
             (
                 #selector(NSResponder.moveRightAndModifySelection(_:)),
-                .command(.extendCharacterRight(viewport: viewport))
+                .command(.navigate(.extendCharacterRight(viewport: viewport)))
             ),
             (
                 #selector(NSResponder.moveWordLeftAndModifySelection(_:)),
-                .command(.extendWordLeft(viewport: viewport))
+                .command(.navigate(.extendWordLeft(viewport: viewport)))
             ),
             (
                 #selector(NSResponder.moveWordRightAndModifySelection(_:)),
-                .command(.extendWordRight(viewport: viewport))
+                .command(.navigate(.extendWordRight(viewport: viewport)))
             ),
             (
                 #selector(NSResponder.deleteWordBackward(_:)),
-                .command(.deleteWordBackward(viewport: viewport))
+                .command(.navigate(.deleteWordBackward(viewport: viewport)))
             ),
         ]
 

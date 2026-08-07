@@ -33,10 +33,6 @@ extension EditorSession {
             guard canRouteTextCommand() else { return nil }
             return deleteBackwardToTextStart()
 
-        case .deleteWordBackward(let viewport):
-            guard canRouteTextCommand() else { return nil }
-            return deleteBackwardToPreviousWordBoundary(viewport: viewport)
-
         case .enter:
             return handleEnterInputCommand()
 
@@ -49,6 +45,9 @@ extension EditorSession {
 
         case .clearSelection:
             return handleClearSelectionInputCommand()
+
+        case .navigate(let navigation):
+            return handleNavigationCommand(navigation)
 
         case .indent:
             return handleIndentInputCommand()
@@ -77,14 +76,6 @@ extension EditorSession {
                 return nil
             }
 
-        case .moveLeft(let viewport):
-            guard canRouteTextCommand() else { return nil }
-            return moveHorizontally(direction: .left, viewport: viewport)
-
-        case .moveRight(let viewport):
-            guard canRouteTextCommand() else { return nil }
-            return moveHorizontally(direction: .right, viewport: viewport)
-
         case .moveToTextStart:
             guard canRouteTextCommand() else { return nil }
             return moveToTextBoundary(.left)
@@ -92,6 +83,42 @@ extension EditorSession {
         case .moveToTextEnd:
             guard canRouteTextCommand() else { return nil }
             return moveToTextBoundary(.right)
+
+        case .extendToTextStart:
+            guard canRouteTextCommand() else { return nil }
+            return extendTextSelection(to: .left)
+
+        case .extendToTextEnd:
+            guard canRouteTextCommand() else { return nil }
+            return extendTextSelection(to: .right)
+
+        case .selectAll:
+            return handleSelectAllInputCommand()
+
+        case .undo:
+            return handleUndoInputCommand()
+
+        case .redo:
+            return handleRedoInputCommand()
+        }
+    }
+
+
+    private func handleNavigationCommand(
+        _ command: EditorInputEvent.Command.Navigation
+    ) -> EditorUpdate? {
+        switch command {
+        case .deleteWordBackward(let viewport):
+            guard canRouteTextCommand() else { return nil }
+            return deleteBackwardToPreviousWordBoundary(viewport: viewport)
+
+        case .moveLeft(let viewport):
+            guard canRouteTextCommand() else { return nil }
+            return moveHorizontally(direction: .left, viewport: viewport)
+
+        case .moveRight(let viewport):
+            guard canRouteTextCommand() else { return nil }
+            return moveHorizontally(direction: .right, viewport: viewport)
 
         case .moveWordLeft(let viewport):
             guard canRouteTextCommand() else { return nil }
@@ -108,14 +135,6 @@ extension EditorSession {
         case .extendCharacterRight(let viewport):
             guard canRouteTextCommand() else { return nil }
             return extendTextSelectionByCharacter(.right, viewport: viewport)
-
-        case .extendToTextStart:
-            guard canRouteTextCommand() else { return nil }
-            return extendTextSelection(to: .left)
-
-        case .extendToTextEnd:
-            guard canRouteTextCommand() else { return nil }
-            return extendTextSelection(to: .right)
 
         case .extendWordLeft(let viewport):
             guard canRouteTextCommand() else { return nil }
@@ -136,15 +155,6 @@ extension EditorSession {
 
         case .extendDown(let viewport):
             return handleVerticalMovementInputCommand(.down, extending: true, viewport: viewport)
-
-        case .selectAll:
-            return handleSelectAllInputCommand()
-
-        case .undo:
-            return handleUndoInputCommand()
-
-        case .redo:
-            return handleRedoInputCommand()
         }
     }
 
