@@ -11,7 +11,7 @@ extension EditorModel {
             throw .abort
         }
         let blockID = position.blockID
-        guard let block = document.block(blockID) else { throw .abort }
+        guard let block = state.document.block(blockID) else { throw .abort }
         if block.kind.isListLike && block.content.text.isEmpty {
             if !block.childIDs.isEmpty || block.parentID == nil {
                 try setBlockKind(

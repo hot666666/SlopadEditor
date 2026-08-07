@@ -18,8 +18,7 @@ extension EditorModel {
     @discardableResult
     package func undo() -> EditorHistoryStepResult? {
         guard let transaction = undoStack.popLast() else { return nil }
-        document = transaction.beforeSnapshot
-        selection = transaction.selectionBefore
+        state = transaction.before
         redoStack.append(transaction)
         assertDocumentValidInDebug()
         return EditorHistoryStepResult(documentChanged: transaction.change.documentChanged)
@@ -28,8 +27,7 @@ extension EditorModel {
     @discardableResult
     package func redo() -> EditorHistoryStepResult? {
         guard let transaction = redoStack.popLast() else { return nil }
-        document = transaction.afterSnapshot
-        selection = transaction.selectionAfter
+        state = transaction.after
         undoStack.append(transaction)
         trimUndoStackToBudget()
         assertDocumentValidInDebug()
@@ -58,7 +56,7 @@ extension EditorModel {
 
     func assertDocumentValidInDebug() {
         #if DEBUG
-            document.assertValidInvariants()
+            state.document.assertValidInvariants()
         #endif
     }
 }

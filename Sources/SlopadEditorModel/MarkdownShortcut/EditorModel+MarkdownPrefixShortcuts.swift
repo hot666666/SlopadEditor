@@ -9,7 +9,7 @@ extension EditorModel {
         operations: inout [EditorOperation],
         changed: inout Set<BlockID>
     ) {
-        guard let block = document.block(blockID), block.kind.supportsMarkdownShortcuts else {
+        guard let block = state.document.block(blockID), block.kind.supportsMarkdownShortcuts else {
             return
         }
         if applyBlockShortcut(blockID: blockID, caretOffset: caretOffset, operations: &operations) {
@@ -22,7 +22,7 @@ extension EditorModel {
         caretOffset: Int,
         operations: inout [EditorOperation]
     ) -> Bool {
-        guard let block = document.block(blockID), block.kind.supportsMarkdownShortcuts else {
+        guard let block = state.document.block(blockID), block.kind.supportsMarkdownShortcuts else {
             return false
         }
         guard let match = markdownPrefixShortcutMatch(
@@ -31,7 +31,7 @@ extension EditorModel {
         ) else { return false }
 
         guard
-            case .success = document.updateContent(
+            case .success = state.document.updateContent(
                 blockID: blockID,
                 { content in
                     content.delete(TextRange(0, match.marker.count))
@@ -39,10 +39,13 @@ extension EditorModel {
         else {
             return false
         }
-        guard case .success = document.setBlockKind(blockID: blockID, kind: match.kind) else {
+        guard case .success = state.document.setBlockKind(blockID: blockID, kind: match.kind) else {
             return false
         }
-        selection = .caret(blockID: blockID, offset: 0)
+        // The marker text is gone and the caret jumps to the start of a block that is now a
+        // different kind. That is a relocation, not a caret advancing through typing, so a
+        // style armed against the old text does not carry over.
+        state.replaceSelection(.caret(blockID: blockID, offset: 0))
         operations.append(.refreshMarker)
         return true
     }

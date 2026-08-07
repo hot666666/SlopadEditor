@@ -10,14 +10,14 @@ extension EditorModel {
         guard case .blocks(let blockSelection) = selection else {
             throw .abort
         }
-        let ordered = document.topLevelBlockIDs(blockSelection.blockIDs)
+        let ordered = state.document.topLevelBlockIDs(blockSelection.blockIDs)
         guard !ordered.isEmpty else { throw .abort }
         let allVisibleSelected =
-            !document.rootBlockIDs.isEmpty
-            && ordered == document.rootBlockIDs
+            !state.document.rootBlockIDs.isEmpty
+            && ordered == state.document.rootBlockIDs
         var removed: [BlockID] = []
         for blockID in ordered {
-            switch document.removeSubtree(blockID) {
+            switch state.document.removeSubtree(blockID) {
             case .success(let removedSubtree):
                 removed.append(contentsOf: removedSubtree)
 
@@ -30,12 +30,12 @@ extension EditorModel {
 
         if allVisibleSelected {
             let resetID = BlockID()
-            document = .singleParagraph("", id: resetID)
-            selection = .caret(blockID: resetID, offset: 0)
+            state.document = .singleParagraph("", id: resetID)
+            state.selection = .caret(blockID: resetID, offset: 0)
             changed.insert(resetID)
             operations.append(.resetDocumentToEmptyParagraph(blockID: resetID))
         } else {
-            selection = .inactive
+            state.selection = .inactive
         }
     }
 }

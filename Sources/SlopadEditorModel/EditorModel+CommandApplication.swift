@@ -15,8 +15,7 @@ extension EditorModel {
         _ steps: [EditorTransactionStep]
     ) -> (selectionBefore: EditorSelection, change: EditorChange)? {
         guard !steps.isEmpty else { return nil }
-        let beforeDocument = document
-        let beforeSelection = selection
+        let beforeState = state
         var operations: [EditorOperation] = []
         var changed: Set<BlockID> = []
 
@@ -26,21 +25,20 @@ extension EditorModel {
                 case .command(let command):
                     try perform(command, operations: &operations, changed: &changed)
                 case .replaceSelection(let selection):
-                    self.selection = selection
+                    state.replaceSelection(selection)
                 }
             }
 
-            let documentChanged = !beforeDocument.hasSameCanonicalContent(as: document)
-            guard documentChanged || beforeSelection != selection || !operations.isEmpty
+            let documentChanged = !beforeState.document.hasSameCanonicalContent(as: document)
+            guard documentChanged || beforeState.selection != selection
+                || beforeState.storedMarks != state.storedMarks || !operations.isEmpty
             else {
                 return nil
             }
 
             let transaction = EditorTransaction(
-                beforeSnapshot: beforeDocument,
-                afterSnapshot: document,
-                selectionBefore: beforeSelection,
-                selectionAfter: selection,
+                before: beforeState,
+                after: state,
                 change: EditorChange(
                     documentChanged: documentChanged,
                     changedBlockIDs: changed,
@@ -56,8 +54,7 @@ extension EditorModel {
                 change: transaction.change
             )
         } catch {
-            document = beforeDocument
-            selection = beforeSelection
+            state = beforeState
             assertDocumentValidInDebug()
             return nil
         }
@@ -100,6 +97,14 @@ extension EditorModel {
         case .setBlockKind(let blockID, let kind):
             try setBlockKind(
                 blockID: blockID, kind: kind, operations: &operations, changed: &changed)
+
+        case .toggleStoredStyle(let style):
+            guard case .caret = selection else { throw .abort }
+            state.toggleStoredMark(style)
+
+        case .clearStoredStyles:
+            guard case .caret = selection, !state.storedMarks.isEmpty else { throw .abort }
+            state.storedMarks = []
 
         case .removeTextStyle(let blockID, let range, let style):
             try removeTextStyle(

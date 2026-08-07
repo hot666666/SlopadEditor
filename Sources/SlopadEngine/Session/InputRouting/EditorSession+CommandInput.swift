@@ -57,14 +57,25 @@ extension EditorSession {
             return handleOutdentInputCommand()
 
         case .toggleInlineStyle(let style):
-            guard let target = inlineStyleTarget() else { return nil }
-            return handleCommand(
-                .toggleTextStyle(blockID: target.blockID, range: target.range, style: style))
+            switch inlineStyleTarget() {
+            case .range(let blockID, let range):
+                return handleCommand(
+                    .toggleTextStyle(blockID: blockID, range: range, style: style))
+            case .caret:
+                return handleCommand(.toggleStoredStyle(style))
+            case .none:
+                return nil
+            }
 
         case .clearInlineStyles:
-            guard let target = inlineStyleTarget() else { return nil }
-            return handleCommand(
-                .clearTextStyles(blockID: target.blockID, range: target.range))
+            switch inlineStyleTarget() {
+            case .range(let blockID, let range):
+                return handleCommand(.clearTextStyles(blockID: blockID, range: range))
+            case .caret:
+                return handleCommand(.clearStoredStyles)
+            case .none:
+                return nil
+            }
 
         case .moveLeft(let viewport):
             guard canRouteTextCommand() else { return nil }
@@ -137,18 +148,23 @@ extension EditorSession {
         }
     }
 
-    /// The block and range an inline style command applies to.
+    /// What an inline style command should act on.
     ///
-    /// Returns `nil` for a caret-only selection. Applying a style with nothing selected
-    /// means remembering it for the next keystroke, which is editing state the model does
-    /// not carry yet, and silently doing nothing would be worse than refusing.
+    /// A selected range is styled directly. A caret has nothing to style yet, so the style is
+    /// armed for whatever gets typed next instead of being dropped.
     ///
-    /// Live composition is refused as well: marking text that the input method may still
-    /// replace would attach marks to characters that are about to disappear.
-    private func inlineStyleTarget() -> (blockID: BlockID, range: TextRange)? {
+    /// Live composition yields `nil`: marking text that the input method may still replace
+    /// would attach marks to characters that are about to disappear.
+    private enum InlineStyleTarget {
+        case range(blockID: BlockID, range: TextRange)
+        case caret
+    }
+
+    private func inlineStyleTarget() -> InlineStyleTarget? {
         guard composition == nil, canRouteTextCommand() else { return nil }
-        guard let selection = activeTextSelection(), !selection.range.isEmpty else { return nil }
-        return (blockID: selection.position.blockID, range: selection.range)
+        guard let selection = activeTextSelection() else { return nil }
+        guard !selection.range.isEmpty else { return .caret }
+        return .range(blockID: selection.position.blockID, range: selection.range)
     }
 
     func canRouteTextCommand() -> Bool {

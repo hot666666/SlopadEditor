@@ -10,7 +10,7 @@ extension EditorModel {
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
         try requireDocumentMutationSuccess(
-            document.setBlockKind(blockID: blockID, kind: kind))
+            state.document.setBlockKind(blockID: blockID, kind: kind))
         changed.insert(blockID)
         operations.append(.refreshMarker)
     }
@@ -20,7 +20,7 @@ extension EditorModel {
         operations: inout [EditorOperation],
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
-        guard let block = document.block(blockID) else { throw .abort }
+        guard let block = state.document.block(blockID) else { throw .abort }
         switch block.kind {
         case .todo(let isChecked):
             try setBlockKind(
