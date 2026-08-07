@@ -346,6 +346,41 @@ a fresh derived `BlockLayout` state before the next synchronized render.
 tree representation has one public shape. The context does not turn the persistence
 snapshot or its revision into a mutation credential.
 
+## Editor-Owned Scrolling and Host Sizing
+
+`setupScrollView()` pins the controller's `NSScrollView` to all four edges of its root
+view. Two consequences are contract, not incidental layout:
+
+- **The editor owns scrolling.** It decides when content scrolls, where the viewport is,
+  and when the selection is revealed. Viewport-bearing engine commands read that viewport.
+- **The editor fills its container.** It has no intrinsic content size and will occupy
+  whatever space the host gives it.
+
+**Embedding inside a host-owned scroll view is not supported.** Nesting the editor in an
+outer `NSScrollView` or SwiftUI `ScrollView` produces two components that both believe they
+own scrolling: wheel events are claimed by the inner view, the outer view's offset and the
+editor's viewport disagree, and selection reveal scrolls the wrong container. Nothing
+detects this at compile time, which is why it is written down here.
+
+A host that wants an inline editor growing with its content sizes the container itself:
+
+```swift
+controller.onContentHeightChange = { height in
+    heightConstraint.constant = CGFloat(height)
+}
+```
+
+`contentHeight` and `onContentHeightChange` report the settled document height, excluding
+the editor's bottom padding. They exist separately from `onSnapshotChanged` because that
+callback fires on every scroll and render pass; a host driving a frame from it recomputes
+layout on every keystroke and every scroll tick. `onContentHeightChange` fires when the
+number a host would act on actually moved.
+
+The editor still scrolls internally when the host constrains it below `contentHeight`, so
+this is a sizing convenience rather than a second layout mode. A genuine host-owned
+scrolling mode — where the editor renders its full height and never scrolls — is a larger
+change to viewport ownership and remains a roadmap item.
+
 ## Default AppKit Path and Full Replacement
 
 ```mermaid
