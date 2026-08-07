@@ -1,7 +1,22 @@
-// MARK: - BlockTextLayoutProtocol
+// MARK: - Text Layout Capabilities
 
-public protocol BlockTextLayoutProtocol: Sendable {
+// One backend implements all four. They are declared separately so a consumer is handed
+// only what it uses: `BlockLayout` needs a height and nothing else, and giving it caret
+// geometry or word boundaries invites a layer that owns derived geometry to start answering
+// questions about text meaning.
+//
+// Splitting the contracts is not splitting the implementation. Measurement, geometry, and
+// drawing must agree on line breaks, so they have to come from one coherent backend — see
+// ADR 0003.
+
+/// Height and baseline for a block at a given width.
+public protocol BlockMeasuring: Sendable {
     func measure(_ request: BlockMeasureRequest) -> BlockMeasurement
+}
+
+/// Where text sits once laid out: frames, line fragments, caret and selection rectangles,
+/// and the reverse mapping from a point back to a position.
+public protocol TextGeometryResolving: Sendable {
     func textFrame(for request: BlockMeasureRequest, measuredHeight: Double?) -> EditorRect
     func lineFragments(for request: BlockMeasureRequest) -> [LineFragmentSnapshot]
     func caretRect(for position: TextPosition, in request: BlockMeasureRequest) -> EditorRect?
@@ -13,6 +28,11 @@ public protocol BlockTextLayoutProtocol: Sendable {
     func selectionRects(for range: TextRange, in request: BlockMeasureRequest) -> [EditorRect]
     func textPosition(at point: EditorPoint, in request: BlockMeasureRequest) -> TextPosition
     func textHitTest(at point: EditorPoint, in request: BlockMeasureRequest) -> TextHitTestResult?
+}
+
+/// Movement through shaped text — physical direction and linguistic word boundaries, which
+/// depend on the platform's own segmentation rather than on document order.
+public protocol TextNavigationResolving: Sendable {
     func navigate(
         selection: TextSelection,
         context: TextNavigationContext?,
@@ -25,6 +45,10 @@ public protocol BlockTextLayoutProtocol: Sendable {
         containing position: TextPosition,
         in request: BlockMeasureRequest
     ) -> TextRange?
+}
+
+/// The range a deletion should remove, which follows the same segmentation as navigation.
+public protocol TextDeletionResolving: Sendable {
     func deletionRange(
         for selection: TextSelection,
         direction: TextNavigationDirection,
@@ -32,6 +56,15 @@ public protocol BlockTextLayoutProtocol: Sendable {
         in request: BlockMeasureRequest
     ) -> TextRange?
 }
+
+// MARK: - BlockTextLayoutProtocol
+
+/// The whole seam, for a backend to adopt and for `EditorSession` to hold.
+///
+/// Consumers should depend on the narrowest capability they need instead of this.
+public protocol BlockTextLayoutProtocol:
+    BlockMeasuring, TextGeometryResolving, TextNavigationResolving, TextDeletionResolving
+{}
 
 // MARK: - Portable Logical Fallback
 

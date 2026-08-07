@@ -8,7 +8,7 @@ extension BlockLayout {
         document: Document,
         composition: TextComposition?,
         viewport: EditorViewport,
-        textLayouter: any BlockTextLayoutProtocol
+        textLayouter: any BlockMeasuring
     ) -> EditorRect? {
         let contentSnapshot = EffectiveDocumentSnapshot(
             document: document,

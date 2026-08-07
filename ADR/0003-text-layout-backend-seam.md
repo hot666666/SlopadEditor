@@ -4,7 +4,7 @@ Date: 2026-07-08
 
 ## Status
 
-Accepted
+Accepted. Amended 2026-08-08 — see "Amendment: narrow contracts, one backend".
 
 ## Context
 
@@ -80,3 +80,47 @@ next surface.
   canonical model.
 - The default AppKit chrome/theme hook cannot replace backend text layout or drawing.
 - Hosts do not mutate layout revision counters independently of the backend instance.
+
+
+## Amendment: narrow contracts, one backend
+
+Date: 2026-08-08 — issue #34, epic #23.
+
+The original decision said the seam covers more than height, and warned against renaming
+`textLayouter` to `textMeasurer`. That still holds: measurement, geometry, navigation, and
+drawing must agree on the same shaped text, so they come from one coherent backend.
+
+What it did not say is how *narrow* each consumer's view of that backend should be. In
+practice `BlockLayout` was handed all ten methods and called exactly one:
+
+| method | BlockLayout | EditorSession | AppKit UI |
+| --- | :---: | :---: | :---: |
+| `measure` | used | | |
+| `textFrame` | | | used |
+| `lineFragments` | | used | used |
+| `caretRect` | | used | used |
+| `selectionRects` | | | used |
+| `textPosition` | | via `textHitTest` default | |
+| `textHitTest` | | used | |
+| `navigate` | | used | |
+| `wordRange` | | used | |
+| `deletionRange` | | used | |
+
+Handing a layer that owns derived geometry the ability to ask about word boundaries invites
+it to start answering questions about text meaning, which is the boundary this ADR exists to
+protect.
+
+`BlockTextLayoutProtocol` is therefore split into `BlockMeasuring`,
+`TextGeometryResolving`, `TextNavigationResolving`, and `TextDeletionResolving`, with
+`BlockTextLayoutProtocol` refining all four. A backend adopts the whole seam as before;
+`BlockLayout` is injected `any BlockMeasuring` only.
+
+Consequences added by this amendment:
+
+- Splitting the contracts is not splitting the implementation. A backend that answered
+  geometry from a different layout than it measured with would violate the original
+  decision, and nothing here permits that.
+- Do not create a SwiftPM target per capability. The protocols live where the seam already
+  lived, in `SlopadCoreModel/Layout`.
+- `AppKitEditorUI` still resolves geometry directly against the concrete backend. Whether
+  that should instead arrive through the Session snapshot is a separate decision (issue #35).

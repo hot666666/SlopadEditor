@@ -7,7 +7,7 @@ extension BlockLayout {
         document: Document,
         composition: TextComposition?,
         viewport: EditorViewport,
-        textLayouter: any BlockTextLayoutProtocol
+        textLayouter: any BlockMeasuring
     ) -> EditorSnapshotRevision {
         let widthRevision = viewport.widthRevision
         if !needsLayout(widthRevision: widthRevision),
