@@ -72,6 +72,76 @@ struct EditorSessionSelectionModeInputEventTests {
         #expect(inactiveUpdate == nil)
     }
 
+    @Test("clearSelection은 어떤 선택 모드에서든 한 번에 inactive로 간다")
+    func clearSelectionDropsAnySelectionInOneStep() throws {
+        // Given: escape는 단계별로 올라가므로 호출 횟수가 현재 모드에 의존한다.
+        let blockID: BlockID = "a"
+        let caretSession = EditorSession(
+            document: .singleParagraph("A", id: blockID),
+            selection: .caret(blockID: blockID, offset: 1)
+        )
+        let textSession = EditorSession(
+            document: .singleParagraph("A", id: blockID),
+            selection: .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: blockID, offset: 0),
+                    focus: TextPosition(blockID: blockID, offset: 1)
+                )
+            )
+        )
+        let blockSession = EditorSession(
+            document: .singleParagraph("A", id: blockID),
+            selection: .blocks(BlockSelection(blockIDs: [blockID]))
+        )
+
+        // When
+        let fromCaret = try #require(caretSession.handleInput(.command(.clearSelection)))
+        let fromText = try #require(textSession.handleInput(.command(.clearSelection)))
+        let fromBlocks = try #require(blockSession.handleInput(.command(.clearSelection)))
+
+        // Then
+        #expect(fromCaret.selection == .inactive)
+        #expect(fromText.selection == .inactive)
+        #expect(fromBlocks.selection == .inactive)
+    }
+
+    @Test("이미 inactive면 clearSelection은 소비되지 않는다")
+    func clearSelectionIsRefusedWhenAlreadyInactive() {
+        // Given
+        let session = EditorSession(
+            document: .singleParagraph("A", id: "a"),
+            selection: .inactive
+        )
+
+        // When / Then: escape와 같은 모양으로 호스트에 escalate된다.
+        #expect(session.handleInput(.command(.clearSelection)) == nil)
+    }
+
+    @Test("조합 중 clearSelection은 조합을 commit한 뒤 해제한다")
+    func commitsCompositionBeforeClearingSelection() throws {
+        // Given: 조합 중 해제가 마지막 음절을 버리면 안 된다.
+        let blockID: BlockID = "a"
+        let session = EditorSession(
+            document: .singleParagraph("A", id: blockID),
+            selection: .caret(blockID: blockID, offset: 1)
+        )
+        _ = session.handleInput(
+            .beginComposition(
+                blockID: blockID,
+                replacementRange: TextRange.point(1),
+                text: "!"
+            )
+        )
+
+        // When
+        let update = try #require(session.handleInput(.command(.clearSelection)))
+
+        // Then
+        #expect(update.selection == .inactive)
+        #expect(session.document.block(blockID)?.content.text == "A!")
+        #expect(session.composition == nil)
+    }
+
     @Test("조합 중 Escape는 조합을 commit한 뒤 현재 블록을 선택한다")
     func commitsCompositionBeforeEscapeToBlockSelection() throws {
         // Given

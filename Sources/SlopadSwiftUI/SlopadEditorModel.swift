@@ -73,6 +73,25 @@ public final class SlopadEditorModel {
         controller?.perform(action) != nil
     }
 
+    /// Clears caret, text and block selection in one step, and returns whether there was
+    /// anything to clear.
+    ///
+    /// Selection and focus are separate contracts: this leaves the responder where it is,
+    /// so a host reacting to a click elsewhere in its window does not pull focus back into
+    /// the editor. Use ``setFocused(_:)`` when focus is what should move.
+    ///
+    /// Emulating this with repeated ``perform(_:)`` of `.escape` is not equivalent —
+    /// escape escalates one level per press, so the number of presses depends on the
+    /// current selection mode, and the default action path takes the responder.
+    @discardableResult
+    public func clearSelection() -> Bool {
+        controller?.perform(
+            .clearSelection,
+            makeFirstResponder: false,
+            scrollSelectionIntoView: false
+        ) != nil
+    }
+
     // MARK: - Mounting
 
     /// Attaches a controller and seeds the observable state from it.

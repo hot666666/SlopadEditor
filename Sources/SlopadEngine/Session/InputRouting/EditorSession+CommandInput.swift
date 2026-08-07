@@ -47,6 +47,9 @@ extension EditorSession {
         case .escape:
             return handleEscapeInputCommand()
 
+        case .clearSelection:
+            return handleClearSelectionInputCommand()
+
         case .indent:
             return handleIndentInputCommand()
 
@@ -258,6 +261,21 @@ extension EditorSession {
             return handleSelectionChange(.inactive)
 
         case .inactive, .text:
+            return nil
+        }
+    }
+
+    /// Drops selection in one step, from whichever mode it is in.
+    ///
+    /// Escape escalates one level per press, so reaching `inactive` through it requires
+    /// knowing the current mode and the escalation order. This is the same transition
+    /// stated once, which also keeps the implicit composition commit on it.
+    private func handleClearSelectionInputCommand() -> EditorUpdate? {
+        switch editorModel.selection {
+        case .caret, .text, .blocks:
+            return handleSelectionChange(.inactive)
+
+        case .inactive:
             return nil
         }
     }

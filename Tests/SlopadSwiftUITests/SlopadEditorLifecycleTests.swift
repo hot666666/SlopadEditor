@@ -206,6 +206,24 @@ struct SlopadEditorLifecycleTests {
         #expect(context.model.contentHeight == 240)
     }
 
+    @Test("clearSelection은 한 번에 해제하고 focus는 건드리지 않는다")
+    func clearSelectionLeavesFocusAlone() {
+        // Given: 바깥 클릭으로 선택만 지우는 경로. escape 반복이면 responder까지 끌어온다.
+        let context = MountedEditor()
+        #expect(!context.model.isFocused)
+
+        // When
+        let cleared = context.model.clearSelection()
+
+        // Then
+        #expect(cleared)
+        #expect(!context.model.isFocused)
+        #expect(!context.controller.isFocused)
+
+        // When: 이미 해제된 뒤에는 할 일이 없다고 답한다.
+        #expect(!context.model.clearSelection())
+    }
+
     @Test("focus 변경이 model로 흐른다")
     func focusReachesTheModel() {
         // Given

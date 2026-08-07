@@ -126,6 +126,14 @@ private struct DownstreamAppKitHost {
         controller.perform(.undo, makeFirstResponder: false, scrollSelectionIntoView: false)
         _ = escalatedActions
 
+        // Dropping selection is one action, not an escape escalation the host has to count
+        // out, and it leaves the responder where the host put it.
+        controller.perform(
+            .clearSelection,
+            makeFirstResponder: false,
+            scrollSelectionIntoView: false
+        )
+
         // Focus is a first-class contract now: a host observes it, sets it, and reads it
         // back without reaching for a render call.
         var observedFocus: [Bool] = []

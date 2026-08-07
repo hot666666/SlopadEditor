@@ -196,3 +196,148 @@ public struct SlopadEditor: NSViewControllerRepresentable {
         }
     }
 }
+
+#Preview("SlopadEditor Save/Interaction PoC") {
+	SlopadEditorPoC()
+		.frame(width: 680, height: 500)
+}
+
+private struct SlopadEditorPoC: View {
+	@State private var editorModel = SlopadEditorModel()
+	@State private var document = SlopadDocument(
+		id: "slopad.editor.poc",
+		blocks: [
+			EditorBlockInput(
+				id: "p-1",
+				kind: .heading(level: .h1),
+				content: BlockContent(text: "Slopad SwiftUI Preview PoC")
+			),
+			EditorBlockInput(
+				id: "p-2",
+				content: BlockContent(text: "이 영역에서 직접 편집해 보세요. 타이핑/삭제/드래그 동작이 동작합니다.")
+			),
+			EditorBlockInput(
+				id: "p-3",
+				kind: .quote,
+				content: BlockContent(text: "커밋된 수정은 onCommittedChange에서 print로 출력됩니다.")
+			),
+			EditorBlockInput(
+				id: "p-4",
+				kind: .todo(isChecked: false),
+				content: BlockContent(text: "프리뷰에서도 저장 동작을 확인한다")
+			),
+		]
+	)
+
+	private var revisionLabel: String {
+		editorModel.documentSnapshot?.revision.rawValue.description
+			?? editorModel.documentRevision?.rawValue.description
+			?? "nil"
+	}
+	private var selectionLabel: String {
+		String(describing: editorModel.isFocused)
+	}
+	private var editorSessionEpochLabel: String {
+		if editorModel.epoch == nil { return "nil" }
+		return "active"
+	}
+
+	/// 에디터 바깥을 눌렀을 때의 선택 해제.
+	///
+	/// `escape`를 두 번 보내 흉내내지 않는다. escape는 한 번에 한 단계(caret/text -> blocks
+	/// -> inactive)만 올라가므로 필요한 횟수가 현재 선택 모드에 따라 달라지고, 기본 action 경로는
+	/// 응답자까지 가져온다. `clearSelection()`은 한 번에 해제하고 포커스는 건드리지 않는다.
+	private func clearSelectedBlock() {
+		editorModel.clearSelection()
+	}
+
+	var body: some View {
+		VStack(spacing: 10) {
+			VStack(alignment: .leading, spacing: 4) {
+				SlopadEditor(
+					model: editorModel,
+					document: document
+				)
+				.onCommittedChange {
+					editorModel.commitComposition()
+					guard let snapshot = editorModel.documentSnapshot else {
+						print("[SlopadEditor PoC] save skipped: snapshot is nil")
+						return
+					}
+					let summary = snapshot.blocks.enumerated().map { index, block in
+						"\(index + 1). \(block.kind) - \(block.id) - \(block.content.text)"
+					}
+					print("[SlopadEditor PoC] SAVE revision=\(snapshot.revision.rawValue), epoch=\(snapshot.epoch)")
+					print("[SlopadEditor PoC] blocks:")
+					for line in summary {
+						print("  \(line)")
+					}
+				}
+				.onUnhandledAction { action in
+					print("[SlopadEditor PoC] unhandledAction = \(String(describing: action))")
+					return false
+				}
+				.onChange(of: editorModel.documentRevision) { _, revision in
+					print("[SlopadEditor PoC] revision changed => \(revision?.rawValue.description ?? "nil")")
+				}
+				// firstResponder를 다른 뷰에 뺏긴 경우. 에디터는 포커스 변화를 보고만 하고,
+				// 남은 선택을 어떻게 할지는 호스트 정책이다. 이 PoC는 해제하는 쪽을 택한다.
+				.onChange(of: editorModel.isFocused) { _, isFocused in
+					guard !isFocused else { return }
+					editorModel.clearSelection()
+				}
+				.frame(maxWidth: .infinity, minHeight: 220, maxHeight: 280, alignment: .top)
+			}
+			.accessibilityLabel("SlopadEditor Preview")
+			.background(.thinMaterial)
+			.clipShape(RoundedRectangle(cornerRadius: 8))
+
+			VStack(alignment: .leading, spacing: 4) {
+				Text("Revision: \(revisionLabel)")
+				Text("Epoch: \(editorSessionEpochLabel)")
+				Text("Undo 가능: \(editorModel.canUndo.description) / Redo 가능: \(editorModel.canRedo.description)")
+				Text("Composition 중: \(editorModel.isComposing.description)")
+				Text("선택(블록/텍스트): \(selectionLabel)")
+				Text("Height: \(editorModel.contentHeight)")
+			}
+			.font(.caption)
+			.frame(maxWidth: .infinity, alignment: .leading)
+			.padding(8)
+			.background(.regularMaterial)
+			.cornerRadius(6)
+
+			RoundedRectangle(cornerRadius: 8)
+				.fill(.gray.opacity(0.15))
+				.frame(maxWidth: .infinity, minHeight: 54)
+				.overlay(alignment: .center) {
+					Text("여기를 클릭하면 에디터 외부 터치로 블록 선택이 해제됩니다")
+						.font(.caption)
+				}
+				.contentShape(Rectangle())
+				.onTapGesture {
+					clearSelectedBlock()
+				}
+
+			HStack {
+				Button("샘플 재적재(문서 교체)") {
+					document = SlopadDocument(
+						id: UUID(),
+						blocks: [
+							EditorBlockInput(
+								id: "p-1",
+								kind: .heading(level: .h2),
+								content: BlockContent(text: "교체된 샘플 문서")
+							),
+							EditorBlockInput(
+								id: "p-2",
+								content: BlockContent(text: "이 버튼을 누르면 문서가 교체되어 리프레시가 일어납니다.")
+							),
+						]
+					)
+				}
+			}
+			.buttonStyle(.bordered)
+		}
+		.padding()
+	}
+}

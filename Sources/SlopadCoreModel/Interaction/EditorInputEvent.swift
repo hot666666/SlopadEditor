@@ -13,6 +13,7 @@ public enum EditorInputEvent: Hashable, Sendable {
         case enter
         case shiftEnter
         case escape
+        case clearSelection
         case indent
         case outdent
         case moveLeft(viewport: EditorViewport)

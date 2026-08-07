@@ -53,6 +53,12 @@ private struct HostView: View {
                 isEditing = false
                 return true
             }
+            // Another view in the window took the responder. What remains selected is host
+            // policy; dropping it takes one call and does not pull focus back.
+            .onChange(of: editor.isFocused) { _, isFocused in
+                guard !isFocused else { return }
+                editor.clearSelection()
+            }
             .frame(height: max(editor.contentHeight, 1))
             .task(id: record.id) {
                 document = SlopadDocument(
@@ -94,6 +100,7 @@ private struct DownstreamSwiftUIHost {
         let _: EditorDocumentSnapshot? = model.documentSnapshot
         model.commitComposition()
         model.setFocused(false)
+        _ = model.clearSelection()
         _ = model.perform(.insertText("host toolbar button"))
     }
 
