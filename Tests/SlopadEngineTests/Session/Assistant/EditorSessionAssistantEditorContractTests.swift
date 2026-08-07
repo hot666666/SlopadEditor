@@ -47,20 +47,20 @@ struct EditorSessionAssistantEditorContractTests {
 
         // When
         let context = try session.documentContextSnapshot()
-        let selectedText = try #require(selectedText(from: context.selectedContent))
+        let projectedText = try #require(selectedText(from: context.selectedContent))
         let encodedSelectedContent = try JSONEncoder().encode(context.selectedContent)
 
         // Then
         #expect(context.document.blocks.map(\.id) == [root, child, tail])
         #expect(context.selection == .text(selection))
         #expect(!encodedSelectedContent.isEmpty)
-        #expect(selectedText.fragments.map(\.blockID) == [root, child])
-        #expect(selectedText.fragments.map(\.sourceRange) == [TextRange(1, 5), TextRange(0, 3)])
-        #expect(selectedText.fragments.map(\.content.text) == ["한글🙂Z", "둘째🚀"])
-        #expect(selectedText.fragments[0].parentID == nil)
-        #expect(selectedText.fragments[0].kind == .heading(level: .h2))
+        #expect(projectedText.fragments.map(\.blockID) == [root, child])
+        #expect(projectedText.fragments.map(\.sourceRange) == [TextRange(1, 5), TextRange(0, 3)])
+        #expect(projectedText.fragments.map(\.content.text) == ["한글🙂Z", "둘째🚀"])
+        #expect(projectedText.fragments[0].parentID == nil)
+        #expect(projectedText.fragments[0].kind == .heading(level: .h2))
         #expect(
-            selectedText.fragments[0].content.marks
+            projectedText.fragments[0].content.marks
                 == [
                     BlockContent.InlineMark(kind: .bold, range: TextRange(0, 3)),
                     BlockContent.InlineMark(
@@ -69,10 +69,10 @@ struct EditorSessionAssistantEditorContractTests {
                     ),
                 ]
         )
-        #expect(selectedText.fragments[1].parentID == root)
-        #expect(selectedText.fragments[1].kind == .todo(isChecked: true))
+        #expect(projectedText.fragments[1].parentID == root)
+        #expect(projectedText.fragments[1].kind == .todo(isChecked: true))
         #expect(
-            selectedText.fragments[1].content.marks
+            projectedText.fragments[1].content.marks
                 == [BlockContent.InlineMark(kind: .italic, range: TextRange(1, 3))]
         )
     }
@@ -99,17 +99,17 @@ struct EditorSessionAssistantEditorContractTests {
 
         // When
         let context = try session.documentContextSnapshot()
-        let selectedBlocks = try #require(selectedBlocks(from: context.selectedContent))
+        let projectedBlocks = try #require(selectedBlocks(from: context.selectedContent))
 
         // Then
-        #expect(selectedBlocks.rootBlockIDs == [child, sibling])
-        #expect(selectedBlocks.blocks.map(\.id) == [child, grandchild, sibling])
-        #expect(selectedBlocks.blocks.map(\.kind) == [
+        #expect(projectedBlocks.rootBlockIDs == [child, sibling])
+        #expect(projectedBlocks.blocks.map(\.id) == [child, grandchild, sibling])
+        #expect(projectedBlocks.blocks.map(\.kind) == [
             .todo(isChecked: false),
             .codeBlock(language: "swift"),
             .quote,
         ])
-        #expect(selectedBlocks.blocks.first?.parentID == root)
+        #expect(projectedBlocks.blocks.first?.parentID == root)
     }
 
     @Test("활성 composition 중 context 조회와 patch 적용은 typed error로 거부된다")
