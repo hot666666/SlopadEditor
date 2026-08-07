@@ -41,7 +41,7 @@ struct EditorModelMarkdownPrefixShortcutApplicationTests {
                 (
                     kind: block.kind,
                     text: block.content.text,
-                    appliedShortcut: result?.change.operations.contains { operation in
+                    appliedShortcut: result.outcome?.change.operations.contains { operation in
                         if case .refreshMarker = operation {
                             return true
                         }
@@ -80,7 +80,7 @@ struct EditorModelMarkdownPrefixShortcutApplicationTests {
         let block = try #require(editor.document.blocks[blockID])
         #expect(block.kind == expectedKind)
         #expect(block.content.text == expectedText)
-        #expect(result?.change.operations.contains { operation in
+        #expect(result.outcome?.change.operations.contains { operation in
             if case .refreshMarker = operation {
                 return true
             }

@@ -61,7 +61,7 @@ struct EditorModelTextContentCommandTests {
         let result = try #require(
             editor.apply(.replaceText(blockID: blockID, range: TextRange.point(1), text: "el"))
         )
-        let change = result.change
+        let change = result.outcome!.change
 
         // Then
         #expect(editor.document.blocks[blockID]?.content.text == "Hello")
@@ -92,7 +92,7 @@ struct EditorModelTextContentCommandTests {
         let result = editor.apply(.insertText("X"))
 
         // Then
-        #expect(result == nil)
+        #expect(result.isApplied == false)
         #expect(editor.document.rootBlockIDs == expectedRootBlockIDs)
         #expect(editor.document.blocks[a]?.content.text == "A")
         #expect(editor.document.blocks[b]?.content.text == "B")

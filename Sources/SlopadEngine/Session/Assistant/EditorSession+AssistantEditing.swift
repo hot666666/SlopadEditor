@@ -47,7 +47,7 @@ extension EditorSession {
             throw .staleSource
         }
 
-        let result: (selectionBefore: EditorSelection, change: EditorChange)?
+        let result: EditorCommandResult
         do {
             result = try editorModel.replaceDocument(
                 with: patch.replacementBlocks,
@@ -57,7 +57,7 @@ extension EditorSession {
             throw EditorDocumentTransactionError(error)
         }
 
-        guard let result else { return nil }
+        guard let outcome = result.outcome else { return nil }
 
         textNavigationRuntimeContext = nil
         blockDrag = nil
@@ -65,13 +65,13 @@ extension EditorSession {
         blockSelectionDragAnchor = nil
         textSelectionDragAnchor = nil
         textDoubleClickSelection = nil
-        if result.change.documentChanged {
+        if outcome.change.documentChanged {
             blockLayout = BlockLayout()
         }
-        let invalidation = markLayoutDirty(for: result.change)
+        let invalidation = markLayoutDirty(for: outcome.change)
         return makeEditorUpdate(
             invalidation: invalidation,
-            previousSelection: result.selectionBefore
+            previousSelection: outcome.selectionBefore
         )
     }
 }

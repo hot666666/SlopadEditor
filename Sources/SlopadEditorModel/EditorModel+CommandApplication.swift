@@ -4,24 +4,20 @@ import SlopadCoreModel
 
 extension EditorModel {
     @discardableResult
-    package func apply(
-        _ command: EditorCommand
-    ) -> (selectionBefore: EditorSelection, change: EditorChange)? {
+    package func apply(_ command: EditorCommand) -> EditorCommandResult {
         apply([.command(command)])
     }
 
     @discardableResult
-    package func apply(
-        _ steps: [EditorTransactionStep]
-    ) -> (selectionBefore: EditorSelection, change: EditorChange)? {
-        guard !steps.isEmpty else { return nil }
+    package func apply(_ entries: [EditorTransactionEntry]) -> EditorCommandResult {
+        guard !entries.isEmpty else { return .notApplicable }
         let beforeState = state
         var operations: [EditorOperation] = []
         var changed: Set<BlockID> = []
 
         do throws(EditorCommandAbort) {
-            for step in steps {
-                switch step {
+            for entry in entries {
+                switch entry {
                 case .command(let command):
                     try perform(command, operations: &operations, changed: &changed)
                 case .replaceSelection(let selection):
@@ -33,7 +29,7 @@ extension EditorModel {
             guard documentChanged || beforeState.selection != selection
                 || beforeState.storedMarks != state.storedMarks || !operations.isEmpty
             else {
-                return nil
+                return .notApplicable
             }
 
             let transaction = EditorTransaction(
@@ -49,14 +45,15 @@ extension EditorModel {
             trimUndoStackToBudget()
             redoStack.removeAll()
             assertDocumentValidInDebug()
-            return (
+            let outcome = EditorCommandOutcome(
                 selectionBefore: transaction.selectionBefore,
                 change: transaction.change
             )
+            return documentChanged ? .document(outcome) : .selectionOnly(outcome)
         } catch {
             state = beforeState
             assertDocumentValidInDebug()
-            return nil
+            return .notApplicable
         }
     }
 

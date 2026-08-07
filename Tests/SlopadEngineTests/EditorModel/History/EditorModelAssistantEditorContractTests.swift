@@ -33,8 +33,8 @@ struct EditorModelAssistantEditorContractTests {
         let redo = editor.redo()
 
         // Then
-        #expect(result?.change.documentChanged == true)
-        #expect(result?.change.operations.count == 1)
+        #expect(result.outcome?.change.documentChanged == true)
+        #expect(result.outcome?.change.operations.count == 1)
         #expect(undo?.documentChanged == true)
         #expect(secondUndo == nil)
         #expect(redo?.documentChanged == true)

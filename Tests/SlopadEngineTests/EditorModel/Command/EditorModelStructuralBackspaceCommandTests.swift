@@ -38,7 +38,7 @@ struct EditorModelStructuralBackspaceCommandTests {
         let result = editor.apply(.handleBackspace)
 
         // Then
-        #expect(result == nil)
+        #expect(result.isApplied == false)
         #expect(editor.document.blocks[blockID]?.content.text == expectedText)
     }
 

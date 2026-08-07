@@ -17,10 +17,10 @@ struct EditorSessionTextSelectionNavigationInputEventTests {
 
         // When
         let leftUpdate = try #require(
-            session.handleInput(.command(.extendCharacterLeft(viewport: viewport)))
+            session.handleInput(.command(.navigate(.extendCharacterLeft(viewport: viewport))))
         )
         let rightUpdate = try #require(
-            session.handleInput(.command(.extendCharacterRight(viewport: viewport)))
+            session.handleInput(.command(.navigate(.extendCharacterRight(viewport: viewport))))
         )
 
         // Then
@@ -82,10 +82,10 @@ struct EditorSessionTextSelectionNavigationInputEventTests {
 
         // When
         let leftUpdate = try #require(
-            session.handleInput(.command(.extendWordLeft(viewport: viewport)))
+            session.handleInput(.command(.navigate(.extendWordLeft(viewport: viewport))))
         )
         let rightUpdate = try #require(
-            session.handleInput(.command(.extendWordRight(viewport: viewport)))
+            session.handleInput(.command(.navigate(.extendWordRight(viewport: viewport))))
         )
 
         // Then
@@ -121,7 +121,7 @@ struct EditorSessionTextSelectionNavigationInputEventTests {
 
         // When
         let firstUpdate = try #require(
-            session.handleInput(.command(.extendWordLeft(viewport: viewport)))
+            session.handleInput(.command(.navigate(.extendWordLeft(viewport: viewport))))
         )
         let echoUpdate = try #require(
             session.handleInput(
@@ -129,7 +129,7 @@ struct EditorSessionTextSelectionNavigationInputEventTests {
             )
         )
         let secondUpdate = try #require(
-            session.handleInput(.command(.extendWordLeft(viewport: viewport)))
+            session.handleInput(.command(.navigate(.extendWordLeft(viewport: viewport))))
         )
 
         // Then

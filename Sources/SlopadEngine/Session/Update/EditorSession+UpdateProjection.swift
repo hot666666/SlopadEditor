@@ -17,12 +17,12 @@ extension EditorSession {
         _ command: EditorCommand
     ) -> (previousSelection: EditorSelection?, invalidation: EditorUpdateInvalidation) {
         let result = editorModel.apply(command)
-        if result != nil {
+        if result.isApplied {
             textNavigationRuntimeContext = nil
         }
-        let invalidation = markLayoutDirty(for: result?.change)
+        let invalidation = markLayoutDirty(for: result.outcome?.change)
         return (
-            previousSelection: result?.selectionBefore,
+            previousSelection: result.outcome?.selectionBefore,
             invalidation: invalidation
         )
     }

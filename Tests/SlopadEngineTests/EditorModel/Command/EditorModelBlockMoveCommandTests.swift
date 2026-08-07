@@ -31,7 +31,7 @@ struct EditorModelBlockMoveCommandTests {
         )
 
         // Then
-        let change = try #require(result?.change)
+        let change = try #require(result.outcome?.change)
         #expect(editor.document.rootBlockIDs == [a, d, b, c])
         #expect(change.operations.count == 1)
         guard case let .moveBlocks(blockIDs: movedBlockIDs) =
@@ -68,7 +68,7 @@ struct EditorModelBlockMoveCommandTests {
         )
 
         // Then
-        #expect(result == nil)
+        #expect(result.isApplied == false)
         #expect(editor.document.rootBlockIDs == [a, b, c])
     }
 }

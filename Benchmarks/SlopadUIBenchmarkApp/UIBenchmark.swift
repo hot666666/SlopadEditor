@@ -729,12 +729,12 @@ enum UIBenchmarkRunner {
             let viewport = viewController.currentViewport()
             if frame.isMultiple(of: 2) {
                 _ = viewController.handleNativeInputEvent(
-                    .command(.moveWordLeft(viewport: viewport))
+                    .command(.navigate(.moveWordLeft(viewport: viewport)))
                 )
                 return "moveWordLeft"
             }
             _ = viewController.handleNativeInputEvent(
-                .command(.moveWordRight(viewport: viewport))
+                .command(.navigate(.moveWordRight(viewport: viewport)))
             )
             return "moveWordRight"
 

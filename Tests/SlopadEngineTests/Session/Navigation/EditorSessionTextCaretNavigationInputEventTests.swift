@@ -35,13 +35,13 @@ struct EditorSessionTextCaretNavigationInputEventTests {
 
         // When
         let leftUpdate = try #require(
-            session.handleInput(.command(.moveWordLeft(viewport: viewport)))
+            session.handleInput(.command(.navigate(.moveWordLeft(viewport: viewport))))
         )
         let rightUpdate = try #require(
-            session.handleInput(.command(.moveWordRight(viewport: viewport)))
+            session.handleInput(.command(.navigate(.moveWordRight(viewport: viewport))))
         )
         let nextRightUpdate = try #require(
-            session.handleInput(.command(.moveWordRight(viewport: viewport)))
+            session.handleInput(.command(.navigate(.moveWordRight(viewport: viewport))))
         )
 
         // Then

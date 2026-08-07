@@ -61,7 +61,7 @@ public enum AppKitEditorAction: Hashable, Sendable {
         case .deleteToTextStart:
             command = .deleteToTextStart
         case .deleteWordBackward:
-            command = .deleteWordBackward(viewport: viewport)
+            command = .navigate(.deleteWordBackward(viewport: viewport))
         case .enter:
             command = .enter
         case .shiftEnter:
@@ -79,37 +79,37 @@ public enum AppKitEditorAction: Hashable, Sendable {
         case .clearInlineStyles:
             command = .clearInlineStyles
         case .moveLeft:
-            command = .moveLeft(viewport: viewport)
+            command = .navigate(.moveLeft(viewport: viewport))
         case .moveRight:
-            command = .moveRight(viewport: viewport)
+            command = .navigate(.moveRight(viewport: viewport))
         case .moveToTextStart:
             command = .moveToTextStart
         case .moveToTextEnd:
             command = .moveToTextEnd
         case .moveWordLeft:
-            command = .moveWordLeft(viewport: viewport)
+            command = .navigate(.moveWordLeft(viewport: viewport))
         case .moveWordRight:
-            command = .moveWordRight(viewport: viewport)
+            command = .navigate(.moveWordRight(viewport: viewport))
         case .extendCharacterLeft:
-            command = .extendCharacterLeft(viewport: viewport)
+            command = .navigate(.extendCharacterLeft(viewport: viewport))
         case .extendCharacterRight:
-            command = .extendCharacterRight(viewport: viewport)
+            command = .navigate(.extendCharacterRight(viewport: viewport))
         case .extendToTextStart:
             command = .extendToTextStart
         case .extendToTextEnd:
             command = .extendToTextEnd
         case .extendWordLeft:
-            command = .extendWordLeft(viewport: viewport)
+            command = .navigate(.extendWordLeft(viewport: viewport))
         case .extendWordRight:
-            command = .extendWordRight(viewport: viewport)
+            command = .navigate(.extendWordRight(viewport: viewport))
         case .moveUp:
-            command = .moveUp(viewport: viewport)
+            command = .navigate(.moveUp(viewport: viewport))
         case .moveDown:
-            command = .moveDown(viewport: viewport)
+            command = .navigate(.moveDown(viewport: viewport))
         case .extendUp:
-            command = .extendUp(viewport: viewport)
+            command = .navigate(.extendUp(viewport: viewport))
         case .extendDown:
-            command = .extendDown(viewport: viewport)
+            command = .navigate(.extendDown(viewport: viewport))
         case .selectAll:
             command = .selectAll
         case .undo:

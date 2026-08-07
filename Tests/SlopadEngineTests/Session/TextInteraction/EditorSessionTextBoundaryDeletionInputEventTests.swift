@@ -35,7 +35,7 @@ struct EditorSessionTextBoundaryDeletionInputEventTests {
 
         // When
         let update = try #require(
-            session.handleInput(.command(.deleteWordBackward(viewport: viewport)))
+            session.handleInput(.command(.navigate(.deleteWordBackward(viewport: viewport))))
         )
 
         // Then
@@ -61,7 +61,7 @@ struct EditorSessionTextBoundaryDeletionInputEventTests {
 
         // When
         let update = try #require(
-            session.handleInput(.command(.deleteWordBackward(viewport: viewport)))
+            session.handleInput(.command(.navigate(.deleteWordBackward(viewport: viewport))))
         )
 
         // Then
@@ -85,7 +85,7 @@ struct EditorSessionTextBoundaryDeletionInputEventTests {
 
         // When
         let update = try #require(
-            session.handleInput(.command(.deleteWordBackward(viewport: viewport)))
+            session.handleInput(.command(.navigate(.deleteWordBackward(viewport: viewport))))
         )
 
         // Then
@@ -114,7 +114,7 @@ struct EditorSessionTextBoundaryDeletionInputEventTests {
 
         // When
         let update = session.handleInput(
-            .command(.deleteWordBackward(viewport: viewport))
+            .command(.navigate(.deleteWordBackward(viewport: viewport)))
         )
 
         // Then
@@ -139,12 +139,12 @@ struct EditorSessionTextBoundaryDeletionInputEventTests {
 
         // When
         let negativeRangeUpdate = session.handleInput(
-            .command(.deleteWordBackward(viewport: viewport))
+            .command(.navigate(.deleteWordBackward(viewport: viewport)))
         )
         backendRange = TextRange(0, 2)
         backendRange.lowerBound = 3
         let reversedRangeUpdate = session.handleInput(
-            .command(.deleteWordBackward(viewport: viewport))
+            .command(.navigate(.deleteWordBackward(viewport: viewport)))
         )
 
         // Then
@@ -168,7 +168,7 @@ struct EditorSessionTextBoundaryDeletionInputEventTests {
 
         // When
         let update = session.handleInput(
-            .command(.deleteWordBackward(viewport: viewport))
+            .command(.navigate(.deleteWordBackward(viewport: viewport)))
         )
 
         // Then
@@ -196,7 +196,7 @@ struct EditorSessionTextBoundaryDeletionInputEventTests {
 
         // When
         let update = session.handleInput(
-            .command(.deleteWordBackward(viewport: viewport))
+            .command(.navigate(.deleteWordBackward(viewport: viewport)))
         )
 
         // Then
@@ -264,7 +264,7 @@ struct EditorSessionTextBoundaryDeletionInputEventTests {
 
         // When
         let update = try #require(
-            session.handleInput(.command(.deleteWordBackward(viewport: viewport)))
+            session.handleInput(.command(.navigate(.deleteWordBackward(viewport: viewport))))
         )
 
         // Then
