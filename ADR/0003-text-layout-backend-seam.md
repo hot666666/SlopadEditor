@@ -96,7 +96,7 @@ practice `BlockLayout` was handed all ten methods and called exactly one:
 | method | BlockLayout | EditorSession | AppKit UI |
 | --- | :---: | :---: | :---: |
 | `measure` | used | | |
-| `textFrame` | | | used |
+| `textFrame` | | used | used |
 | `lineFragments` | | used | used |
 | `caretRect` | | used | used |
 | `selectionRects` | | | used |
@@ -108,7 +108,9 @@ practice `BlockLayout` was handed all ten methods and called exactly one:
 
 Handing a layer that owns derived geometry the ability to ask about word boundaries invites
 it to start answering questions about text meaning, which is the boundary this ADR exists to
-protect.
+protect. `EditorSession` uses everything except `measure`, `selectionRects`, and
+`textPosition`; it is typed to exclude measurement for the same reason, since measuring
+outside `BlockLayout` would bypass that layer's cache.
 
 `BlockTextLayoutProtocol` is therefore split into `BlockMeasuring`,
 `TextGeometryResolving`, `TextNavigationResolving`, and `TextDeletionResolving`, with

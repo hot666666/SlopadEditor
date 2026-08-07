@@ -1,5 +1,9 @@
 import SlopadCoreModel
 
+// Stays on the composed protocol: `EditorSession.init` takes the whole seam, because a
+// backend adopts all four capabilities. Only doubles that never reach Session can be
+// narrowed. What did narrow is the BlockLayout-side test helpers, which now ask for
+// `any BlockMeasuring` — so a double that only measures is now accepted there.
 final class RecordingBlockTextLayouter: BlockTextLayoutProtocol, @unchecked Sendable {
     var measuredBlockIDs: [BlockID] = []
     private let measurementsByBlockID: [BlockID: BlockMeasurement]

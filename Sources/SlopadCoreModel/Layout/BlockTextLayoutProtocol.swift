@@ -68,7 +68,6 @@ public protocol BlockTextLayoutProtocol:
 
 // MARK: - Portable Logical Fallback
 
-
 // The documented logical fallback lives on the protocol that declares each method, not on
 // the composed one. A backend adopting a single capability — a navigation-only test double,
 // or a future non-text block type — has to receive these too, otherwise the split hands out
@@ -82,7 +81,6 @@ public extension TextGeometryResolving {
     ) -> EditorRect? {
         caretRect(for: position, in: request)
     }
-
 
     func textHitTest(
         at point: EditorPoint,
@@ -140,7 +138,6 @@ public extension TextNavigationResolving {
             context: nil
         )
     }
-
 
     func wordRange(
         containing position: TextPosition,

@@ -11,7 +11,7 @@ extension EditorSession {
             document: editorModel.document,
             composition: composition,
             viewport: viewport,
-            textLayouter: textLayouter
+            textLayouter: blockMeasuring
         )
 
         #if SLOPAD_BENCHMARK_INSTRUMENTATION

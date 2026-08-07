@@ -42,7 +42,29 @@ public final class EditorSession {
 
     var editorModel: EditorModel
     var blockLayout: BlockLayout
-    var textLayouter: any BlockTextLayoutProtocol
+    /// The whole seam, stored once.
+    ///
+    /// `private` so extensions in other files cannot reach it — they get the narrow views
+    /// below instead. Two independently settable references would have to be kept in sync,
+    /// and one assignment site updating only one of them is a silent divergence.
+    private var textBackend: any BlockTextLayoutProtocol
+
+    /// What Session itself asks about laid-out text.
+    ///
+    /// Excludes `BlockMeasuring` on purpose: measurement belongs to `BlockLayout`, behind
+    /// its cache. Typing this view narrowly is what stops a later extension here from
+    /// calling `measure` directly and bypassing that cache.
+    var textLayouter: any TextGeometryResolving & TextNavigationResolving & TextDeletionResolving {
+        textBackend
+    }
+
+    /// Forwarded to `BlockLayout`, which is the only thing that measures.
+    var blockMeasuring: any BlockMeasuring { textBackend }
+
+    /// Swaps the backend. Both views follow, because there is only one stored value.
+    func replaceTextBackend(_ backend: any BlockTextLayoutProtocol) {
+        textBackend = backend
+    }
     var composition: TextComposition?
     var compositionSelection: TextSelection?
     var blockDrag: (blockIDs: [BlockID], dropTarget: BlockDropTarget?, dropIndicator: EditorRect?)?
@@ -71,7 +93,7 @@ public final class EditorSession {
     ) {
         self.editorModel = EditorModel(document: document, selection: selection)
         self.blockLayout = BlockLayout()
-        self.textLayouter = textLayouter
+        self.textBackend = textLayouter
         self.composition = nil
         self.compositionSelection = nil
         self.blockDrag = nil
