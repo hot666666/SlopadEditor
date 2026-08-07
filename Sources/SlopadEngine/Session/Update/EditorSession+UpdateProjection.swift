@@ -48,6 +48,7 @@ extension EditorSession {
             previousSelection: previousSelection,
             composition: composition,
             history: historyState,
+            epoch: sessionEpoch,
             committedDocumentRevision: committedDocumentRevision,
             layoutDirty: blockLayout.isDirty,
             invalidation: invalidation
@@ -58,6 +59,7 @@ extension EditorSession {
                 previousSelection: previousSelection,
                 composition: composition,
                 history: historyState,
+                epoch: sessionEpoch,
                 committedDocumentRevision: committedDocumentRevision,
                 invalidation: invalidation
             )

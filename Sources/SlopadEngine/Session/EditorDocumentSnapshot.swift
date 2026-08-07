@@ -26,7 +26,20 @@ public struct EditorDocumentRevision: RawRepresentable, Hashable, Codable, Compa
 /// `revision` is monotonically increasing for the lifetime of one `EditorSession`.
 /// Its revision advances only for committed canonical document mutations. Selection,
 /// layout, scrolling, and live IME composition do not advance it.
-public struct EditorDocumentSnapshot: Hashable, Codable, Sendable {
+/// Reading this value never throws, so a host can capture it during live IME composition —
+/// the moment a persistence host most needs it, and the moment
+/// `documentContextSnapshot()` refuses to answer.
+///
+/// Not `Codable`: `epoch` is meaningful only against a live Session in this process, and a
+/// decodable epoch would defeat the staleness check it exists for. Hosts persist `blocks`,
+/// which is `Codable`, through their own codec.
+public struct EditorDocumentSnapshot: Hashable, Sendable {
+    /// Identifies the Session this snapshot came from.
+    ///
+    /// Compare it against the epoch captured alongside an earlier revision before acting on
+    /// that revision. `revision` alone cannot tell two Sessions apart because it restarts
+    /// at zero whenever the Session is replaced.
+    public let epoch: EditorSessionEpoch
     public let revision: EditorDocumentRevision
     /// Every canonical block in depth-first preorder.
     ///
@@ -34,7 +47,12 @@ public struct EditorDocumentSnapshot: Hashable, Codable, Sendable {
     /// order and must be preserved when reconstructing the tree.
     public let blocks: [EditorBlockInput]
 
-    init(revision: EditorDocumentRevision, blocks: [EditorBlockInput]) {
+    init(
+        epoch: EditorSessionEpoch,
+        revision: EditorDocumentRevision,
+        blocks: [EditorBlockInput]
+    ) {
+        self.epoch = epoch
         self.revision = revision
         self.blocks = blocks
     }
