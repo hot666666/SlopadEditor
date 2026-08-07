@@ -58,10 +58,9 @@ struct EditorModelTextContentCommandTests {
         )
 
         // When
-        let result = try #require(
-            editor.apply(.replaceText(blockID: blockID, range: TextRange.point(1), text: "el"))
-        )
-        let change = result.outcome!.change
+        let result = editor.apply(
+            .replaceText(blockID: blockID, range: TextRange.point(1), text: "el"))
+        let change = try #require(result.outcome).change
 
         // Then
         #expect(editor.document.blocks[blockID]?.content.text == "Hello")
