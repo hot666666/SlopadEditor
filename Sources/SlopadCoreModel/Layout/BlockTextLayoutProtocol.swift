@@ -68,7 +68,13 @@ public protocol BlockTextLayoutProtocol:
 
 // MARK: - Portable Logical Fallback
 
-public extension BlockTextLayoutProtocol {
+
+// The documented logical fallback lives on the protocol that declares each method, not on
+// the composed one. A backend adopting a single capability — a navigation-only test double,
+// or a future non-text block type — has to receive these too, otherwise the split hands out
+// contracts that cannot be satisfied without reimplementing text segmentation.
+
+public extension TextGeometryResolving {
     func caretRect(
         for position: TextPosition,
         navigationContext: TextNavigationContext?,
@@ -76,6 +82,7 @@ public extension BlockTextLayoutProtocol {
     ) -> EditorRect? {
         caretRect(for: position, in: request)
     }
+
 
     func textHitTest(
         at point: EditorPoint,
@@ -86,6 +93,9 @@ public extension BlockTextLayoutProtocol {
 
     /// Supplies logical LTR behavior for simple backends that do not own visual navigation.
     /// Platform text backends should override this for bidi and locale-aware segmentation.
+}
+
+public extension TextNavigationResolving {
     func navigate(
         selection: TextSelection,
         context: TextNavigationContext?,
@@ -131,6 +141,7 @@ public extension BlockTextLayoutProtocol {
         )
     }
 
+
     func wordRange(
         containing position: TextPosition,
         in request: BlockMeasureRequest
@@ -139,6 +150,9 @@ public extension BlockTextLayoutProtocol {
         return fallbackWordRange(in: request.text, containing: position.offset)
     }
 
+}
+
+public extension TextDeletionResolving {
     func deletionRange(
         for selection: TextSelection,
         direction: TextNavigationDirection,
