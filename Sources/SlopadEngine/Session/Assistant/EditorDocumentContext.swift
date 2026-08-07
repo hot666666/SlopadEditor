@@ -7,13 +7,18 @@ import SlopadCoreModel
 ///
 /// The token is intentionally not persistent. A host must obtain a fresh context after a
 /// document commit, selection change, Session replacement, or composition lifecycle.
+///
+/// It shares the Session epoch with the persistence path but stays a strictly stronger
+/// token: a patch also pins the exact revision and selection, because replacing a document
+/// the caller no longer sees is a silent overwrite. Persistence needs only the epoch, so it
+/// reads that one field from `EditorDocumentSnapshot` rather than weakening this token.
 public struct EditorDocumentSource: Hashable, Sendable {
-    let sessionEpoch: UUID
+    let sessionEpoch: EditorSessionEpoch
     let revision: EditorDocumentRevision
     let selection: EditorSelection
 
     init(
-        sessionEpoch: UUID,
+        sessionEpoch: EditorSessionEpoch,
         revision: EditorDocumentRevision,
         selection: EditorSelection
     ) {

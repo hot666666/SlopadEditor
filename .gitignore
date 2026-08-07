@@ -63,3 +63,5 @@ fastlane/test_output
 
 .vscode/
 .agents/
+
+.swiftpm/

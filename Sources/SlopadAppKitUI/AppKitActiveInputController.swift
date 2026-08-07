@@ -11,6 +11,7 @@ protocol AppKitActiveInputOwner: AnyObject {
     func handleNativeInputEvent(_ inputEvent: EditorInputEvent) -> EditorUpdate?
     func handleActiveInputRenderRequest(_ request: AppKitActiveInputRenderRequest)
     func currentViewport() -> EditorViewport
+    func reportUnhandledAction(_ action: AppKitEditorAction, defaultHandled: Bool) -> Bool
 }
 
 // MARK: - AppKitActiveInputController
@@ -269,20 +270,20 @@ final class AppKitActiveInputController {
 
         switch commandSelector {
         case AppKitCommandSelectors.insertNewline:
-            owner?.handleNativeInputEvent(.command(.enter))
+            return handleSemanticAction(.enter)
 
         case AppKitCommandSelectors.insertLineBreak,
             AppKitCommandSelectors.insertNewlineIgnoringFieldEditor:
-            owner?.handleNativeInputEvent(.command(.shiftEnter))
+            return handleSemanticAction(.shiftEnter)
 
         case AppKitCommandSelectors.deleteBackward:
-            owner?.handleNativeInputEvent(.command(.deleteBackward))
+            return handleSemanticAction(.deleteBackward)
 
         case AppKitCommandSelectors.deleteForward:
             owner?.handleNativeInputEvent(.command(.deleteForward))
 
         case AppKitCommandSelectors.deleteToBeginningOfLine:
-            return handleInputCommand(.deleteToTextStart)
+            return handleInputCommand(.deleteToTextStart, reportingUnhandled: .deleteToTextStart)
 
         case AppKitCommandSelectors.deleteWordBackward:
             return handleViewportInputCommand { .deleteWordBackward(viewport: $0) }
@@ -344,26 +345,26 @@ final class AppKitActiveInputController {
             return handleViewportInputCommand { .extendDown(viewport: $0) }
 
         case AppKitCommandSelectors.cancelOperation:
-            owner?.handleNativeInputEvent(.command(.escape))
+            return handleSemanticAction(.escape)
 
         case AppKitCommandSelectors.selectAll:
-            owner?.handleNativeInputEvent(.command(.selectAll))
+            return handleSemanticAction(.selectAll)
 
         case AppKitCommandSelectors.copy:
             return copySelectionToPasteboard()
 
         case AppKitCommandSelectors.cut:
             guard copySelectionToPasteboard() else { return false }
-            return handleInputCommand(.cutSelection)
+            return handleInputCommand(.cutSelection, reportingUnhandled: .cutSelection)
 
         case AppKitCommandSelectors.paste:
             return pasteTextFromPasteboard()
 
         case AppKitCommandSelectors.undo:
-            return handleInputCommand(.undo)
+            return handleInputCommand(.undo, reportingUnhandled: .undo)
 
         case AppKitCommandSelectors.redo:
-            return handleInputCommand(.redo)
+            return handleInputCommand(.redo, reportingUnhandled: .redo)
 
         default:
             return false
@@ -400,9 +401,35 @@ final class AppKitActiveInputController {
     }
 
     @discardableResult
-    private func handleInputCommand(_ command: EditorInputEvent.Command) -> Bool {
+    private func handleInputCommand(
+        _ command: EditorInputEvent.Command,
+        reportingUnhandled action: AppKitEditorAction? = nil
+    ) -> Bool {
         guard owner?.handleNativeInputEvent(.command(command)) != nil else {
-            return false
+            guard let action, let owner else { return false }
+            // These selectors already returned false — and so fell through the responder
+            // chain — when the engine refused them, so that stays the default.
+            return owner.reportUnhandledAction(action, defaultHandled: false)
+        }
+        requestRender(makeFirstResponder: true, scrollSelectionIntoView: true)
+        return true
+    }
+
+    /// Runs a discrete semantic action and lets the host take it over when the engine
+    /// refuses it.
+    ///
+    /// Only discrete actions route here. Continuous caret navigation is deliberately left
+    /// out: "move up at the first line" is a routine boundary hit that happens constantly
+    /// during ordinary editing, and reporting it as an escalation would drown the signal
+    /// this callback exists to carry.
+    private func handleSemanticAction(_ action: AppKitEditorAction) -> Bool {
+        guard let owner else { return false }
+        guard owner.handleNativeInputEvent(action.inputEvent(viewport: owner.currentViewport()))
+            != nil
+        else {
+            // These selectors reported the command as handled even when the engine refused
+            // it, so a host that sets no callback keeps observing exactly that.
+            return owner.reportUnhandledAction(action, defaultHandled: true)
         }
         requestRender(makeFirstResponder: true, scrollSelectionIntoView: true)
         return true

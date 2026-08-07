@@ -31,6 +31,7 @@ public typealias TextNavigationContext = SlopadEngine.TextNavigationContext
 // MARK: - Host Observation Vocabulary
 
 public typealias EditorUpdate = SlopadEngine.EditorUpdate
+public typealias EditorSessionEpoch = SlopadEngine.EditorSessionEpoch
 public typealias EditorDocumentRevision = SlopadEngine.EditorDocumentRevision
 public typealias EditorDocumentSnapshot = SlopadEngine.EditorDocumentSnapshot
 public typealias EditorDocumentSource = SlopadEngine.EditorDocumentSource

@@ -153,10 +153,36 @@ The default controller surface is intentionally narrower than the raw engine sur
 Programmatic editing goes through `perform(_:)` with a context-free
 `AppKitEditorAction`; the controller captures its current viewport when the corresponding
 engine command needs geometry. `commitActiveComposition()` is the explicit lifecycle
-flush for a host that must persist, replace, or close a document. `focus`,
+flush for a host that must persist, replace, or close a document. `focus`, `setFocused`,
 `resetDocument`, `scrollDocument`, `updateEditorStyle`, `onUpdate`, render snapshots, and
-full-document snapshots remain synchronized host contracts. Raw `EditorInputEvent` and
-`currentViewport` are not public on `AppKitEditorViewController`.
+full-document snapshots remain synchronized host contracts. Raw `EditorInputEvent`,
+`currentViewport`, and `renderAndSyncSurface` are not public on
+`AppKitEditorViewController`.
+
+### Host Embedding Contract
+
+Embedding the editor as one subview of a larger app needs five things beyond mounting it,
+each of which fails silently when a host derives it wrong. ADR 0012 records the test used
+to decide what became public; this is what it produced.
+
+| Concern | Public surface | Without it |
+| --- | --- | --- |
+| Session staleness | `EditorSessionEpoch` on `EditorDocumentSnapshot` and `EditorUpdate` | `resetDocument` restarts revisions at zero, so a held revision persists into the wrong document |
+| Focus | `setFocused(_:)`, `isFocused`, `onFocusChange` | A render call stands in for a focus API, and `@FocusState` cannot be bridged |
+| Unconsumed input | `onUnhandledAction` | Escape escalates to nothing with no signal, leaving the host to guess from the responder chain |
+| Content height | `contentHeight`, `onContentHeightChange` | Reading one number requires subscribing to every scroll and render pass |
+| SwiftUI lifecycle | `SlopadEditor`, `SlopadEditorModel`, `SlopadDocument` | Every host re-derives the identity guard, committed-change filter, epoch check, and composition flush |
+
+`onFocusChange` reports focus the host did not initiate — a click, or another view taking
+it away — because a binding that only sees host-initiated changes desynchronizes the first
+time the user clicks elsewhere. `onUnhandledAction` is a result notification: it reports
+what the engine already decided and cannot change that decision.
+
+**`[EditorBlockInput]` is the only document representation crossing this boundary.** No
+`String`, storage format, or codec type appears in the host-facing API. Turning a stored
+format into blocks, and blocks back into a stored format, is the host's codec on the
+host's side. This is what stops a convenience format from becoming a second canonical
+model.
 
 The narrower default facade does not remove the engine extension boundary.
 `EditorSession.handleInput(_:)`, `EditorInputEvent`, `EditorViewport`, and
@@ -345,6 +371,41 @@ a fresh derived `BlockLayout` state before the next synchronized render.
 `EditorDocumentContextSnapshot.document` reuses `EditorDocumentSnapshot` so canonical
 tree representation has one public shape. The context does not turn the persistence
 snapshot or its revision into a mutation credential.
+
+## Editor-Owned Scrolling and Host Sizing
+
+`setupScrollView()` pins the controller's `NSScrollView` to all four edges of its root
+view. Two consequences are contract, not incidental layout:
+
+- **The editor owns scrolling.** It decides when content scrolls, where the viewport is,
+  and when the selection is revealed. Viewport-bearing engine commands read that viewport.
+- **The editor fills its container.** It has no intrinsic content size and will occupy
+  whatever space the host gives it.
+
+**Embedding inside a host-owned scroll view is not supported.** Nesting the editor in an
+outer `NSScrollView` or SwiftUI `ScrollView` produces two components that both believe they
+own scrolling: wheel events are claimed by the inner view, the outer view's offset and the
+editor's viewport disagree, and selection reveal scrolls the wrong container. Nothing
+detects this at compile time, which is why it is written down here.
+
+A host that wants an inline editor growing with its content sizes the container itself:
+
+```swift
+controller.onContentHeightChange = { height in
+    heightConstraint.constant = CGFloat(height)
+}
+```
+
+`contentHeight` and `onContentHeightChange` report the settled document height, excluding
+the editor's bottom padding. They exist separately from `onSnapshotChanged` because that
+callback fires on every scroll and render pass; a host driving a frame from it recomputes
+layout on every keystroke and every scroll tick. `onContentHeightChange` fires when the
+number a host would act on actually moved.
+
+The editor still scrolls internally when the host constrains it below `contentHeight`, so
+this is a sizing convenience rather than a second layout mode. A genuine host-owned
+scrolling mode — where the editor renders its full height and never scrolls — is a larger
+change to viewport ownership and remains a roadmap item.
 
 ## Default AppKit Path and Full Replacement
 

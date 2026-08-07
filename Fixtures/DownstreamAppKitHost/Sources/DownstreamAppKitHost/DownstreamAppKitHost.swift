@@ -58,12 +58,17 @@ private struct DownstreamAppKitHost {
         blockID: BlockID,
         style: AppKitEditorStyle
     ) throws {
+        // A persistence host holds a committed change token and decides later whether it is
+        // still worth writing. Both halves have to be public values.
+        var capturedToken: (epoch: EditorSessionEpoch, revision: EditorDocumentRevision)?
         controller.onSnapshotChanged = { _ in }
         controller.onUpdate = { [weak controller] update in
             guard let revision = update.committedDocumentRevision else { return }
             let documentSnapshot = controller?.documentSnapshot
             _ = documentSnapshot?.revision == revision
+            _ = documentSnapshot?.epoch == update.epoch
             _ = documentSnapshot?.blocks
+            capturedToken = (update.epoch, revision)
         }
         controller.blockChromeRenderer = HostChromeRenderer()
         _ = controller.editorStyle == style
@@ -104,7 +109,40 @@ private struct DownstreamAppKitHost {
         )
         precondition(noOpUpdate == nil)
 
-        controller.renderAndSyncSurface(makeFirstResponder: false)
+        // An inline host sizes its container from the document height without subscribing
+        // to render snapshots.
+        var observedHeights: [Double] = []
+        controller.onContentHeightChange = { observedHeights.append($0) }
+        _ = controller.contentHeight
+        _ = observedHeights
+
+        // Escape escalation: the editor tells the host when it ran out of things to do
+        // with a semantic action, instead of the host guessing from the responder chain.
+        var escalatedActions: [AppKitEditorAction] = []
+        controller.onUnhandledAction = { action in
+            escalatedActions.append(action)
+            return action == .escape
+        }
+        controller.perform(.undo, makeFirstResponder: false, scrollSelectionIntoView: false)
+        _ = escalatedActions
+
+        // Dropping selection is one action, not an escape escalation the host has to count
+        // out, and it leaves the responder where the host put it.
+        controller.perform(
+            .clearSelection,
+            makeFirstResponder: false,
+            scrollSelectionIntoView: false
+        )
+
+        // Focus is a first-class contract now: a host observes it, sets it, and reads it
+        // back without reaching for a render call.
+        var observedFocus: [Bool] = []
+        controller.onFocusChange = { observedFocus.append($0) }
+        controller.setFocused(true)
+        controller.setFocused(false)
+        _ = controller.isFocused
+        _ = observedFocus
+
         controller.updateEditorStyle(
             AppKitEditorStyle(
                 fontName: style.fontName,
@@ -142,6 +180,8 @@ private struct DownstreamAppKitHost {
         }
         _ = controller.commitActiveComposition()
         controller.scrollDocument(to: 0)
+
+        let tokenBeforeReset = capturedToken
         controller.resetDocument(
             blocks: [
                 EditorBlockInput(
@@ -151,5 +191,11 @@ private struct DownstreamAppKitHost {
             ],
             selection: .caret(blockID: blockID, offset: 0)
         )
+
+        // The replacement Session restarts revisions at zero, so the epoch is the only
+        // thing that tells the host its pending token belongs to a document that is gone.
+        if let tokenBeforeReset {
+            precondition(tokenBeforeReset.epoch != controller.documentSnapshot.epoch)
+        }
     }
 }

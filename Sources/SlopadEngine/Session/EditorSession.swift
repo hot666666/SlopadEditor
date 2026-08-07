@@ -27,8 +27,12 @@ public final class EditorSession {
 
     /// Returns the complete committed canonical document without viewport or live
     /// composition state.
+    ///
+    /// Unlike `documentContextSnapshot()` this never throws, so it stays readable while a
+    /// native IME composition is in flight.
     public var documentSnapshot: EditorDocumentSnapshot {
         EditorDocumentSnapshot(
+            epoch: sessionEpoch,
             revision: currentDocumentRevision,
             blocks: editorModel.document.editorBlockInputs
         )
@@ -48,7 +52,10 @@ public final class EditorSession {
     var textDoubleClickSelection: (blockID: BlockID, wordRange: TextRange)?
     var textNavigationRuntimeContext: EditorSessionTextNavigationRuntimeContext?
     private var compositionRevisionCounter: Int
-    let documentContextEpoch: UUID
+    /// Identity of this Session instance. Serves both the persistence path
+    /// (`EditorDocumentSnapshot`, `EditorUpdate`) and the patch CAS token
+    /// (`EditorDocumentSource`).
+    let sessionEpoch: EditorSessionEpoch
     private var documentChangeRevision: UInt64
     private var hasPendingDocumentChange: Bool
     #if SLOPAD_BENCHMARK_INSTRUMENTATION
@@ -74,7 +81,7 @@ public final class EditorSession {
         self.textDoubleClickSelection = nil
         self.textNavigationRuntimeContext = nil
         self.compositionRevisionCounter = 0
-        self.documentContextEpoch = UUID()
+        self.sessionEpoch = EditorSessionEpoch()
         self.documentChangeRevision = 0
         self.hasPendingDocumentChange = false
         #if SLOPAD_BENCHMARK_INSTRUMENTATION

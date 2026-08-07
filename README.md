@@ -209,6 +209,7 @@ The ordinary host surface is organized by intent rather than by native callback 
 | Create or replace a document | `init`, `resetDocument` | Controller synchronizes a new `EditorSession` and native surface |
 | Move programmatic focus | `focus(blockID:offset:)` | Session owns selection meaning; AppKit owns responder and reveal |
 | Perform a programmatic edit | `perform(_:)` with `AppKitEditorAction` | Controller supplies viewport; Session applies semantics |
+| Drop selection without moving focus | `perform(.clearSelection, makeFirstResponder: false)` | Session owns the transition to inactive; responder ownership is untouched |
 | Flush marked text before save/switch/close | `commitActiveComposition()` | Session commits; controller re-synchronizes canonical native text |
 | Change default text presentation | `updateEditorStyle(_:)` | One `AppKitTextSystem` replaces layout and drawing together |
 | Customize block decoration | `AppKitBlockChromeRenderer` | Host draws clipped chrome; adapter still draws text and feedback |

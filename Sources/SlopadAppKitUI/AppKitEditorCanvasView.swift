@@ -21,6 +21,7 @@ protocol AppKitEditorCanvasHandler: AnyObject {
     func hasMarkedTextForNativeSurface() -> Bool
     func attributedSubstringForNativeSurface(range: NSRange) -> NSAttributedString?
     func firstRectForNativeSurface(range: NSRange) -> NSRect
+    func canvasFocusDidChange(_ isFocused: Bool)
 }
 
 // MARK: - AppKitEditorCanvasView
@@ -65,6 +66,27 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
 
     override var acceptsFirstResponder: Bool {
         true
+    }
+
+    // Responder transitions are the only place a focus change is observable regardless of
+    // who caused it — the host calling `setFocused`, a click landing on the canvas, or
+    // another view in the window taking focus away. Reporting only host-initiated changes
+    // would make a `@FocusState` binding work in one direction and silently desynchronize
+    // in the other.
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        if accepted {
+            handler?.canvasFocusDidChange(true)
+        }
+        return accepted
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        if resigned {
+            handler?.canvasFocusDidChange(false)
+        }
+        return resigned
     }
 
     override func draw(_ dirtyRect: NSRect) {

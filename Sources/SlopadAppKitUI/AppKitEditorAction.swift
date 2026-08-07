@@ -17,6 +17,7 @@ public enum AppKitEditorAction: Hashable, Sendable {
     case enter
     case shiftEnter
     case escape
+    case clearSelection
     case indent
     case outdent
     case moveLeft
@@ -62,6 +63,8 @@ public enum AppKitEditorAction: Hashable, Sendable {
             command = .shiftEnter
         case .escape:
             command = .escape
+        case .clearSelection:
+            command = .clearSelection
         case .indent:
             command = .indent
         case .outdent:

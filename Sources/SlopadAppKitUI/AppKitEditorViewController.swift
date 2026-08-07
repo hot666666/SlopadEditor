@@ -174,6 +174,20 @@ public final class AppKitEditorViewController: NSViewController {
         return try session.documentContextSnapshot()
     }
     public private(set) var snapshot: EditorSessionSnapshot?
+
+    /// The full height of the laid-out document, excluding the editor's bottom padding.
+    ///
+    /// This is the value an inline editor sizes itself to. It is `0` until the first
+    /// layout settles.
+    public private(set) var contentHeight: Double = 0
+
+    /// Called when the document height changes, and only then.
+    ///
+    /// `onSnapshotChanged` also carries `totalHeight`, but it fires on every scroll and
+    /// render pass, so a host that only wants to grow a frame would be recomputing on
+    /// every keystroke and every scroll tick. This fires when the number a host would act
+    /// on actually moved.
+    public var onContentHeightChange: ((Double) -> Void)?
     public var blockChromeRenderer: any AppKitBlockChromeRenderer
     public var onSnapshotChanged: ((EditorSessionSnapshot) -> Void)?
     public var onUpdate: ((EditorUpdate) -> Void)?
@@ -222,6 +236,8 @@ public final class AppKitEditorViewController: NSViewController {
     private var pendingSurfaceSyncRequest: SurfaceSyncRequest?
     private var activeSnapshotPublicationKey: SnapshotPublicationKey?
     private let focusOnAppear: Bool
+    /// A `setFocused` call that arrived before the view had a window.
+    private var pendingFocus: Bool?
 
     // MARK: - Init
 
@@ -263,14 +279,100 @@ public final class AppKitEditorViewController: NSViewController {
 
     public override func viewDidAppear() {
         super.viewDidAppear()
-        if focusOnAppear {
-            renderAndSyncSurface(makeFirstResponder: true)
+        if let pendingFocus {
+            self.pendingFocus = nil
+            setFocused(pendingFocus)
+        } else if focusOnAppear {
+            setFocused(true)
         }
+    }
+
+    // MARK: - Public Focus
+
+    /// Whether the editor currently holds keyboard focus.
+    ///
+    /// Maintained from the canvas's responder transitions rather than read from the window
+    /// on demand, so it stays correct inside `onFocusChange` — AppKit has not updated
+    /// `window.firstResponder` yet at the moment a responder is told it became one.
+    public private(set) var isFocused: Bool = false
+
+    /// Called whenever focus changes, including changes the host did not initiate.
+    ///
+    /// Fires only on an actual transition, so a host can drive it from a binding without
+    /// filtering repeats itself.
+    public var onFocusChange: ((Bool) -> Void)?
+
+    /// Gives the editor keyboard focus, or gives it up.
+    ///
+    /// This is synchronized: `isFocused` and `onFocusChange` have already settled when the
+    /// call returns. Before the view has a window the request is remembered and applied on
+    /// `viewDidAppear`, because a host binding is usually evaluated before the view is
+    /// mounted.
+    ///
+    /// Giving up focus only resigns focus this editor actually holds. Blurring
+    /// unconditionally would let a host that is merely disabling itself steal focus from an
+    /// unrelated view.
+    public func setFocused(_ isFocused: Bool) {
+        guard let window = view.window else {
+            pendingFocus = isFocused
+            return
+        }
+        guard isFocused != self.isFocused else { return }
+
+        if isFocused {
+            window.makeFirstResponder(editorCanvasView)
+        } else {
+            window.makeFirstResponder(nil)
+        }
+
+        // The responder change alone does not move the native input surface. Without this
+        // the editor would hold focus while IME still targets the geometry from before.
+        renderAndSyncSurface(makeFirstResponder: false)
+    }
+
+    /// Reconciles the observable focus state with a canvas responder transition.
+    func canvasFocusDidChange(_ isFocused: Bool) {
+        guard isFocused != self.isFocused else { return }
+        self.isFocused = isFocused
+        onFocusChange?(isFocused)
+    }
+
+    // MARK: - Unhandled Actions
+
+    /// Called when the engine refused a semantic action, so the host can take it over.
+    ///
+    /// Return `true` if the host consumed the action, `false` to fall back to the editor's
+    /// default handling for it. `handleEscapeInputCommand` is the motivating case: Escape
+    /// walks caret → blocks → inactive and then returns nothing, and until now there was no
+    /// signal at all that the editor had run out of things to do with it.
+    ///
+    /// This is a result notification, not a policy hook — it reports what the engine
+    /// already decided and never gets to change that decision. Native key, pointer and IME
+    /// callbacks stay adapter-owned.
+    public var onUnhandledAction: ((AppKitEditorAction) -> Bool)?
+
+    /// Guards against a callback that performs another action which is also refused.
+    private var isReportingUnhandledAction = false
+
+    /// Reports a refused action and answers whether it ended up handled.
+    ///
+    /// `defaultHandled` is what the call site did before this callback existed, so a host
+    /// that never sets `onUnhandledAction` observes no behavior change anywhere.
+    func reportUnhandledAction(
+        _ action: AppKitEditorAction,
+        defaultHandled: Bool
+    ) -> Bool {
+        guard let onUnhandledAction, !isReportingUnhandledAction else {
+            return defaultHandled
+        }
+        isReportingUnhandledAction = true
+        defer { isReportingUnhandledAction = false }
+        return onUnhandledAction(action)
     }
 
     // MARK: - Public Actions
 
-    public func renderAndSyncSurface(
+    package func renderAndSyncSurface(
         makeFirstResponder: Bool,
         scrollSelectionIntoView: Bool = false
     ) {
@@ -364,11 +466,17 @@ public final class AppKitEditorViewController: NSViewController {
         scrollSelectionIntoView: Bool = true
     ) -> EditorUpdate? {
         _ = commitActiveComposition()
-        return handleInput(
+        let update = handleInput(
             action.inputEvent(viewport: currentViewport()),
             makeFirstResponder: makeFirstResponder,
             scrollSelectionIntoView: scrollSelectionIntoView
         )
+        if update == nil {
+            // No responder chain to fall back to on a programmatic action, so the callback
+            // is the only escalation path here.
+            _ = reportUnhandledAction(action, defaultHandled: false)
+        }
+        return update
     }
 
     /// Applies one canonical full-document post-image and synchronizes the AppKit surface.
@@ -605,8 +713,19 @@ public final class AppKitEditorViewController: NSViewController {
 
         isSynchronizingSurface = false
         if let finalViewport, let finalSnapshot {
+            // Reported from the settled snapshot rather than from each render pass, so a
+            // host binding its frame to this never sees the intermediate heights the
+            // convergence loop produces.
+            notifyContentHeightIfChanged(finalSnapshot.totalHeight)
             publishSnapshot(finalSnapshot, viewport: finalViewport)
         }
+    }
+
+    /// Emits `onContentHeightChange` when the settled document height actually moved.
+    private func notifyContentHeightIfChanged(_ height: Double) {
+        guard contentHeight != height else { return }
+        contentHeight = height
+        onContentHeightChange?(height)
     }
 
     private func enqueueSurfaceSyncRequest(_ request: SurfaceSyncRequest) {
