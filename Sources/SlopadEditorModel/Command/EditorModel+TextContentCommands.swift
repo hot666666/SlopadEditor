@@ -3,6 +3,20 @@ import SlopadCoreModel
 // MARK: - Text Content Commands
 
 extension EditorModel {
+    /// Marks freshly inserted text with whatever the caret had armed.
+    fileprivate static func applyStoredMarks(
+        _ marks: Set<BlockContent.InlineMark.Kind>,
+        to content: inout BlockContent,
+        over offset: Int,
+        length: Int
+    ) {
+        guard !marks.isEmpty, length > 0 else { return }
+        let range = TextRange(offset, offset + length)
+        for kind in marks.sorted() {
+            content.addMark(kind: kind, range: range)
+        }
+    }
+
     func insertText(
         _ text: String,
         operations: inout [EditorOperation],
@@ -14,14 +28,18 @@ extension EditorModel {
 
         case .caret(let position):
             let blockID = position.blockID
-            guard document.containsBlock(blockID) else { throw .abort }
+            guard state.document.containsBlock(blockID) else { throw .abort }
             let offset = position.offset
+            let armedMarks = state.storedMarks
             try requireDocumentMutationSuccess(
-                document.updateContent(blockID: blockID) { content in
+                state.document.updateContent(blockID: blockID) { content in
                     content.insert(text, at: offset)
+                    Self.applyStoredMarks(armedMarks, to: &content, over: offset, length: text.count)
                 })
             let newOffset = offset + text.count
-            selection = .caret(blockID: blockID, offset: newOffset)
+            // Assigned rather than replaced: the caret moved because a character was typed,
+            // so anything armed for this spot still applies to the next one.
+            state.selection = .caret(blockID: blockID, offset: newOffset)
             changed.insert(blockID)
             normalizeShortcutsIfNeeded(
                 blockID: blockID, caretOffset: newOffset, operations: &operations, changed: &changed
@@ -32,13 +50,16 @@ extension EditorModel {
                 throw .abort
             }
             let blockID = textSelection.anchor.blockID
-            guard document.containsBlock(blockID) else { throw .abort }
+            guard state.document.containsBlock(blockID) else { throw .abort }
+            let armedMarks = state.storedMarks
             try requireDocumentMutationSuccess(
-                document.updateContent(blockID: blockID) { content in
+                state.document.updateContent(blockID: blockID) { content in
                     content.delete(range)
                     content.insert(text, at: range.lowerBound)
+                    Self.applyStoredMarks(
+                        armedMarks, to: &content, over: range.lowerBound, length: text.count)
             })
-            selection = .caret(blockID: blockID, offset: range.lowerBound + text.count)
+            state.selection = .caret(blockID: blockID, offset: range.lowerBound + text.count)
             changed.insert(blockID)
             normalizeShortcutsIfNeeded(
                 blockID: blockID, caretOffset: range.lowerBound + text.count,
@@ -57,14 +78,14 @@ extension EditorModel {
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
         guard !range.isEmpty || !text.isEmpty else { throw .abort }
-        guard document.containsBlock(blockID) else { throw .abort }
+        guard state.document.containsBlock(blockID) else { throw .abort }
         try requireDocumentMutationSuccess(
-            document.updateContent(blockID: blockID) { content in
+            state.document.updateContent(blockID: blockID) { content in
                 content.delete(range)
                 content.insert(text, at: range.lowerBound)
             })
         let newOffset = range.lowerBound + text.count
-        selection = .caret(blockID: blockID, offset: newOffset)
+        state.selection = .caret(blockID: blockID, offset: newOffset)
         changed.insert(blockID)
         if !text.isEmpty {
             normalizeShortcutsIfNeeded(
@@ -79,12 +100,12 @@ extension EditorModel {
         operations: inout [EditorOperation],
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
-        guard document.containsBlock(blockID) else { throw .abort }
+        guard state.document.containsBlock(blockID) else { throw .abort }
         try requireDocumentMutationSuccess(
-            document.updateContent(blockID: blockID) { content in
+            state.document.updateContent(blockID: blockID) { content in
                 content.delete(range)
             })
-        selection = .caret(blockID: blockID, offset: range.lowerBound)
+        state.selection = .caret(blockID: blockID, offset: range.lowerBound)
         changed.insert(blockID)
     }
 

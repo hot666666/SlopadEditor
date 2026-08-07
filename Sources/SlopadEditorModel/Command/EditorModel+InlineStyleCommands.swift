@@ -10,7 +10,7 @@ extension EditorModel {
         operations: inout [EditorOperation],
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
-        guard let block = document.block(blockID) else { throw .abort }
+        guard let block = state.document.block(blockID) else { throw .abort }
         let originalContent = block.content
         var nextContent = originalContent
         nextContent.addMark(kind: style, range: range)
@@ -18,7 +18,7 @@ extension EditorModel {
             throw .abort
         }
         try requireDocumentMutationSuccess(
-            document.replaceContent(blockID: blockID, content: nextContent))
+            state.document.replaceContent(blockID: blockID, content: nextContent))
         changed.insert(blockID)
     }
 
@@ -29,7 +29,7 @@ extension EditorModel {
         operations: inout [EditorOperation],
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
-        guard let block = document.block(blockID) else { throw .abort }
+        guard let block = state.document.block(blockID) else { throw .abort }
         let originalContent = block.content
         var nextContent = originalContent
         nextContent.clearMarks(matching: style, in: range)
@@ -37,7 +37,7 @@ extension EditorModel {
             throw .abort
         }
         try requireDocumentMutationSuccess(
-            document.replaceContent(blockID: blockID, content: nextContent))
+            state.document.replaceContent(blockID: blockID, content: nextContent))
         changed.insert(blockID)
     }
 
@@ -54,7 +54,7 @@ extension EditorModel {
         operations: inout [EditorOperation],
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
-        guard let block = document.block(blockID) else { throw .abort }
+        guard let block = state.document.block(blockID) else { throw .abort }
         if block.content.coversEntirely(style.caseIdentity, in: range) {
             try removeTextStyle(
                 blockID: blockID,
@@ -80,7 +80,7 @@ extension EditorModel {
         operations: inout [EditorOperation],
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
-        guard let block = document.block(blockID) else { throw .abort }
+        guard let block = state.document.block(blockID) else { throw .abort }
         let originalContent = block.content
         var nextContent = originalContent
         nextContent.clearMarks(in: range)
@@ -88,7 +88,7 @@ extension EditorModel {
             throw .abort
         }
         try requireDocumentMutationSuccess(
-            document.replaceContent(blockID: blockID, content: nextContent))
+            state.document.replaceContent(blockID: blockID, content: nextContent))
         changed.insert(blockID)
     }
 }

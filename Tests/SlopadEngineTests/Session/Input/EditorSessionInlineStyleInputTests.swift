@@ -102,8 +102,8 @@ struct EditorSessionInlineStyleInputTests {
         #expect(marks(session, blockID).isEmpty)
     }
 
-    @Test("caret만 있으면 style 명령을 거부한다")
-    func refusesStyleWithoutSelection() {
+    @Test("caret만 있으면 문서를 바꾸지 않고 다음 입력을 위해 예약한다")
+    func armsStyleWithoutSelection() {
         // Given
         let blockID: BlockID = "block"
         let session = makeSession(blockID: blockID, text: "abcd", selecting: TextRange.point(2))
@@ -111,8 +111,8 @@ struct EditorSessionInlineStyleInputTests {
         // When
         let update = session.handleInput(.command(.toggleInlineStyle(.strong)))
 
-        // Then
-        #expect(update == nil)
+        // Then: 예약은 편집 상태 변화라 update는 나오지만 문서는 그대로다.
+        #expect(update != nil)
         #expect(marks(session, blockID).isEmpty)
     }
 

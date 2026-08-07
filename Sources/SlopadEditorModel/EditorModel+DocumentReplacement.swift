@@ -46,8 +46,9 @@ extension EditorModel {
         if documentChanged {
             afterDocument.revision = beforeDocument.revision + 1
         }
-        document = afterDocument
-        selection = selectionAfter
+        let beforeState = state
+        state.document = afterDocument
+        state.selection = selectionAfter
 
         let changedBlockIDs = documentChanged
             ? Set(beforeDocument.blocks.keys).union(afterDocument.blocks.keys)
@@ -57,13 +58,7 @@ extension EditorModel {
             changedBlockIDs: changedBlockIDs,
             operations: documentChanged ? [.replaceDocument] : []
         )
-        let transaction = EditorTransaction(
-            beforeSnapshot: beforeDocument,
-            afterSnapshot: afterDocument,
-            selectionBefore: beforeSelection,
-            selectionAfter: selectionAfter,
-            change: change
-        )
+        let transaction = EditorTransaction(before: beforeState, after: state, change: change)
         undoStack.append(transaction)
         trimUndoStackToBudget()
         redoStack.removeAll()
