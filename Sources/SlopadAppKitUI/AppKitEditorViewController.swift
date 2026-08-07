@@ -222,6 +222,8 @@ public final class AppKitEditorViewController: NSViewController {
     private var pendingSurfaceSyncRequest: SurfaceSyncRequest?
     private var activeSnapshotPublicationKey: SnapshotPublicationKey?
     private let focusOnAppear: Bool
+    /// A `setFocused` call that arrived before the view had a window.
+    private var pendingFocus: Bool?
 
     // MARK: - Init
 
@@ -263,14 +265,67 @@ public final class AppKitEditorViewController: NSViewController {
 
     public override func viewDidAppear() {
         super.viewDidAppear()
-        if focusOnAppear {
-            renderAndSyncSurface(makeFirstResponder: true)
+        if let pendingFocus {
+            self.pendingFocus = nil
+            setFocused(pendingFocus)
+        } else if focusOnAppear {
+            setFocused(true)
         }
+    }
+
+    // MARK: - Public Focus
+
+    /// Whether the editor currently holds keyboard focus.
+    ///
+    /// Maintained from the canvas's responder transitions rather than read from the window
+    /// on demand, so it stays correct inside `onFocusChange` — AppKit has not updated
+    /// `window.firstResponder` yet at the moment a responder is told it became one.
+    public private(set) var isFocused: Bool = false
+
+    /// Called whenever focus changes, including changes the host did not initiate.
+    ///
+    /// Fires only on an actual transition, so a host can drive it from a binding without
+    /// filtering repeats itself.
+    public var onFocusChange: ((Bool) -> Void)?
+
+    /// Gives the editor keyboard focus, or gives it up.
+    ///
+    /// This is synchronized: `isFocused` and `onFocusChange` have already settled when the
+    /// call returns. Before the view has a window the request is remembered and applied on
+    /// `viewDidAppear`, because a host binding is usually evaluated before the view is
+    /// mounted.
+    ///
+    /// Giving up focus only resigns focus this editor actually holds. Blurring
+    /// unconditionally would let a host that is merely disabling itself steal focus from an
+    /// unrelated view.
+    public func setFocused(_ isFocused: Bool) {
+        guard let window = view.window else {
+            pendingFocus = isFocused
+            return
+        }
+        guard isFocused != self.isFocused else { return }
+
+        if isFocused {
+            window.makeFirstResponder(editorCanvasView)
+        } else {
+            window.makeFirstResponder(nil)
+        }
+
+        // The responder change alone does not move the native input surface. Without this
+        // the editor would hold focus while IME still targets the geometry from before.
+        renderAndSyncSurface(makeFirstResponder: false)
+    }
+
+    /// Reconciles the observable focus state with a canvas responder transition.
+    func canvasFocusDidChange(_ isFocused: Bool) {
+        guard isFocused != self.isFocused else { return }
+        self.isFocused = isFocused
+        onFocusChange?(isFocused)
     }
 
     // MARK: - Public Actions
 
-    public func renderAndSyncSurface(
+    package func renderAndSyncSurface(
         makeFirstResponder: Bool,
         scrollSelectionIntoView: Bool = false
     ) {

@@ -109,7 +109,15 @@ private struct DownstreamAppKitHost {
         )
         precondition(noOpUpdate == nil)
 
-        controller.renderAndSyncSurface(makeFirstResponder: false)
+        // Focus is a first-class contract now: a host observes it, sets it, and reads it
+        // back without reaching for a render call.
+        var observedFocus: [Bool] = []
+        controller.onFocusChange = { observedFocus.append($0) }
+        controller.setFocused(true)
+        controller.setFocused(false)
+        _ = controller.isFocused
+        _ = observedFocus
+
         controller.updateEditorStyle(
             AppKitEditorStyle(
                 fontName: style.fontName,
