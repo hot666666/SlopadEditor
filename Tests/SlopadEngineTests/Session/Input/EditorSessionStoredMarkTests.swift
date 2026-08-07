@@ -127,6 +127,88 @@ struct EditorSessionStoredMarkTests {
             ])
     }
 
+    @Test("네이티브 키 입력 경로에도 예약이 적용된다")
+    func armedStyleAppliesToNativeReplacement() {
+        // Given: AppKit 의 NSTextInputClient 는 글자마다 insertText 가 아니라 replaceText 를
+        // 보낸다. 예약이 여기서 빠지면 실제 타이핑에서만 조용히 동작하지 않는다.
+        let blockID: BlockID = "block"
+        let session = makeSession(blockID: blockID, text: "ab", caretAt: 2)
+        _ = session.handleInput(.command(.toggleInlineStyle(.strong)))
+
+        // When
+        _ = session.handleInput(
+            .command(.replaceText(blockID: blockID, range: TextRange.point(2), text: "X")))
+
+        // Then
+        #expect(text(session, blockID) == "abX")
+        #expect(
+            marks(session, blockID) == [
+                BlockContent.InlineMark(kind: .strong, range: TextRange(2, 3))
+            ])
+    }
+
+    @Test("IME 조합을 커밋해도 예약이 적용된다")
+    func armedStyleSurvivesCompositionCommit() {
+        // Given
+        let blockID: BlockID = "block"
+        let session = makeSession(blockID: blockID, text: "", caretAt: 0)
+        _ = session.handleInput(.command(.toggleInlineStyle(.emphasis)))
+
+        // When: 조합 중에는 예약이 걸리지 않지만, 커밋된 텍스트에는 적용되어야 한다.
+        _ = session.handleInput(
+            .beginComposition(blockID: blockID, replacementRange: TextRange.point(0), text: "ㅎ"))
+        _ = session.handleInput(
+            .updateComposition(blockID: blockID, replacementRange: TextRange.point(0), text: "한"))
+        _ = session.handleInput(.commitComposition)
+
+        // Then
+        #expect(text(session, blockID) == "한")
+        #expect(
+            marks(session, blockID) == [
+                BlockContent.InlineMark(kind: .emphasis, range: TextRange(0, 1))
+            ])
+    }
+
+    @Test("문서를 교체하면 예약이 풀린다")
+    func replacingTheDocumentDisarms() throws {
+        // Given: 에이전트 패치도 이 경로를 쓴다. 교체된 내용에 이전 예약이 붙으면 안 된다.
+        let blockID: BlockID = "block"
+        let session = makeSession(blockID: blockID, text: "ab", caretAt: 2)
+        _ = session.handleInput(.command(.toggleInlineStyle(.strong)))
+
+        // When
+        let context = try session.documentContextSnapshot()
+        _ = try session.applyDocumentPatch(
+            EditorDocumentPatch(
+                source: context.source,
+                replacementBlocks: [
+                    EditorBlockInput(id: blockID, content: BlockContent(text: "zz"))
+                ],
+                selectionAfter: .caret(blockID: blockID, offset: 2)
+            ))
+        _ = session.handleInput(.command(.insertText("Y")))
+
+        // Then
+        #expect(text(session, blockID) == "zzY")
+        #expect(marks(session, blockID).isEmpty)
+    }
+
+    @Test("블록 종류가 바뀌면 예약이 풀린다")
+    func blockKindConversionDisarms() {
+        // Given
+        let blockID: BlockID = "block"
+        let session = makeSession(blockID: blockID, text: "#", caretAt: 1)
+        _ = session.handleInput(.command(.toggleInlineStyle(.strong)))
+
+        // When: "# " 로 heading 이 되면서 caret 이 블록 시작으로 옮겨진다.
+        _ = session.handleInput(.command(.insertText(" ")))
+        _ = session.handleInput(.command(.insertText("T")))
+
+        // Then
+        #expect(text(session, blockID) == "T")
+        #expect(marks(session, blockID).isEmpty)
+    }
+
     @Test("여러 스타일을 함께 예약할 수 있다")
     func armsSeveralStyles() {
         // Given

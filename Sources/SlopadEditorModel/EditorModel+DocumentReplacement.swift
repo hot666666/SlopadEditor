@@ -47,8 +47,10 @@ extension EditorModel {
             afterDocument.revision = beforeDocument.revision + 1
         }
         let beforeState = state
-        state.document = afterDocument
-        state.selection = selectionAfter
+        // A whole new document is not a place the caret was aiming at, so anything armed for
+        // the old one is dropped. Agent patches land here too: a style armed before a patch
+        // must not attach itself to unrelated replacement content.
+        state = EditorState(document: afterDocument, selection: selectionAfter)
 
         let changedBlockIDs = documentChanged
             ? Set(beforeDocument.blocks.keys).union(afterDocument.blocks.keys)

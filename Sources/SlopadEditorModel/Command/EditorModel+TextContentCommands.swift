@@ -79,10 +79,16 @@ extension EditorModel {
     ) throws(EditorCommandAbort) {
         guard !range.isEmpty || !text.isEmpty else { throw .abort }
         guard state.document.containsBlock(blockID) else { throw .abort }
+        // This — not `insertText` — is what an ordinary keystroke and an IME commit arrive
+        // as, so stored marks have to be honored here or arming a style would only work for
+        // programmatic insertions.
+        let armedMarks = state.storedMarks
         try requireDocumentMutationSuccess(
             state.document.updateContent(blockID: blockID) { content in
                 content.delete(range)
                 content.insert(text, at: range.lowerBound)
+                Self.applyStoredMarks(
+                    armedMarks, to: &content, over: range.lowerBound, length: text.count)
             })
         let newOffset = range.lowerBound + text.count
         state.selection = .caret(blockID: blockID, offset: newOffset)

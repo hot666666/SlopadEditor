@@ -42,7 +42,10 @@ extension EditorModel {
         guard case .success = state.document.setBlockKind(blockID: blockID, kind: match.kind) else {
             return false
         }
-        state.selection = .caret(blockID: blockID, offset: 0)
+        // The marker text is gone and the caret jumps to the start of a block that is now a
+        // different kind. That is a relocation, not a caret advancing through typing, so a
+        // style armed against the old text does not carry over.
+        state.replaceSelection(.caret(blockID: blockID, offset: 0))
         operations.append(.refreshMarker)
         return true
     }
