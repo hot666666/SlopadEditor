@@ -17,7 +17,7 @@
 | ID | 원 서술 | 실제 | 반영 위치 |
 | --- | --- | --- | --- |
 | A1 | Phase 0 「기준선 통합」이 필요하다 | `git diff origin/main origin/claude/epic8` = 0줄. PR #22로 병합 완료 | §2.1, §15 Phase 0 |
-| A2 | 명령 계층을 새로 만들어야 한다 | `EditorCommand` 20 케이스와 `apply([Step])`이 이미 트랜잭션·undo 1회·롤백을 제공한다 | §3.4, §7 |
+| A2 | 명령 계층을 새로 만들어야 한다 | `EditorCommand` 18 케이스와 `apply([Step])`이 이미 트랜잭션·undo 1회·롤백을 제공한다 | §3.4, §7 |
 | A3 | (언급 없음) | inline mark를 편집 중 생성할 수 없다. `applyTextStyle` 호출부가 테스트뿐 | §6.0 신설 |
 | A4 | `BlockTextLayoutKey`를 새로 도입한다 | `PreparedLayoutKey = (BlockMeasureRequest, TextKitEditorStyle)`가 이미 더 강한 값 키다 | §11.3 |
 | A5 | AppKit UI는 rendering만 소비한다 | AppKit UI가 geometry 4종을 직접 호출한다 | §11.1 |
@@ -182,9 +182,12 @@ Slopad는 ProseMirror의 DOM 구현을 복사하는 것이 아니라, **문서·
 `claude/epic8`은 PR #22(`14f980a`)로 `main`에 squash merge되었고 **두 브랜치의 트리는 동일하다.**
 
 ```bash
+# 병합 시점(14f980a) 기준
 $ git diff --stat origin/main origin/claude/epic8
 (출력 없음 — 트리 동일)
 ```
+
+`main`은 그 뒤로 진행했으므로 오늘 같은 명령을 그대로 실행하면 차이가 나온다. 판단 기준은 **병합 시점의 트리 동일성**이다.
 
 squash merge이므로 `git log origin/main..origin/claude/epic8`은 비어 있지 않게 나온다. 그 명령으로 판단하면 안 되고, 위의 트리 비교가 기준이다.
 
@@ -483,7 +486,7 @@ NativeInputIntent
 >
 > ```text
 > EditorInputEvent.Command   public   CoreModel/Interaction   전송 + 일부 의미 (33 cases)
-> EditorCommand              package  EditorModel/Command     의미 명령 (20 cases)
+> EditorCommand              package  EditorModel/Command     의미 명령 (18 cases)
 > EditorTransactionStep      package  EditorModel/History     .command | .replaceSelection
 > ```
 >
