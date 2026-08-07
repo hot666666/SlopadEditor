@@ -4,6 +4,55 @@ This document keeps only the current development direction for the Slopad projec
 [Architecture](ARCHITECTURE.md) for the current target graph, ownership model, and
 platform extension philosophy.
 
+This file, together with `ADR/` and the active tracking issue, is the single source of
+truth for **what the code should become**. Current source and tests remain the authority
+for **what the code does today**. When the two disagree about intent, correct this
+document first, then change code.
+
+`Slopad_Semantic_Editor_Architecture_Handoff.md` is a background record of how the current
+direction was reached. It is not a work order, and its Phase list is superseded by the
+active epic below.
+
+## Active Epic
+
+**[Epic #23 — Markdown-semantic 편집 계층 정립](https://github.com/hot666666/Slopad/issues/23)**
+
+Two tracks run in parallel; they do not share files.
+
+| Track | Issues | Focus |
+| --- | --- | --- |
+| A — semantics | [#24](https://github.com/hot666666/Slopad/issues/24) [#25](https://github.com/hot666666/Slopad/issues/25) [#26](https://github.com/hot666666/Slopad/issues/26) [#27](https://github.com/hot666666/Slopad/issues/27) [#28](https://github.com/hot666666/Slopad/issues/28) [#29](https://github.com/hot666666/Slopad/issues/29) [#30](https://github.com/hot666666/Slopad/issues/30) [#31](https://github.com/hot666666/Slopad/issues/31) [#32](https://github.com/hot666666/Slopad/issues/32) [#33](https://github.com/hot666666/Slopad/issues/33) | inline mark reachability, editing state, command vocabulary, input rules, Markdown decode/encode |
+| B — layout | [#34](https://github.com/hot666666/Slopad/issues/34) [#35](https://github.com/hot666666/Slopad/issues/35) [#36](https://github.com/hot666666/Slopad/issues/36) [#37](https://github.com/hot666666/Slopad/issues/37) | text capability split, caret geometry path, cache key alignment, prepared layout store |
+
+The highest-priority item is [#25](https://github.com/hot666666/Slopad/issues/25): inline
+marks exist in the canonical model and in the TextKit render path, but no input event
+reaches `applyTextStyle`, so **no mark can be created during editing at all**. Input rules
+and Markdown inline conversion both depend on it.
+
+### Decisions fixed for this epic
+
+These are settled. Sub-issues implement them rather than re-opening them.
+
+| # | Decision | Rationale |
+| --- | --- | --- |
+| D1 | caret geometry is published through the Session snapshot; AppKit UI does not call the text backend directly | UI then needs only the rendering contract. focus, damage, and content height already travel that path |
+| D2 | no cross-block text ranges; multi-block work stays block selection | allowing them pulls in split/join position mapping, which requires the global integer coordinate space that is an explicit non-goal |
+| D3 | measurement keys align on `BlockMeasureRequest` value equality; no new revision-based key | `PreparedLayoutKey = (BlockMeasureRequest, TextKitEditorStyle)` already makes "same key implies same layout" true by construction. A revision key would weaken that to a convention |
+| D4 | `BlockKind` stays a closed enum; no open `typeID` with dynamic payload | the Markdown block vocabulary is closed by its specification. Opening it loses exhaustive `switch` checking and requires unknown-type preservation machinery with no consumer |
+| D5 | structure and content maps are not split | Swift's `[BlockID: Block]` is already copy-on-write, so most of the expected benefit is automatic. Splitting adds a key-set agreement invariant. Revisit when lazy content loading is real |
+| D6 | no format plugin protocol or registry | there is one format implementation. The point of a separate target is isolating the `swift-markdown` AST, not extensibility |
+| D7 | the inline mark vocabulary is a closed set owned by the core; neither format nor backend may extend it | `TextKitAttributedStringBuilder` already only interprets marks. What a format cannot express becomes an encoder diagnostic, not a new mark |
+
+### Out of scope for this epic
+
+- `DocumentStep` / `PositionMap` — blocked by D2; snapshot history stays.
+- `DocumentSchema` / `BlockSpec` / `MarkSpec` — `Document+Invariants.swift` already
+  enforces the listed checks, and extension blocks have no first consumer.
+- Persistence source-of-truth choice — depends on the round-trip criterion fixed in
+  [#29](https://github.com/hot666666/Slopad/issues/29); a separate ADR follows.
+- HTML artifact blocks, image/table blocks — consuming-product requirements that cannot be
+  expressed as engine-verifiable completion criteria.
+
 ## Achieved Baseline
 
 - The headless `EditorSession` facade is the host-facing surface.
@@ -95,7 +144,14 @@ needed before a host app can use the engine as a Notion/Craft-style editor surfa
   paste, and format negotiation with platform pasteboards are not yet modeled.
 - Inline marks exist in the canonical model and TextKit rendering path, but there is no
   public `EditorInputEvent` command surface for toolbar/menu shortcuts such as bold,
-  italic, code, link edit, or clear formatting.
+  italic, code, link edit, or clear formatting. The consequence is stronger than a missing
+  convenience: `applyTextStyle` and `clearTextStyles` are reachable only from tests, so no
+  inline mark is ever created during editing. Marks enter a document only through the
+  initial `[EditorBlockInput]`. This blocks Markdown inline input rules, so it is the first
+  item of the active epic ([#25](https://github.com/hot666666/Slopad/issues/25)).
+- `BlockContent.InlineMark.Kind` carries four cases (`bold`, `italic`, `code`, `link`).
+  `strikethrough` is absent even though GFM and the planned input rules need it, and the
+  two presentational names conflict with the format-neutral vocabulary rule (D7).
 - Physical character and linguistic word navigation now use the text backend, but native
   soft-line beginning/end commands still resolve to logical block start/end. A complete
   bidi insertion contract must also decide whether a backend secondary insertion location
@@ -152,6 +208,10 @@ Priority order:
     a real AppKit verification path.
 
 - P2 - Product command surface for block transforms and inline formatting
+  - Tracked by the active epic: [#25](https://github.com/hot666666/Slopad/issues/25),
+    [#26](https://github.com/hot666666/Slopad/issues/26),
+    [#27](https://github.com/hot666666/Slopad/issues/27). Promoted ahead of P0/P1 work
+    because nothing else in the inline path can proceed without it.
   - Add host-facing input events for block kind transform, todo toggling, inline mark
     toggle/application, link editing, code styling, and clear formatting.
   - Reuse the existing canonical `BlockKind`, `BlockContent.InlineMark`, and `EditorModel`
