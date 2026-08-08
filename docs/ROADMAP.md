@@ -17,6 +17,8 @@ active epic below.
 
 **[Epic #23 — Markdown-semantic 편집 계층 정립](https://github.com/hot666666/Slopad/issues/23)**
 
+[Current integration status](epic-23-status.html)
+
 Two tracks run in parallel; they do not share files.
 
 | Track | Issues | Focus |
