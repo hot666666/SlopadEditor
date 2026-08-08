@@ -51,6 +51,20 @@ struct EditorModelInputRuleTests {
         #expect(editor.document.block("block")?.content.text == "# ")
     }
 
+    @Test("동일한 블록 종류의 prefix 는 리터럴 텍스트로 남는다")
+    func sameBlockKindPrefixStaysLiteral() {
+        // Given: 이미 H1인 빈 블록에 H1 prefix를 직접 입력한다.
+        let editor = makeEditor(text: "#", caretAt: 1, kind: .heading(level: .h1))
+
+        // When
+        _ = editor.apply(.insertText(" "))
+
+        // Then: 종류를 바꿀 필요가 없으므로 prefix를 소비하지 않는다.
+        #expect(editor.document.block("block")?.kind == .heading(level: .h1))
+        #expect(editor.document.block("block")?.content.text == "# ")
+        #expect(editor.selection == .caret(blockID: "block", offset: 2))
+    }
+
     @Test("불완전한 문법은 그대로 텍스트로 남는다")
     func leavesIncompleteSyntaxAlone() {
         // Given
