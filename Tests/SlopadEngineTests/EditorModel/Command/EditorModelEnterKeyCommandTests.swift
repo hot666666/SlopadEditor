@@ -35,6 +35,49 @@ struct EditorModelEnterKeyCommandTests {
         #expect(editor.selection == .caret(blockID: createdID, offset: expectedCreatedOffset))
     }
 
+    @Test("단일 블록 텍스트 선택에서 Enter는 선택을 지우고 시작 위치에서 블록을 나눈다")
+    func givenSingleBlockTextSelection_whenEnter_thenSelectionIsReplacedBySplit() throws {
+        // Given
+        let blockID: BlockID = "block"
+        let editor = EditorModel(
+            document: .singleParagraph("Hello selected World", id: blockID),
+            selection: .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: blockID, offset: 6),
+                    focus: TextPosition(blockID: blockID, offset: 14)
+                )
+            )
+        )
+
+        // When
+        let result = editor.apply(.handleEnter)
+
+        // Then
+        let change = try #require(result.outcome?.change)
+        let createdID = try #require(
+            change.operations.compactMap { operation -> BlockID? in
+                if case .splitBlock(_, let created) = operation { return created }
+                return nil
+            }.first
+        )
+        #expect(editor.document.blocks[blockID]?.content.text == "Hello ")
+        #expect(editor.document.blocks[createdID]?.content.text == " World")
+        #expect(editor.selection == .caret(blockID: createdID, offset: 0))
+
+        // And: 선택 삭제와 split은 하나의 transaction이라 한 번에 복구된다.
+        _ = editor.undo()
+        #expect(editor.document.blocks[blockID]?.content.text == "Hello selected World")
+        #expect(
+            editor.selection
+                == .text(
+                    TextSelection(
+                        anchor: TextPosition(blockID: blockID, offset: 6),
+                        focus: TextPosition(blockID: blockID, offset: 14)
+                    )
+                )
+        )
+    }
+
     @Test("빈 root list item에서 Enter 키 명령은 문단으로 변환한다")
     func givenEmptyRootListItem_whenEnter_thenBlockBecomesParagraph() throws {
         // Given

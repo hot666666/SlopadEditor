@@ -24,6 +24,10 @@ extension EditorModel {
 
         switch outcome {
         case .canonical(.convertBlock(let removing, let kind)):
+            // A prefix only acts as a shortcut when it changes the block kind. If the
+            // block already has that exact kind, the user is entering literal Markdown
+            // text (for example, "# " at the start of an H1), so keep the marker.
+            guard block.kind != kind else { return }
             try requireDocumentMutationSuccess(
                 state.document.updateContent(blockID: blockID) { content in
                     content.delete(removing)

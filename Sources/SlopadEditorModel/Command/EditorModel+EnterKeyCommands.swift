@@ -7,7 +7,30 @@ extension EditorModel {
         operations: inout [EditorOperation],
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
-        guard case .caret(let position) = selection else {
+        let position: TextPosition
+        switch selection {
+        case .caret(let caret):
+            position = caret
+
+        case .text(let textSelection):
+            guard
+                textSelection.isSingleBlock,
+                let range = textSelection.rangeInSingleBlock
+            else {
+                throw .abort
+            }
+            try deleteText(
+                blockID: textSelection.anchor.blockID,
+                range: range,
+                operations: &operations,
+                changed: &changed
+            )
+            position = TextPosition(
+                blockID: textSelection.anchor.blockID,
+                offset: range.lowerBound
+            )
+
+        case .inactive, .blocks:
             throw .abort
         }
         let blockID = position.blockID
