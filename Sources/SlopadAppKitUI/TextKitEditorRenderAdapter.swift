@@ -4,33 +4,9 @@ import SlopadEngine
 
 // MARK: - Engine Render Descriptor Adaptation
 
-extension TextKitBlockTextLayouter {
-    func textFrame(
-        for descriptor: EditorTextRenderDescriptor,
-        measuredHeight: Double? = nil
-    ) -> EditorRect {
-        textFrame(for: descriptor.measureRequest, measuredHeight: measuredHeight)
-    }
-
-    func caretRect(
-        for position: TextPosition,
-        navigationContext: TextNavigationContext? = nil,
-        in descriptor: EditorTextRenderDescriptor
-    ) -> EditorRect? {
-        caretRect(
-            for: position,
-            navigationContext: navigationContext,
-            in: descriptor.measureRequest
-        )
-    }
-
-    func selectionRects(
-        for range: SlopadEngine.TextRange,
-        in descriptor: EditorTextRenderDescriptor
-    ) -> [EditorRect] {
-        selectionRects(for: range, in: descriptor.measureRequest)
-    }
-}
+// The geometry overloads that used to live here are gone. Caret and selection rectangles now
+// arrive on the Session snapshot already in document coordinates, so the adapter has nothing
+// to ask the backend for. Drawing is the one thing left that still takes a descriptor.
 
 extension TextKitBlockRenderer {
     func draw(

@@ -69,7 +69,16 @@ public final class EditorSession {
     /// directly would silently keep geometry from the previous backend.
     func replaceTextBackend(_ backend: any BlockTextLayoutProtocol) {
         textBackend = backend
+        // `CaretGeometryKey` describes the request, not who answered it. A style swap can
+        // change glyph metrics while text, width, depth, selection, and caret position all
+        // stay identical, so the memo would keep serving rectangles measured in the previous
+        // font. Nothing in the key can see that; only dropping it can.
+        cachedCaretGeometry = nil
     }
+    /// Last resolved caret/selection geometry, reused across surface convergence renders.
+    var cachedCaretGeometry:
+        (key: CaretGeometryKey, caretRect: EditorRect?, selectionRects: [EditorRect])?
+
     var composition: TextComposition?
     var compositionSelection: TextSelection?
     var blockDrag: (blockIDs: [BlockID], dropTarget: BlockDropTarget?, dropIndicator: EditorRect?)?

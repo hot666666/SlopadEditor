@@ -99,7 +99,7 @@ practice `BlockLayout` was handed all ten methods and called exactly one:
 | `textFrame` | | used | used |
 | `lineFragments` | | used | used |
 | `caretRect` | | used | used |
-| `selectionRects` | | | used |
+| `selectionRects` | | used | used |
 | `textPosition` | | via `textHitTest` default | |
 | `textHitTest` | | used | |
 | `navigate` | | used | |
@@ -124,5 +124,11 @@ Consequences added by this amendment:
   decision, and nothing here permits that.
 - Do not create a SwiftPM target per capability. The protocols live where the seam already
   lived, in `SlopadCoreModel/Layout`.
-- `AppKitEditorUI` still resolves geometry directly against the concrete backend. Whether
-  that should instead arrive through the Session snapshot is a separate decision (issue #35).
+- Caret and selection rectangles arrive through the Session snapshot (issue #35), resolved
+  in document coordinates so an adapter draws rather than asks. `EditorSession` memoizes them
+  across the adapter's surface-convergence renders, which run many times per paint.
+- One synchronous query stays: `EditorSession.textLineFragmentRects(in:)`, used to decide
+  whether a mouse-down lands on text. Unlike the caret, its input is an ad hoc pointer
+  position rather than tracked selection state, so there is no snapshot slot it could arrive
+  in and no render to attach it to. It is still a Session call — the adapter does not reach
+  the backend — but it is answered live.
