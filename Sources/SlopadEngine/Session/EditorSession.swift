@@ -58,10 +58,15 @@ public final class EditorSession {
         textBackend
     }
 
-    /// Forwarded to `BlockLayout`, which is the only thing that measures.
+    /// The measuring capability handed to `BlockLayout`, which is the only layer that measures.
     var blockMeasuring: any BlockMeasuring { textBackend }
 
-    /// Swaps the backend. Both views follow, because there is only one stored value.
+    /// Swaps the stored value. Both views follow, because there is only one.
+    ///
+    /// Low-level: this does **not** advance the text-layout revision or invalidate cached
+    /// measurements. A real runtime backend swap must go through
+    /// `replaceTextLayoutBackend`, which ADR 0003 requires to do both. Reaching for this one
+    /// directly would silently keep geometry from the previous backend.
     func replaceTextBackend(_ backend: any BlockTextLayoutProtocol) {
         textBackend = backend
     }
