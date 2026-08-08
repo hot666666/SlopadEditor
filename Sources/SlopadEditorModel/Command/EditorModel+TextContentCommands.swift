@@ -41,9 +41,9 @@ extension EditorModel {
             // so anything armed for this spot still applies to the next one.
             state.selection = .caret(blockID: blockID, offset: newOffset)
             changed.insert(blockID)
-            normalizeShortcutsIfNeeded(
-                blockID: blockID, caretOffset: newOffset, operations: &operations, changed: &changed
-            )
+            try applyInputRulesIfNeeded(
+                committedText: text, blockID: blockID, caretOffset: newOffset,
+                operations: &operations, changed: &changed)
 
         case .text(let textSelection):
             guard textSelection.isSingleBlock, let range = textSelection.rangeInSingleBlock else {
@@ -61,8 +61,8 @@ extension EditorModel {
             })
             state.selection = .caret(blockID: blockID, offset: range.lowerBound + text.count)
             changed.insert(blockID)
-            normalizeShortcutsIfNeeded(
-                blockID: blockID, caretOffset: range.lowerBound + text.count,
+            try applyInputRulesIfNeeded(
+                committedText: text, blockID: blockID, caretOffset: range.lowerBound + text.count,
                 operations: &operations, changed: &changed)
 
         case .blocks:
@@ -94,9 +94,9 @@ extension EditorModel {
         state.selection = .caret(blockID: blockID, offset: newOffset)
         changed.insert(blockID)
         if !text.isEmpty {
-            normalizeShortcutsIfNeeded(
-                blockID: blockID, caretOffset: newOffset, operations: &operations, changed: &changed
-            )
+            try applyInputRulesIfNeeded(
+                committedText: text, blockID: blockID, caretOffset: newOffset,
+                operations: &operations, changed: &changed)
         }
     }
 
