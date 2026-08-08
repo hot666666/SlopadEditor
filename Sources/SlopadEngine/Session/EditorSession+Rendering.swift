@@ -57,17 +57,64 @@ extension EditorSession {
         }
 
         let contentLength = rendered.textRender.measureRequest.text.count
+        let selectedRange = activeSelection.range.clamped(to: contentLength)
+        let focusOffset = max(0, min(activeSelection.position.offset, contentLength))
+        let navigationContext = activeTextNavigationSelection().flatMap {
+            textNavigationContext(for: $0, request: rendered.textRender.measureRequest)
+        }
+        let caretPosition = TextPosition(
+            blockID: rendered.textRender.measureRequest.blockID,
+            offset: focusOffset,
+            affinity: activeSelection.position.affinity
+        )
+
         return EditorSessionActiveTextInputDescriptor(
-            selectedRange: activeSelection.range.clamped(to: contentLength),
-            focusOffset: max(0, min(activeSelection.position.offset, contentLength)),
+            selectedRange: selectedRange,
+            focusOffset: focusOffset,
             focusAffinity: activeSelection.position.affinity,
-            navigationContext: activeTextNavigationSelection().flatMap {
-                textNavigationContext(
-                    for: $0,
-                    request: rendered.textRender.measureRequest
-                )
-            },
-            renderDescriptor: rendered.textRender
+            navigationContext: navigationContext,
+            renderDescriptor: rendered.textRender,
+            caretRect: textLayouter.caretRect(
+                for: caretPosition,
+                navigationContext: navigationContext,
+                in: rendered.textRender.measureRequest
+            ).map { documentRect($0, in: rendered.textRender) },
+            selectionRects: selectedRange.isEmpty
+                ? []
+                : textLayouter.selectionRects(
+                    for: selectedRange, in: rendered.textRender.measureRequest
+                ).map { documentRect($0, in: rendered.textRender) }
+        )
+    }
+
+    /// Line fragment rectangles for a laid-out block, in document coordinates.
+    ///
+    /// Answers "does this point land on text" for a caller deciding between starting a text
+    /// selection and starting a block-selection rectangle. The question is about laid-out
+    /// text, so it is resolved here rather than by the adapter reaching for the backend; the
+    /// caller still owns its own hit tolerance.
+    public func textLineFragmentRects(
+        in renderDescriptor: EditorTextRenderDescriptor
+    ) -> [EditorRect] {
+        textLayouter.lineFragments(for: renderDescriptor.measureRequest)
+            .map { documentRect($0.rect, in: renderDescriptor) }
+    }
+
+    /// Converts a rect the backend reports inside a block's text into document coordinates.
+    ///
+    /// The backend answers relative to the laid-out text, which sits at an offset inside the
+    /// block's frame; `textFrame` reports that offset.
+    private func documentRect(
+        _ localRect: EditorRect,
+        in descriptor: EditorTextRenderDescriptor
+    ) -> EditorRect {
+        let textFrame = textLayouter.textFrame(
+            for: descriptor.measureRequest, measuredHeight: nil)
+        return EditorRect(
+            x: localRect.x + descriptor.frame.x - textFrame.x,
+            y: localRect.y + descriptor.frame.y - textFrame.y,
+            width: localRect.width,
+            height: localRect.height
         )
     }
 }

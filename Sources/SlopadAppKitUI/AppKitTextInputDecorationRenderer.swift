@@ -54,43 +54,12 @@ struct AppKitTextInputDecorationRenderer {
     private func caretRect(
         for descriptor: EditorSessionActiveTextInputDescriptor
     ) -> CGRect? {
-        let request = descriptor.renderDescriptor.measureRequest
-        let position = TextPosition(
-            blockID: request.blockID,
-            offset: descriptor.focusOffset,
-            affinity: descriptor.focusAffinity
-        )
-        guard
-            let localRect = textLayouter.caretRect(
-                for: position,
-                navigationContext: descriptor.navigationContext,
-                in: descriptor.renderDescriptor
-            )
-        else { return nil }
-        return documentRect(localRect, in: descriptor.renderDescriptor)
+        descriptor.caretRect.map(CGRect.init)
     }
 
     private func selectionRects(
         for descriptor: EditorSessionActiveTextInputDescriptor
     ) -> [CGRect] {
-        textLayouter.selectionRects(
-            for: descriptor.selectedRange,
-            in: descriptor.renderDescriptor
-        ).map {
-            documentRect($0, in: descriptor.renderDescriptor)
-        }
-    }
-
-    private func documentRect(
-        _ localRect: EditorRect,
-        in descriptor: EditorTextRenderDescriptor
-    ) -> CGRect {
-        let localFrame = textLayouter.textFrame(for: descriptor, measuredHeight: nil)
-        return CGRect(
-            x: CGFloat(localRect.x + descriptor.frame.x - localFrame.x),
-            y: CGFloat(localRect.y + descriptor.frame.y - localFrame.y),
-            width: CGFloat(localRect.width),
-            height: CGFloat(localRect.height)
-        )
+        descriptor.selectionRects.map(CGRect.init)
     }
 }
