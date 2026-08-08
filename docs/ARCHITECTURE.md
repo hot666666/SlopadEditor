@@ -570,6 +570,12 @@ leaving measurement, hit testing, caret geometry, or native text feedback on ano
 configuration. `AppKitBlockChromeRenderer` receives the same style but remains clipped
 decoration; it does not participate in text shaping.
 
+For a custom adapter importing `SlopadAppKitTextKit` directly, `TextKitTextSystem` is the
+supported construction boundary. Its public `layouter` and `renderer` share one internal
+`TextKitLayoutContext`; their standalone initializers are internal. This preserves the
+same coherent-backend invariant outside the default `AppKitTextSystem` host path without
+exposing the prepared TextKit object graph.
+
 ## Responsibility Matrix
 
 | Owner | Owns | Must not own |

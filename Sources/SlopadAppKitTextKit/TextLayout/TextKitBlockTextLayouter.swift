@@ -6,8 +6,12 @@ import SlopadCoreModel
 // MARK: - TextKitBlockTextLayouter
 
 public struct TextKitBlockTextLayouter: BlockTextLayoutProtocol, Sendable {
-    public init(style: TextKitEditorStyle = TextKitEditorStyle()) {
+    init(style: TextKitEditorStyle = TextKitEditorStyle()) {
         self.init(style: style, layoutContext: TextKitLayoutContext())
+    }
+
+    var layoutContextIdentifierForTesting: ObjectIdentifier {
+        ObjectIdentifier(layoutContext)
     }
 
     #if SLOPAD_BENCHMARK_INSTRUMENTATION
