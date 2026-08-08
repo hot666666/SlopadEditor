@@ -55,6 +55,10 @@ private struct DownstreamMarkdownHost {
         let decodedBlocks = try SlopadMarkdown.decode(
             "# Imported\n\n- first\n  - nested"
         )
+        let encodedMarkdown = try SlopadMarkdown.encode(decodedBlocks)
+        let roundTrippedBlocks = try SlopadMarkdown.decode(encodedMarkdown)
+        precondition(roundTrippedBlocks.map(\.kind) == decodedBlocks.map(\.kind))
+        precondition(roundTrippedBlocks.map(\.content) == decodedBlocks.map(\.content))
         let context = try session.documentContextSnapshot()
 
         _ = try session.applyDocumentPatch(

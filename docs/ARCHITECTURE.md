@@ -96,6 +96,7 @@ registry. Its call site is deliberately small and synchronous:
 
 ```swift
 let blocks = try SlopadMarkdown.decode(markdown)
+let markdown = try SlopadMarkdown.encode(blocks)
 ```
 
 The decoder is stateless. A success contains only fresh depth-first
@@ -104,6 +105,15 @@ The decoder is stateless. A success contains only fresh depth-first
 partial blocks. Public source ranges are half-open and use 1-based lines plus 1-based
 UTF-8 byte columns. A source containing only invisible parser definitions still succeeds
 as one empty paragraph, so successful block input is never empty.
+
+The encoder consumes that same public `[EditorBlockInput]` vocabulary rather than the
+package-internal `Document`. It validates a canonical parent-before-child depth-first tree
+before producing text, and returns `MarkdownEncodingError` with block-identity diagnostics
+and no partial Markdown for a shape that cannot be represented losslessly. Semantic
+round-trip is the contract: encode/decode preserves the canonical tree, text, and inline
+marks but creates fresh block IDs on decode. Strong uses `**`; emphasis prefers `_` and
+uses a deterministic `*` fallback only when CommonMark's delimiter rules would otherwise
+lose meaning at a nested seam or Unicode-adjacent boundary.
 
 Inline assembly records parser-fragment boundaries as UTF-8 offsets, then maps them only
 after the complete canonical string has its final Swift `Character` segmentation. When an

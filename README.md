@@ -329,7 +329,7 @@ import SlopadAppKit
 existing integrations and advanced custom-adapter work. See `Package.swift` for the exact
 product and target list.
 
-### Markdown Decoding
+### Markdown Conversion
 
 Markdown support is opt-in and does not make Markdown canonical document state. Add the
 `SlopadMarkdown` product alongside the host product that will consume its block inputs:
@@ -342,13 +342,19 @@ Markdown support is opt-in and does not make Markdown canonical document state. 
 import SlopadMarkdown
 
 let blocks = try SlopadMarkdown.decode("# Imported")
+let markdown = try SlopadMarkdown.encode(blocks)
 ```
 
 The synchronous decoder returns only core `EditorBlockInput` values with fresh IDs. It
 fails closed with `MarkdownDecodingError` when any syntax cannot be represented; the error
 contains nonempty typed diagnostics with 1-based line and 1-based UTF-8 byte columns.
-Each `MarkdownDiagnostic` exposes a `MarkdownDiagnostic.Kind` and a half-open
-`sourceRange`. `Markdown` parser AST types never cross the product boundary.
+`MarkdownDiagnostic` exposes a `MarkdownDiagnostic.Kind` and a half-open `sourceRange`.
+The matching encoder accepts canonical depth-first block inputs and either returns one
+deterministic Markdown value or fails closed with `MarkdownEncodingError` diagnostics keyed
+by canonical block identity. `decode(encode(blocks))` preserves canonical tree/content
+semantics while creating fresh IDs. Strong emits `**`; emphasis prefers `_` and uses a
+deterministic `*` fallback only where CommonMark delimiter parsing would lose semantics.
+`Markdown` parser AST types never cross the product boundary.
 
 ## Development Targets
 
