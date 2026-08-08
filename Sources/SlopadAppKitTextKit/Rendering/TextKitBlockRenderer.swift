@@ -4,8 +4,12 @@ import SlopadCoreModel
 // MARK: - TextKitBlockRenderer
 
 public struct TextKitBlockRenderer: Sendable {
-    public init(style: TextKitEditorStyle = TextKitEditorStyle()) {
+    init(style: TextKitEditorStyle = TextKitEditorStyle()) {
         self.init(style: style, layoutContext: TextKitLayoutContext())
+    }
+
+    var layoutContextIdentifierForTesting: ObjectIdentifier {
+        ObjectIdentifier(layoutContext)
     }
 
     public func draw(

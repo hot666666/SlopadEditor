@@ -122,6 +122,10 @@ Consequences added by this amendment:
 - Splitting the contracts is not splitting the implementation. A backend that answered
   geometry from a different layout than it measured with would violate the original
   decision, and nothing here permits that.
+- `TextKitTextSystem` is the public construction boundary for the AppKit/TextKit2 backend.
+  It returns a layouter and renderer backed by one hidden `TextKitLayoutContext`.
+  Standalone layouter and renderer initializers are internal so a downstream adapter
+  cannot accidentally assemble a split backend.
 - Do not create a SwiftPM target per capability. The protocols live where the seam already
   lived, in `SlopadCoreModel/Layout`.
 - Caret and selection rectangles arrive through the Session snapshot (issue #35), resolved
