@@ -13,13 +13,25 @@ public struct TextKitBlockTextLayouter: BlockTextLayoutProtocol, Sendable {
     #if SLOPAD_BENCHMARK_INSTRUMENTATION
         /// Backend-side counters for #37: how often a layout was prepared, and how often that
         /// required rebuilding the attributed string.
-        public static var preparedLayoutCounts: (prepares: Int, attributedStringBuilds: Int) {
-            (TextKitLayoutContext.prepareLayoutCallCount,
-             TextKitLayoutContext.attributedStringBuildCount)
+        package static var preparedLayoutCounts: (prepares: Int, attributedStringBuilds: Int) {
+            TextKitLayoutContext.aggregateInstrumentationSnapshot
         }
 
-        public static func resetPreparedLayoutCounts() {
+        package static func resetPreparedLayoutCounts() {
             TextKitLayoutContext.resetInstrumentation()
+        }
+
+        /// Counters for this layouter's context, used to verify adapter composition without
+        /// interference from other concurrently running text systems.
+        package var contextPreparedLayoutCounts: (
+            prepares: Int,
+            attributedStringBuilds: Int
+        ) {
+            layoutContext.instrumentationSnapshot()
+        }
+
+        package var layoutContextIdentifierForInstrumentation: ObjectIdentifier {
+            ObjectIdentifier(layoutContext)
         }
     #endif
 

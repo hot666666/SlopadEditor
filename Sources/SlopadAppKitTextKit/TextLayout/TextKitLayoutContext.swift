@@ -15,15 +15,29 @@ final class TextKitLayoutContext: @unchecked Sendable {
     private var preparedLayoutState: PreparedLayoutState?
 
     #if SLOPAD_BENCHMARK_INSTRUMENTATION
-        /// How often a layout had to be prepared, and how often that meant rebuilding the
-        /// attributed string. The gap between the two is what a shared prepared store would
-        /// close, so #37 cannot be judged without these.
-        private(set) nonisolated(unsafe) static var prepareLayoutCallCount = 0
-        private(set) nonisolated(unsafe) static var attributedStringBuildCount = 0
+        private static let instrumentationLock = NSLock()
+        private nonisolated(unsafe) static var aggregatePreparedLayoutCount = 0
+        private nonisolated(unsafe) static var aggregateAttributedStringBuildCount = 0
+
+        // Instance values let regression tests observe one production-composed text system
+        // without racing the process-wide counters used by the benchmark app.
+        private var preparedLayoutCount = 0
+        private var attributedStringBuildCount = 0
+
+        static var aggregateInstrumentationSnapshot: (
+            prepares: Int,
+            attributedStringBuilds: Int
+        ) {
+            instrumentationLock.lock()
+            defer { instrumentationLock.unlock() }
+            return (aggregatePreparedLayoutCount, aggregateAttributedStringBuildCount)
+        }
 
         static func resetInstrumentation() {
-            prepareLayoutCallCount = 0
-            attributedStringBuildCount = 0
+            instrumentationLock.lock()
+            defer { instrumentationLock.unlock() }
+            aggregatePreparedLayoutCount = 0
+            aggregateAttributedStringBuildCount = 0
         }
     #endif
 
@@ -430,18 +444,23 @@ final class TextKitLayoutContext: @unchecked Sendable {
         for request: BlockMeasureRequest,
         style: TextKitEditorStyle
     ) -> PreparedLayoutState {
-        #if SLOPAD_BENCHMARK_INSTRUMENTATION
-            Self.prepareLayoutCallCount += 1
-        #endif
         let key = PreparedLayoutKey(request: request, style: style)
         if let preparedLayoutState, preparedLayoutState.key == key {
             return preparedLayoutState
         }
 
         #if SLOPAD_BENCHMARK_INSTRUMENTATION
-            Self.attributedStringBuildCount += 1
+            preparedLayoutCount += 1
+            Self.recordPreparedLayout()
         #endif
-        let attributed = TextKitAttributedStringBuilder.attributedString(for: request, style: style)
+        let attributed = TextKitAttributedStringBuilder.attributedString(
+            for: request,
+            style: style
+        )
+        #if SLOPAD_BENCHMARK_INSTRUMENTATION
+            attributedStringBuildCount += 1
+            Self.recordAttributedStringBuild()
+        #endif
         let layoutText = Self.normalizedTrailingLineBreak(in: attributed)
 
         let textWidth = style.textWidth(
@@ -474,6 +493,29 @@ final class TextKitLayoutContext: @unchecked Sendable {
         preparedLayoutState = prepared
         return prepared
     }
+
+    #if SLOPAD_BENCHMARK_INSTRUMENTATION
+        func instrumentationSnapshot() -> (
+            prepares: Int,
+            attributedStringBuilds: Int
+        ) {
+            lock.lock()
+            defer { lock.unlock() }
+            return (preparedLayoutCount, attributedStringBuildCount)
+        }
+
+        private static func recordPreparedLayout() {
+            instrumentationLock.lock()
+            defer { instrumentationLock.unlock() }
+            aggregatePreparedLayoutCount += 1
+        }
+
+        private static func recordAttributedStringBuild() {
+            instrumentationLock.lock()
+            defer { instrumentationLock.unlock() }
+            aggregateAttributedStringBuildCount += 1
+        }
+    #endif
 
     private func caretRectWithoutLock(
         position: TextPosition,

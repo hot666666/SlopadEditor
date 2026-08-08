@@ -21,6 +21,12 @@ public struct TextKitBlockRenderer: Sendable {
         )
     }
 
+    #if SLOPAD_BENCHMARK_INSTRUMENTATION
+        package var layoutContextIdentifierForInstrumentation: ObjectIdentifier {
+            ObjectIdentifier(layoutContext)
+        }
+    #endif
+
     // MARK: - Internal State
 
     private let style: TextKitEditorStyle
