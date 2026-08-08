@@ -29,6 +29,20 @@ For a focused repair, rerun the focused regression and only the broader gate tha
 repair invalidated. Do not relabel a unit test as visual, device, remote CI, or benchmark
 evidence.
 
+## AppKit native callback smoke scope
+
+`AppKitNativeCallbackSmokeTests` mounts the production `AppKitEditorViewController` in an
+`NSWindow`. Pointer and keyboard checks enter through synthesized `NSEvent` values delivered
+by `NSWindow.sendEvent(_:)`; marked-text checks enter through the canvas's real
+`NSTextInputClient` callbacks. The layer complements direct adapter/Session unit tests and
+must not call controller semantic handlers as a substitute for native callback coverage.
+
+AppKit has no deterministic test API that asks the user's installed input method server to
+compose a specific string. The marked-text smoke therefore reproduces the callback sequence
+that AppKit delivers, but it does not prove a physical keyboard, global event routing, input
+source selection, candidate-window UI, or a particular third-party IME. Exercise the same
+path in `SlopadDebugApp` when the claim depends on those system integrations.
+
 ## Documentation-only changes
 
 Do not run executable tests merely to create a claim for a non-executable change. Instead
