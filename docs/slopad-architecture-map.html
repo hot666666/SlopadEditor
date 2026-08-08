@@ -1,0 +1,2273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Slopad Architecture Explainer</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Slopad Architecture Explainer" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Slopad Architecture Explainer&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 14px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --radius: var(--border-radius-lg, 12.5px);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: 5px;
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: superellipse(1.5);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: superellipse(1.5);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+    [aria-pressed=&quot;true&quot;],
+    [aria-selected=&quot;true&quot;],
+    .is-selected
+  ) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: 16px !important;
+  height: 16px !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div id=&quot;slopad-architecture-explainer&quot;&gt;
+  &lt;style&gt;
+    #slopad-architecture-explainer {
+      width: 100%;
+      color: var(--foreground);
+      font-size: var(--font-size-base);
+    }
+    #slopad-architecture-explainer .sae-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    #slopad-architecture-explainer .sae-heading h1,
+    #slopad-architecture-explainer .sae-heading p { margin: 0; }
+    #slopad-architecture-explainer .sae-tabs {
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    #slopad-architecture-explainer [data-panel][hidden] { display: none; }
+    #slopad-architecture-explainer .sae-controls {
+      display: grid;
+      grid-template-columns: minmax(180px, 280px) 1fr;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 12px;
+    }
+    #slopad-architecture-explainer .sae-control-heading h2 { margin: 0 0 6px; }
+    #slopad-architecture-explainer .sae-legend {
+      display: flex;
+      justify-content: end;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--muted-foreground);
+    }
+    #slopad-architecture-explainer .sae-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    #slopad-architecture-explainer .sae-legend i {
+      width: 10px;
+      height: 10px;
+      display: inline-block;
+      border-radius: 50%;
+      background: var(--border);
+    }
+    #slopad-architecture-explainer .sae-legend .selected { background: var(--primary); }
+    #slopad-architecture-explainer .sae-legend .dependency { background: var(--viz-series-1); }
+    #slopad-architecture-explainer .sae-legend .consumer { background: var(--viz-series-2); }
+    #slopad-architecture-explainer .sae-graph-wrap { width: 100%; }
+    #slopad-architecture-explainer .sae-graph { width: 100%; display: block; }
+    #slopad-architecture-explainer .sae-graph .edge {
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 1.25;
+      stroke-linecap: round;
+      opacity: .16;
+      marker-end: url(#sae-arrow-muted);
+    }
+    #slopad-architecture-explainer .sae-graph .edge.is-dependency {
+      stroke: var(--viz-series-1);
+      stroke-width: 3.25;
+      opacity: 1;
+      marker-end: url(#sae-arrow-dependency);
+    }
+    #slopad-architecture-explainer .sae-graph .edge.is-consumer {
+      stroke: var(--viz-series-2);
+      stroke-width: 3.25;
+      opacity: 1;
+      marker-end: url(#sae-arrow-consumer);
+    }
+    #slopad-architecture-explainer .sae-graph .node rect {
+      fill: color-mix(in srgb, var(--muted) 38%, transparent);
+      stroke: var(--border);
+      stroke-width: 1;
+    }
+    #slopad-architecture-explainer .sae-graph .node[data-kind=&quot;owner&quot;] rect {
+      fill: color-mix(in srgb, var(--viz-series-1) 13%, transparent);
+    }
+    #slopad-architecture-explainer .sae-graph .node[data-kind=&quot;adapter&quot;] rect {
+      fill: color-mix(in srgb, var(--viz-series-2) 13%, transparent);
+    }
+    #slopad-architecture-explainer .sae-graph .node[data-kind=&quot;format&quot;] rect {
+      fill: color-mix(in srgb, var(--viz-series-3) 13%, transparent);
+    }
+    #slopad-architecture-explainer .sae-graph .node.is-selected rect {
+      fill: var(--primary);
+      stroke: var(--primary);
+      stroke-width: 2;
+    }
+    #slopad-architecture-explainer .sae-graph .node.is-related rect {
+      stroke: var(--viz-series-1);
+      stroke-width: 2.5;
+    }
+    #slopad-architecture-explainer .sae-graph .node.is-consumer rect {
+      stroke: var(--viz-series-2);
+      stroke-width: 2.5;
+    }
+    #slopad-architecture-explainer .sae-graph text {
+      fill: var(--foreground);
+      font-size: 12px;
+      font-weight: 500;
+      pointer-events: none;
+    }
+    #slopad-architecture-explainer .sae-graph .node.is-selected text {
+      fill: var(--primary-foreground);
+    }
+    #slopad-architecture-explainer .sae-graph .layer-label {
+      fill: var(--muted-foreground);
+      font-size: 11px;
+      font-weight: 400;
+    }
+    #slopad-architecture-explainer .sae-overview {
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+    }
+    #slopad-architecture-explainer .sae-overview h2,
+    #slopad-architecture-explainer .sae-overview p { margin: 0 0 8px; }
+    #slopad-architecture-explainer .sae-overview-graph .edge {
+      opacity: .12;
+      marker-end: url(#sae-overview-arrow-muted);
+    }
+    #slopad-architecture-explainer .sae-overview-graph .edge.is-dependency {
+      opacity: 1;
+      stroke-width: 1.75;
+      marker-end: url(#sae-overview-arrow-dependency);
+    }
+    #slopad-architecture-explainer .sae-overview-graph .edge.is-consumer {
+      opacity: 1;
+      stroke-width: 1.75;
+      marker-end: url(#sae-overview-arrow-consumer);
+    }
+    #slopad-architecture-explainer .sae-overview-graph .node { opacity: .34; }
+    #slopad-architecture-explainer .sae-overview-graph .node.is-selected,
+    #slopad-architecture-explainer .sae-overview-graph .node.is-related,
+    #slopad-architecture-explainer .sae-overview-graph .node.is-consumer { opacity: 1; }
+    #slopad-architecture-explainer .sae-module-detail,
+    #slopad-architecture-explainer .sae-selected-detail {
+      margin-top: 14px;
+    }
+    #slopad-architecture-explainer .sae-module-detail &gt; h2 { margin-bottom: 10px; }
+    #slopad-architecture-explainer .sae-module-detail &gt; p { margin: 0 0 18px; }
+    #slopad-architecture-explainer .sae-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+    #slopad-architecture-explainer .sae-responsibility {
+      padding-left: 12px;
+      border-left: 3px solid var(--border);
+    }
+    #slopad-architecture-explainer .sae-responsibility.sae-owns { border-left-color: var(--viz-series-1); }
+    #slopad-architecture-explainer .sae-responsibility.sae-excludes { border-left-color: var(--muted-foreground); }
+    #slopad-architecture-explainer .sae-responsibility.sae-boundary { border-left-color: var(--viz-series-2); }
+    #slopad-architecture-explainer .sae-detail-grid h3,
+    #slopad-architecture-explainer .sae-detail-grid p,
+    #slopad-architecture-explainer .sae-detail-grid ul { margin-top: 4px; margin-bottom: 0; }
+    #slopad-architecture-explainer .sae-detail-grid ul { padding-left: 18px; }
+    #slopad-architecture-explainer .sae-path {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 10px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    #slopad-architecture-explainer .sae-path .arrow { color: var(--muted-foreground); }
+    #slopad-architecture-explainer .sae-steps {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0 0;
+    }
+    #slopad-architecture-explainer .sae-step {
+      display: grid;
+      grid-template-columns: 32px minmax(150px, .75fr) minmax(220px, 1.25fr) auto;
+      gap: 10px;
+      align-items: start;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    #slopad-architecture-explainer .sae-step:last-child { border-bottom: 0; }
+    #slopad-architecture-explainer .sae-step-index {
+      color: var(--muted-foreground);
+      font-variant-numeric: tabular-nums;
+    }
+    #slopad-architecture-explainer .sae-step strong,
+    #slopad-architecture-explainer .sae-step code,
+    #slopad-architecture-explainer .sae-step small { display: block; }
+    #slopad-architecture-explainer .sae-step small { color: var(--muted-foreground); }
+    #slopad-architecture-explainer .sae-code-view { margin-top: 16px; }
+    #slopad-architecture-explainer .sae-code-grid {
+      display: grid;
+      grid-template-columns: minmax(220px, .8fr) minmax(0, 1.2fr);
+      gap: 18px;
+    }
+    #slopad-architecture-explainer .sae-code-grid h3 { margin-top: 0; }
+    #slopad-architecture-explainer .sae-callstack { margin: 0; padding-left: 22px; }
+    #slopad-architecture-explainer .sae-callstack li {
+      padding: 4px 0 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    #slopad-architecture-explainer .sae-callstack li:last-child { border-bottom: 0; }
+    #slopad-architecture-explainer .sae-code-file { margin: 0 0 8px; }
+    #slopad-architecture-explainer .sae-code-view pre {
+      margin: 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    #slopad-architecture-explainer .sae-pipelines { display: grid; gap: 10px; margin-bottom: 16px; }
+    #slopad-architecture-explainer .sae-pipeline {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    #slopad-architecture-explainer .sae-pipeline:last-child { border-bottom: 0; }
+    #slopad-architecture-explainer .sae-state-grid,
+    #slopad-architecture-explainer .sae-textkit-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+    #slopad-architecture-explainer .sae-state-grid section,
+    #slopad-architecture-explainer .sae-textkit-grid section {
+      padding-top: 8px;
+      border-top: 3px solid var(--border);
+    }
+    #slopad-architecture-explainer .sae-state-grid section:nth-child(1) { border-color: var(--viz-series-1); }
+    #slopad-architecture-explainer .sae-state-grid section:nth-child(2) { border-color: var(--viz-series-2); }
+    #slopad-architecture-explainer .sae-state-grid section:nth-child(3) { border-color: var(--viz-series-3); }
+    #slopad-architecture-explainer .sae-state-grid section:nth-child(4) { border-color: var(--viz-series-4); }
+    #slopad-architecture-explainer .sae-state-grid ul,
+    #slopad-architecture-explainer .sae-textkit-grid ul { padding-left: 18px; margin-bottom: 0; }
+    #slopad-architecture-explainer .sae-state-grid li,
+    #slopad-architecture-explainer .sae-textkit-grid li { margin-bottom: 6px; }
+    #slopad-architecture-explainer .sae-coherence {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      margin: 16px 0;
+      text-align: center;
+    }
+    #slopad-architecture-explainer .sae-coherence &gt; div {
+      padding: 10px 6px;
+      border-top: 2px solid var(--border);
+      border-bottom: 2px solid var(--border);
+    }
+    #slopad-architecture-explainer .sae-coherence .arrow { color: var(--muted-foreground); }
+    #slopad-architecture-explainer .sae-table-caption {
+      margin: 14px 0 4px;
+      color: var(--muted-foreground);
+    }
+    @media (max-width: 720px) {
+      #slopad-architecture-explainer .sae-controls,
+      #slopad-architecture-explainer .sae-detail-grid,
+      #slopad-architecture-explainer .sae-state-grid,
+      #slopad-architecture-explainer .sae-textkit-grid { grid-template-columns: 1fr; }
+      #slopad-architecture-explainer .sae-legend { justify-content: start; }
+      #slopad-architecture-explainer .sae-step {
+        grid-template-columns: 28px 1fr;
+      }
+      #slopad-architecture-explainer .sae-step &gt; :nth-child(3),
+      #slopad-architecture-explainer .sae-step &gt; :nth-child(4) { grid-column: 2; }
+      #slopad-architecture-explainer .sae-code-grid { grid-template-columns: 1fr; }
+      #slopad-architecture-explainer .sae-coherence { grid-template-columns: 1fr; text-align: left; }
+      #slopad-architecture-explainer .sae-coherence .arrow { text-align: center; transform: rotate(90deg); }
+    }
+  &lt;/style&gt;
+
+  &lt;div class=&quot;sae-heading&quot;&gt;
+    &lt;div&gt;
+      &lt;h1&gt;Slopad 책임·관계 지도&lt;/h1&gt;
+      &lt;p class=&quot;text-muted&quot;&gt;같은 시스템을 컴파일, 런타임, 상태, TextKit, 호스트, 리뷰 관점으로 전환&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;span class=&quot;viz-badge&quot;&gt;main · Epic #23 완료&lt;/span&gt;
+  &lt;/div&gt;
+
+  &lt;nav class=&quot;viz-controls sae-tabs&quot; aria-label=&quot;Architecture viewpoints&quot;&gt;
+    &lt;button type=&quot;button&quot; class=&quot;btn btn-primary&quot; data-view=&quot;modules&quot; aria-pressed=&quot;true&quot;&gt;모듈 지도&lt;/button&gt;
+    &lt;button type=&quot;button&quot; class=&quot;btn&quot; data-view=&quot;trajectory&quot; aria-pressed=&quot;false&quot;&gt;입력 궤적&lt;/button&gt;
+    &lt;button type=&quot;button&quot; class=&quot;btn&quot; data-view=&quot;state&quot; aria-pressed=&quot;false&quot;&gt;상태 수명&lt;/button&gt;
+    &lt;button type=&quot;button&quot; class=&quot;btn&quot; data-view=&quot;textkit&quot; aria-pressed=&quot;false&quot;&gt;TextKit 경계&lt;/button&gt;
+    &lt;button type=&quot;button&quot; class=&quot;btn&quot; data-view=&quot;hosts&quot; aria-pressed=&quot;false&quot;&gt;호스트 표면&lt;/button&gt;
+  &lt;/nav&gt;
+
+  &lt;section data-panel=&quot;modules&quot; aria-labelledby=&quot;sae-modules-title&quot;&gt;
+    &lt;h2 id=&quot;sae-modules-title&quot; class=&quot;sr-only&quot;&gt;SwiftPM module dependency map&lt;/h2&gt;
+    &lt;div class=&quot;sae-controls&quot;&gt;
+      &lt;div class=&quot;sae-control-heading&quot;&gt;
+        &lt;h2&gt;관계를 볼 구성요소&lt;/h2&gt;
+        &lt;label class=&quot;sr-only&quot; for=&quot;sae-module-select&quot;&gt;구성요소 선택&lt;/label&gt;
+        &lt;select id=&quot;sae-module-select&quot; class=&quot;form-select&quot;&gt;&lt;/select&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;sae-legend&quot; aria-label=&quot;Graph legend&quot;&gt;
+        &lt;span&gt;&lt;i class=&quot;consumer&quot;&gt;&lt;/i&gt;위: 선택한 구성요소를 사용하는 모듈&lt;/span&gt;
+        &lt;span&gt;&lt;i class=&quot;selected&quot;&gt;&lt;/i&gt;가운데: 선택한 구성요소&lt;/span&gt;
+        &lt;span&gt;&lt;i class=&quot;dependency&quot;&gt;&lt;/i&gt;아래: 선택한 구성요소가 사용하는 모듈&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;sae-graph-wrap&quot;&gt;
+      &lt;svg id=&quot;sae-module-graph&quot; class=&quot;sae-graph&quot; role=&quot;img&quot; aria-label=&quot;Slopad production target dependency graph&quot;&gt;&lt;/svg&gt;
+    &lt;/div&gt;
+    &lt;section class=&quot;card sae-module-detail&quot; aria-live=&quot;polite&quot;&gt;
+      &lt;h2 id=&quot;sae-module-name&quot;&gt;&lt;/h2&gt;
+      &lt;p id=&quot;sae-module-role&quot;&gt;&lt;/p&gt;
+      &lt;div class=&quot;sae-detail-grid&quot;&gt;
+        &lt;div class=&quot;sae-responsibility sae-owns&quot;&gt;&lt;h3&gt;✓ 소유 책임&lt;/h3&gt;&lt;ul id=&quot;sae-module-owns&quot;&gt;&lt;/ul&gt;&lt;/div&gt;
+        &lt;div class=&quot;sae-responsibility sae-excludes&quot;&gt;&lt;h3&gt;— 제외된 책임&lt;/h3&gt;&lt;ul id=&quot;sae-module-excludes&quot;&gt;&lt;/ul&gt;&lt;/div&gt;
+        &lt;div class=&quot;sae-responsibility sae-boundary&quot;&gt;&lt;h3&gt;↔ 계약·경계&lt;/h3&gt;&lt;ul id=&quot;sae-module-boundary&quot;&gt;&lt;/ul&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+    &lt;section class=&quot;sae-overview&quot; aria-labelledby=&quot;sae-overview-title&quot;&gt;
+      &lt;h2 id=&quot;sae-overview-title&quot;&gt;전체 모듈 계층&lt;/h2&gt;
+      &lt;p class=&quot;text-muted&quot;&gt;전체 위치는 유지하고, 선택한 모듈과 바로 연결된 모듈만 강조합니다.&lt;/p&gt;
+      &lt;div class=&quot;sae-graph-wrap&quot;&gt;
+        &lt;svg id=&quot;sae-overview-graph&quot; class=&quot;sae-graph sae-overview-graph&quot; role=&quot;img&quot; aria-label=&quot;Slopad full module hierarchy with selected direct relationships&quot;&gt;&lt;/svg&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+  &lt;/section&gt;
+
+  &lt;section data-panel=&quot;trajectory&quot; hidden aria-labelledby=&quot;sae-trajectory-title&quot;&gt;
+    &lt;div class=&quot;sae-controls&quot;&gt;
+      &lt;label class=&quot;form-label&quot; for=&quot;sae-scenario-select&quot;&gt;동작 사례
+        &lt;select id=&quot;sae-scenario-select&quot; class=&quot;form-select&quot;&gt;&lt;/select&gt;
+      &lt;/label&gt;
+      &lt;div&gt;
+        &lt;h2 id=&quot;sae-trajectory-title&quot;&gt;&lt;/h2&gt;
+        &lt;p id=&quot;sae-trajectory-rule&quot; class=&quot;text-muted&quot;&gt;&lt;/p&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div id=&quot;sae-trajectory-path&quot; class=&quot;sae-path&quot; aria-label=&quot;Module path&quot;&gt;&lt;/div&gt;
+    &lt;ol id=&quot;sae-trajectory-steps&quot; class=&quot;sae-steps&quot;&gt;&lt;/ol&gt;
+    &lt;section class=&quot;card sae-code-view&quot; aria-live=&quot;polite&quot;&gt;
+      &lt;div class=&quot;sae-code-grid&quot;&gt;
+        &lt;div&gt;
+          &lt;h3&gt;대표 호출 스택&lt;/h3&gt;
+          &lt;ol id=&quot;sae-callstack&quot; class=&quot;sae-callstack&quot;&gt;&lt;/ol&gt;
+        &lt;/div&gt;
+        &lt;div&gt;
+          &lt;h3&gt;핵심 코드 발췌&lt;/h3&gt;
+          &lt;p class=&quot;sae-code-file text-muted&quot;&gt;&lt;code id=&quot;sae-code-file&quot;&gt;&lt;/code&gt; · 이해를 위한 축약&lt;/p&gt;
+          &lt;pre&gt;&lt;code id=&quot;sae-code-sample&quot;&gt;&lt;/code&gt;&lt;/pre&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+  &lt;/section&gt;
+
+  &lt;section data-panel=&quot;state&quot; hidden aria-labelledby=&quot;sae-state-title&quot;&gt;
+    &lt;h2 id=&quot;sae-state-title&quot;&gt;무엇이 진짜 원본이고, 무엇이 잠깐 생겼다가 사라지는가&lt;/h2&gt;
+    &lt;div class=&quot;sae-pipelines&quot; aria-label=&quot;State projection pipelines&quot;&gt;
+      &lt;div class=&quot;sae-pipeline&quot;&gt;&lt;span class=&quot;viz-badge&quot;&gt;편집&lt;/span&gt;&lt;code&gt;Document&lt;/code&gt;&lt;span&gt;→&lt;/span&gt;&lt;code&gt;Document + composition&lt;/code&gt;&lt;span&gt;→&lt;/span&gt;&lt;code&gt;BlockLayout&lt;/code&gt;&lt;span&gt;→&lt;/span&gt;&lt;code&gt;TextKit prepared graph&lt;/code&gt;&lt;span&gt;→&lt;/span&gt;&lt;code&gt;EditorSessionSnapshot&lt;/code&gt;&lt;span&gt;→&lt;/span&gt;&lt;span&gt;화면&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;sae-pipeline&quot;&gt;&lt;span class=&quot;viz-badge&quot;&gt;저장&lt;/span&gt;&lt;code&gt;Document&lt;/code&gt;&lt;span&gt;→&lt;/span&gt;&lt;code&gt;EditorDocumentSnapshot&lt;/code&gt;&lt;span&gt;→&lt;/span&gt;&lt;span&gt;호스트 저장소&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;sae-pipeline&quot;&gt;&lt;span class=&quot;viz-badge&quot;&gt;포맷&lt;/span&gt;&lt;span&gt;Markdown&lt;/span&gt;&lt;span&gt;⇄&lt;/span&gt;&lt;code&gt;[EditorBlockInput]&lt;/code&gt;&lt;span&gt;→&lt;/span&gt;&lt;code&gt;EditorDocumentPatch&lt;/code&gt;&lt;span&gt;→&lt;/span&gt;&lt;code&gt;Document&lt;/code&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;sae-state-grid&quot;&gt;
+      &lt;section&gt;&lt;h3&gt;영속 canonical document&lt;/h3&gt;&lt;p class=&quot;text-muted&quot;&gt;정의: CoreModel · 저장/변이 소유: EditorModel&lt;/p&gt;&lt;ul&gt;&lt;li&gt;block tree와 순서&lt;/li&gt;&lt;li&gt;&lt;code&gt;BlockID&lt;/code&gt;, kind, text, inline marks&lt;/li&gt;&lt;li&gt;트랜잭션으로만 변경&lt;/li&gt;&lt;li&gt;&lt;code&gt;EditorDocumentSnapshot.blocks&lt;/code&gt;로 전체 투영&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;
+      &lt;section&gt;&lt;h3&gt;semantic editor state&lt;/h3&gt;&lt;p class=&quot;text-muted&quot;&gt;EditorModel · undo 전후상에 포함&lt;/p&gt;&lt;ul&gt;&lt;li&gt;caret/text/block selection&lt;/li&gt;&lt;li&gt;&lt;code&gt;storedMarks&lt;/code&gt;&lt;/li&gt;&lt;li&gt;undo/redo transaction history&lt;/li&gt;&lt;li&gt;문서 저장 대상은 아님&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;
+      &lt;section&gt;&lt;h3&gt;runtime overlay&lt;/h3&gt;&lt;p class=&quot;text-muted&quot;&gt;Session 또는 AppKit · canonical 아님&lt;/p&gt;&lt;ul&gt;&lt;li&gt;IME composition과 composition selection&lt;/li&gt;&lt;li&gt;slash query/menu runtime&lt;/li&gt;&lt;li&gt;drag/rectangle/navigation context&lt;/li&gt;&lt;li&gt;viewport, focus, scroll, responder&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;
+      &lt;section&gt;&lt;h3&gt;derived / projection&lt;/h3&gt;&lt;p class=&quot;text-muted&quot;&gt;언제든 원본에서 재생성 가능&lt;/p&gt;&lt;ul&gt;&lt;li&gt;visible order, y/height index&lt;/li&gt;&lt;li&gt;TextLayout cache와 prepared store&lt;/li&gt;&lt;li&gt;attributed string/TextKit objects&lt;/li&gt;&lt;li&gt;render snapshot과 redraw facts&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;
+    &lt;/div&gt;
+    &lt;p class=&quot;sae-table-caption&quot;&gt;핵심 판별: &lt;code&gt;visibleBlocks&lt;/code&gt;는 화면용이고 저장 원본이 아니다. live IME는 effective content에는 보이지만 &lt;code&gt;documentSnapshot&lt;/code&gt;에는 들어가지 않는다.&lt;/p&gt;
+  &lt;/section&gt;
+
+  &lt;section data-panel=&quot;textkit&quot; hidden aria-labelledby=&quot;sae-textkit-title&quot;&gt;
+    &lt;h2 id=&quot;sae-textkit-title&quot;&gt;계약은 좁게 나누고, 구현은 한 TextKit 문맥으로 묶는다&lt;/h2&gt;
+    &lt;div class=&quot;sae-coherence&quot; aria-label=&quot;Coherent TextKit path&quot;&gt;
+      &lt;div&gt;&lt;strong&gt;소비자별 좁은 계약&lt;/strong&gt;&lt;br&gt;&lt;code&gt;BlockMeasuring&lt;/code&gt;&lt;br&gt;&lt;code&gt;Geometry / Navigation / Deletion&lt;/code&gt;&lt;/div&gt;
+      &lt;span class=&quot;arrow&quot;&gt;→&lt;/span&gt;
+      &lt;div&gt;&lt;strong&gt;&lt;code&gt;TextKitTextSystem&lt;/code&gt;&lt;/strong&gt;&lt;br&gt;layouter + renderer&lt;br&gt;하나의 context&lt;/div&gt;
+      &lt;span class=&quot;arrow&quot;&gt;→&lt;/span&gt;
+      &lt;div&gt;&lt;strong&gt;prepared entry&lt;/strong&gt;&lt;br&gt;NSTextStorage → ContentStorage → LayoutManager → Container&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;sae-textkit-grid&quot;&gt;
+      &lt;section&gt;&lt;h3&gt;BlockLayout&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;&lt;code&gt;BlockMeasuring&lt;/code&gt;만 주입&lt;/li&gt;&lt;li&gt;높이·baseline만 요청&lt;/li&gt;&lt;li&gt;caret/word 의미를 다루지 않음&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;
+      &lt;section&gt;&lt;h3&gt;EditorSession&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;geometry, hit test&lt;/li&gt;&lt;li&gt;bidi/word navigation&lt;/li&gt;&lt;li&gt;deletion range&lt;/li&gt;&lt;li&gt;답을 받아 selection/history를 적용&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;
+      &lt;section&gt;&lt;h3&gt;AppKit UI&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;같은 system의 renderer 사용&lt;/li&gt;&lt;li&gt;fragment text와 caret/selection feedback&lt;/li&gt;&lt;li&gt;active block pin을 render 전에 전달&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;
+      &lt;section&gt;&lt;h3&gt;Prepared store&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;key = request value + style&lt;/li&gt;&lt;li&gt;96 entries / 6 MiB estimated cost&lt;/li&gt;&lt;li&gt;동일 BlockID 새 revision 교체&lt;/li&gt;&lt;li&gt;warning: active만, critical: 전체 purge&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;table-responsive&quot;&gt;
+      &lt;table class=&quot;table table-sm&quot;&gt;
+        &lt;thead&gt;&lt;tr&gt;&lt;th&gt;능력&lt;/th&gt;&lt;th&gt;질문&lt;/th&gt;&lt;th&gt;의미 최종 결정자&lt;/th&gt;&lt;th&gt;금지되는 우회&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+        &lt;tbody&gt;
+          &lt;tr&gt;&lt;td&gt;&lt;code&gt;BlockMeasuring&lt;/code&gt;&lt;/td&gt;&lt;td&gt;이 block의 높이는?&lt;/td&gt;&lt;td&gt;BlockLayout이 cache/invalidation 소유&lt;/td&gt;&lt;td&gt;Session이 직접 measure&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;&lt;code&gt;TextGeometryResolving&lt;/code&gt;&lt;/td&gt;&lt;td&gt;caret·line·point 위치는?&lt;/td&gt;&lt;td&gt;backend가 사실 제공, Session이 문서 좌표로 투영&lt;/td&gt;&lt;td&gt;UI가 backend 직접 질의&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;&lt;code&gt;TextNavigationResolving&lt;/code&gt;&lt;/td&gt;&lt;td&gt;bidi/word 이동 결과는?&lt;/td&gt;&lt;td&gt;backend fact + Session selection transition&lt;/td&gt;&lt;td&gt;TextKit이 canonical selection 변경&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;&lt;code&gt;TextDeletionResolving&lt;/code&gt;&lt;/td&gt;&lt;td&gt;무슨 범위를 지울까?&lt;/td&gt;&lt;td&gt;backend range + EditorModel transaction&lt;/td&gt;&lt;td&gt;adapter가 text 직접 삭제&lt;/td&gt;&lt;/tr&gt;
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;section data-panel=&quot;hosts&quot; hidden aria-labelledby=&quot;sae-hosts-title&quot;&gt;
+    &lt;h2 id=&quot;sae-hosts-title&quot;&gt;사용자는 어느 입구를 선택하는가&lt;/h2&gt;
+    &lt;div class=&quot;table-responsive&quot;&gt;
+      &lt;table class=&quot;table&quot;&gt;
+        &lt;thead&gt;&lt;tr&gt;&lt;th&gt;사용자&lt;/th&gt;&lt;th&gt;의존 제품&lt;/th&gt;&lt;th&gt;주요 표면&lt;/th&gt;&lt;th&gt;책임&lt;/th&gt;&lt;th&gt;도달하면 안 되는 것&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+        &lt;tbody&gt;
+          &lt;tr&gt;&lt;td&gt;일반 macOS host&lt;/td&gt;&lt;td&gt;&lt;code&gt;SlopadAppKit&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;AppKitEditorViewController&lt;/code&gt;, action, style, update, snapshots&lt;/td&gt;&lt;td&gt;문서 저장·host chrome·lifecycle&lt;/td&gt;&lt;td&gt;raw TextKit graph, EditorModel 내부&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;SwiftUI host&lt;/td&gt;&lt;td&gt;&lt;code&gt;SlopadSwiftUI&lt;/code&gt;&lt;/td&gt;&lt;td&gt;&lt;code&gt;SlopadEditor&lt;/code&gt;와 observable model&lt;/td&gt;&lt;td&gt;mount → edit → observe → flush → replace → unmount&lt;/td&gt;&lt;td&gt;controller 우회, package API&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;완전 custom adapter&lt;/td&gt;&lt;td&gt;&lt;code&gt;SlopadEngine&lt;/code&gt; + 자체 backend&lt;/td&gt;&lt;td&gt;&lt;code&gt;EditorSession&lt;/code&gt;, input, render, hit-test&lt;/td&gt;&lt;td&gt;native callbacks·drawing·focus·scroll coherence 전체&lt;/td&gt;&lt;td&gt;Model/Layout 직접 결합&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;Markdown import/export caller&lt;/td&gt;&lt;td&gt;&lt;code&gt;SlopadMarkdown&lt;/code&gt; (+ Engine 선택)&lt;/td&gt;&lt;td&gt;&lt;code&gt;decode&lt;/code&gt;, &lt;code&gt;encode&lt;/code&gt;, document patch&lt;/td&gt;&lt;td&gt;언제 import/paste할지와 실패 UX&lt;/td&gt;&lt;td&gt;parser AST 보관·partial success&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;개발/검증&lt;/td&gt;&lt;td&gt;DebugApp, UIBenchmarkApp, fixtures&lt;/td&gt;&lt;td&gt;scenario, benchmark, public compile proof&lt;/td&gt;&lt;td&gt;실제 edge 검증&lt;/td&gt;&lt;td&gt;production owner로 취급&lt;/td&gt;&lt;/tr&gt;
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/div&gt;
+    &lt;p class=&quot;sae-table-caption&quot;&gt;&lt;code&gt;SlopadAppKit&lt;/code&gt;은 compile-time facade다. 두 번째 controller, Session, document, cache를 만들지 않는다.&lt;/p&gt;
+    &lt;div class=&quot;sae-state-grid&quot;&gt;
+      &lt;section&gt;&lt;h3&gt;&lt;code&gt;public&lt;/code&gt;&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;downstream host가 실제로 호출&lt;/li&gt;&lt;li&gt;action, snapshot, style, codec&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;
+      &lt;section&gt;&lt;h3&gt;&lt;code&gt;package&lt;/code&gt;&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;target 사이의 진짜 owner 계약&lt;/li&gt;&lt;li&gt;Session↔AppKit projection 등&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;
+      &lt;section&gt;&lt;h3&gt;&lt;code&gt;internal&lt;/code&gt;&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;owner 내부 정책·cache·helper&lt;/li&gt;&lt;li&gt;Markdown AST와 TextKit context&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;
+      &lt;section&gt;&lt;h3&gt;outer edge&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;host·fixture·debug·benchmark&lt;/li&gt;&lt;li&gt;소비자이지 canonical owner가 아님&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;
+    &lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;script&gt;
+    (() =&gt; {
+      const root = document.getElementById(&#x27;slopad-architecture-explainer&#x27;);
+      const modules = [
+        { id:&#x27;mac-host&#x27;, name:&#x27;macOS host&#x27;, lines:[&#x27;macOS&#x27;,&#x27;host&#x27;], kind:&#x27;host&#x27;, layer:&#x27;외부 소비자&#x27;, role:&#x27;일반 AppKit 제품을 선택하는 앱 경계.&#x27;, owns:[&#x27;문서 저장 정책&#x27;,&#x27;앱 chrome과 lifecycle&#x27;], excludes:[&#x27;편집 의미&#x27;,&#x27;TextKit 내부 객체&#x27;], access:&#x27;SlopadAppKit 공개 표면만 사용&#x27;, file:&#x27;Fixtures/DownstreamAppKitHost&#x27;, deps:[&#x27;appkit&#x27;] },
+        { id:&#x27;swiftui-host&#x27;, name:&#x27;SwiftUI host&#x27;, lines:[&#x27;SwiftUI&#x27;,&#x27;host&#x27;], kind:&#x27;host&#x27;, layer:&#x27;외부 소비자&#x27;, role:&#x27;SwiftUI 생명주기 계약을 소비하는 앱 경계.&#x27;, owns:[&#x27;SwiftUI mount/unmount&#x27;,&#x27;observable host state&#x27;], excludes:[&#x27;AppKit controller 내부&#x27;,&#x27;canonical mutation&#x27;], access:&#x27;SlopadSwiftUI 공개 표면&#x27;, file:&#x27;Fixtures/DownstreamSwiftUIHost&#x27;, deps:[&#x27;swiftui&#x27;] },
+        { id:&#x27;format-caller&#x27;, name:&#x27;Format caller&#x27;, lines:[&#x27;format&#x27;,&#x27;caller&#x27;], kind:&#x27;host&#x27;, layer:&#x27;외부 소비자&#x27;, role:&#x27;명시적 Markdown 가져오기·내보내기 시점을 결정하는 호출자.&#x27;, owns:[&#x27;실패 UX&#x27;,&#x27;import/paste caller policy&#x27;], excludes:[&#x27;parser AST&#x27;,&#x27;partial document&#x27;], access:&#x27;SlopadMarkdown과 선택적 SlopadEngine&#x27;, file:&#x27;Fixtures/DownstreamMarkdownHost&#x27;, deps:[&#x27;markdown&#x27;,&#x27;engine&#x27;] },
+        { id:&#x27;swiftui&#x27;, name:&#x27;SlopadSwiftUI&#x27;, lines:[&#x27;Slopad&#x27;,&#x27;SwiftUI&#x27;], kind:&#x27;adapter&#x27;, layer:&#x27;호스트 퍼사드&#x27;, role:&#x27;AppKit 퍼사드 위에서 SwiftUI 생명주기를 연결하는 래퍼.&#x27;, owns:[&#x27;SwiftUI representable/model lifecycle&#x27;], excludes:[&#x27;두 번째 runtime&#x27;,&#x27;TextKit backend&#x27;], access:&#x27;공개 제품&#x27;, file:&#x27;Sources/SlopadSwiftUI&#x27;, deps:[&#x27;appkit&#x27;] },
+        { id:&#x27;appkit&#x27;, name:&#x27;SlopadAppKit&#x27;, lines:[&#x27;Slopad&#x27;,&#x27;AppKit&#x27;], kind:&#x27;adapter&#x27;, layer:&#x27;호스트 퍼사드&#x27;, role:&#x27;일반 macOS 호스트를 위한 선별된 컴파일 시점 퍼사드.&#x27;, owns:[&#x27;aliases와 curated entry points&#x27;], excludes:[&#x27;controller state&#x27;,&#x27;Session/document/cache&#x27;], access:&#x27;공개 제품이며 런타임 객체는 없음&#x27;, file:&#x27;Sources/SlopadAppKit&#x27;, deps:[&#x27;appkit-ui&#x27;,&#x27;engine&#x27;] },
+        { id:&#x27;markdown&#x27;, name:&#x27;SlopadMarkdown&#x27;, lines:[&#x27;Slopad&#x27;,&#x27;Markdown&#x27;], kind:&#x27;format&#x27;, layer:&#x27;선택형 포맷&#x27;, role:&#x27;상태를 보관하지 않고 전체 문서를 원자적으로 변환하며, 지원하지 않는 구문은 결과 없이 실패하는 Markdown 코덱.&#x27;, owns:[&#x27;decode/encode policy&#x27;,&#x27;typed diagnostics&#x27;], excludes:[&#x27;canonical storage&#x27;,&#x27;typing shortcuts&#x27;,&#x27;parser AST 노출&#x27;], access:&#x27;공개 선택형 제품&#x27;, file:&#x27;Sources/SlopadMarkdown&#x27;, deps:[&#x27;core&#x27;,&#x27;swift-markdown&#x27;] },
+        { id:&#x27;appkit-ui&#x27;, name:&#x27;SlopadAppKitUI&#x27;, lines:[&#x27;Slopad&#x27;,&#x27;AppKitUI&#x27;], kind:&#x27;adapter&#x27;, layer:&#x27;런타임 통합&#x27;, role:&#x27;AppKit 콜백과 네이티브 표면을 엔진 의미로 연결.&#x27;, owns:[&#x27;NSTextInputClient transport&#x27;,&#x27;canvas/focus/scroll sync&#x27;,&#x27;overlay와 drawing order&#x27;], excludes:[&#x27;canonical mutation&#x27;,&#x27;text shaping truth&#x27;], access:&#x27;고급 공개 제품이며 내부 대부분은 package/internal&#x27;, file:&#x27;Sources/SlopadAppKitUI&#x27;, deps:[&#x27;engine&#x27;,&#x27;appkit-textkit&#x27;] },
+        { id:&#x27;engine&#x27;, name:&#x27;SlopadEngine&#x27;, lines:[&#x27;Slopad&#x27;,&#x27;Engine&#x27;], kind:&#x27;owner&#x27;, layer:&#x27;런타임 통합&#x27;, role:&#x27;EditorSession 퍼사드가 편집 의미 소유자와 레이아웃 소유자를 조정.&#x27;, owns:[&#x27;runtime overlays&#x27;,&#x27;input routing&#x27;,&#x27;invalidation&#x27;,&#x27;snapshot assembly&#x27;], excludes:[&#x27;Document mutation invariants&#x27;,&#x27;layout caches&#x27;,&#x27;platform widgets&#x27;], access:&#x27;공개 EditorSession, 소유 계층 접점은 package/internal&#x27;, file:&#x27;Sources/SlopadEngine/Session&#x27;, deps:[&#x27;editor-model&#x27;,&#x27;block-layout&#x27;,&#x27;core&#x27;] },
+        { id:&#x27;appkit-textkit&#x27;, name:&#x27;SlopadAppKitTextKit&#x27;, lines:[&#x27;AppKit&#x27;,&#x27;TextKit&#x27;], kind:&#x27;adapter&#x27;, layer:&#x27;런타임 통합&#x27;, role:&#x27;TextKit 2 기반으로 측정·기하·탐색·그리기를 일관되게 제공하는 백엔드.&#x27;, owns:[&#x27;TextKit object graph&#x27;,&#x27;prepared layout store&#x27;,&#x27;attributed content&#x27;], excludes:[&#x27;native input host&#x27;,&#x27;canonical selection/history&#x27;], access:&#x27;공개 백엔드 타입, context/store는 internal&#x27;, file:&#x27;Sources/SlopadAppKitTextKit&#x27;, deps:[&#x27;core&#x27;] },
+        { id:&#x27;editor-model&#x27;, name:&#x27;SlopadEditorModel&#x27;, lines:[&#x27;Editor&#x27;,&#x27;Model&#x27;], kind:&#x27;owner&#x27;, layer:&#x27;헤드리스 소유 계층&#x27;, role:&#x27;편집 의미와 모든 원본 상태 전이의 단일 소유자.&#x27;, owns:[&#x27;Document stored state&#x27;,&#x27;selection/storedMarks&#x27;,&#x27;commands/transactions/history&#x27;,&#x27;input-rule atomic apply&#x27;], excludes:[&#x27;viewport&#x27;,&#x27;TextKit&#x27;,&#x27;BlockLayout geometry&#x27;], access:&#x27;target internal/package 소유자, host 직접 접근 없음&#x27;, file:&#x27;Sources/SlopadEditorModel&#x27;, deps:[&#x27;core&#x27;,&#x27;input-rules&#x27;] },
+        { id:&#x27;block-layout&#x27;, name:&#x27;SlopadBlockLayout&#x27;, lines:[&#x27;Block&#x27;,&#x27;Layout&#x27;], kind:&#x27;owner&#x27;, layer:&#x27;헤드리스 소유 계층&#x27;, role:&#x27;원본 문서에서 공간 정보를 파생하는 소유자.&#x27;, owns:[&#x27;visible order&#x27;,&#x27;y/height index&#x27;,&#x27;layout invalidation&#x27;,&#x27;TextLayout cache&#x27;,&#x27;reveal/hit geometry&#x27;], excludes:[&#x27;Document mutation&#x27;,&#x27;caret/word semantic transition&#x27;], access:&#x27;Session을 통해 사용하는 package 소유자&#x27;, file:&#x27;Sources/SlopadBlockLayout&#x27;, deps:[&#x27;core&#x27;,&#x27;data&#x27;] },
+        { id:&#x27;input-rules&#x27;, name:&#x27;MarkdownInputRules&#x27;, lines:[&#x27;Markdown&#x27;,&#x27;InputRules&#x27;], kind:&#x27;format&#x27;, layer:&#x27;헤드리스 소유 계층&#x27;, role:&#x27;파서 없이 범위가 제한된 타입 입력 패턴 데이터만 제공.&#x27;, owns:[&#x27;immutable prefix/inline patterns&#x27;,&#x27;trigger/scan metadata&#x27;], excludes:[&#x27;runner&#x27;,&#x27;transaction&#x27;,&#x27;whole-document parse&#x27;], access:&#x27;internal 비제품 target&#x27;, file:&#x27;Sources/SlopadMarkdownInputRules&#x27;, deps:[&#x27;core&#x27;] },
+        { id:&#x27;core&#x27;, name:&#x27;SlopadCoreModel&#x27;, lines:[&#x27;Slopad&#x27;,&#x27;CoreModel&#x27;], kind:&#x27;foundation&#x27;, layer:&#x27;기반 계층&#x27;, role:&#x27;타깃 사이에서 공유하는 계약과 원본 값 정의.&#x27;, owns:[&#x27;Block/Document value definitions&#x27;,&#x27;input/output vocabulary&#x27;,&#x27;BlockTextLayoutProtocol&#x27;], excludes:[&#x27;stored editor state&#x27;,&#x27;generic helper bucket&#x27;], access:&#x27;host 공개 표면과 실제 package 계약&#x27;, file:&#x27;Sources/SlopadCoreModel&#x27;, deps:[] },
+        { id:&#x27;data&#x27;, name:&#x27;SlopadDataStructure&#x27;, lines:[&#x27;Slopad&#x27;,&#x27;DataStructure&#x27;], kind:&#x27;foundation&#x27;, layer:&#x27;기반 계층&#x27;, role:&#x27;편집기를 모르는 순수 자료구조.&#x27;, owns:[&#x27;PrefixSumRedBlackTree 등 storage mechanics&#x27;], excludes:[&#x27;BlockID 의미&#x27;,&#x27;layout policy&#x27;,&#x27;platform vocabulary&#x27;], access:&#x27;package/internal 기반 계층&#x27;, file:&#x27;Sources/SlopadDataStructure&#x27;, deps:[] },
+        { id:&#x27;swift-markdown&#x27;, name:&#x27;swift-markdown 0.8.0&#x27;, lines:[&#x27;swift-markdown&#x27;,&#x27;0.8.0&#x27;], kind:&#x27;format&#x27;, layer:&#x27;외부 의존성&#x27;, role:&#x27;SlopadMarkdown 내부에서만 쓰는 외부 파서 AST.&#x27;, owns:[&#x27;Markdown parsing AST&#x27;], excludes:[&#x27;Slopad canonical model&#x27;,&#x27;Sendable API contract&#x27;], access:&#x27;정확한 버전 고정, internal import만 허용&#x27;, file:&#x27;Package.swift · ADR/0013&#x27;, deps:[] }
+      ];
+      const moduleMap = new Map(modules.map(item =&gt; [item.id, item]));
+      const moduleSelect = root.querySelector(&#x27;#sae-module-select&#x27;);
+      modules.forEach(item =&gt; moduleSelect.add(new Option(`${item.name} · ${item.layer}`, item.id)));
+      moduleSelect.value = &#x27;engine&#x27;;
+
+      const scenarios = [
+        { id:&#x27;text&#x27;, label:&#x27;키보드 · 일반 문자/Markdown shortcut&#x27;, title:&#x27;한 글자 입력은 canonical transaction을 지나고, closing trigger일 때만 bounded rule을 봅니다.&#x27;, rule:&#x27;일반 문자는 Set&lt;Character&gt; gate에서 즉시 끝나며 swift-markdown parser는 호출되지 않습니다.&#x27;, path:[&#x27;AppKit callback&#x27;,&#x27;AppKitActiveInputController&#x27;,&#x27;EditorSession&#x27;,&#x27;EditorModel&#x27;,&#x27;BlockLayout&#x27;,&#x27;TextKit&#x27;,&#x27;SessionSnapshot&#x27;,&#x27;Canvas&#x27;], steps:[
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;NSTextInputClient.insertText&#x27;,&#x27;AppKitActiveInputController.insertText → applyNativeReplacement가 NSRange를 grapheme TextRange로 바꿉니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitActiveInputController.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;EditorSession.handleInput&#x27;,&#x27;`.command(.replaceText)`를 command routing으로 전달합니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession+InputEventDispatch.swift&#x27;],
+          [&#x27;SlopadEditorModel&#x27;,&#x27;EditorModel.apply&#x27;,&#x27;text 삽입, selection 이동, undo before/after를 한 transaction으로 만듭니다.&#x27;,&#x27;canonical&#x27;,&#x27;EditorModel+CommandApplication.swift&#x27;],
+          [&#x27;SlopadEditorModel&#x27;,&#x27;EditorInputRuleRunner&#x27;,&#x27;마지막 문자가 trigger일 때만 pre-mutation bounded candidate를 matcher에 넘깁니다.&#x27;,&#x27;semantic&#x27;,&#x27;EditorInputRuleRunner.swift&#x27;],
+          [&#x27;SlopadMarkdownInputRules&#x27;,&#x27;MarkdownInputRules.all&#x27;,&#x27;`**`, `_`, backtick, `~~`, link, block prefix가 effect data를 반환합니다.&#x27;,&#x27;semantic&#x27;,&#x27;MarkdownInputRules.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;markLayoutDirty → makeEditorUpdate&#x27;,&#x27;semantic change를 layout invalidation과 committed revision으로 투영합니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession+UpdateProjection.swift&#x27;],
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;renderAndSyncSurface&#x27;,&#x27;snapshot을 pull하고 canvas/native input/focus를 함께 수렴시킵니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitEditorViewController.swift&#x27;]
+        ]},
+        { id:&#x27;command&#x27;, label:&#x27;키보드 · 이동/삭제/Enter/Undo&#x27;, title:&#x27;NSResponder selector는 의미 command 또는 viewport-aware navigation으로 번역됩니다.&#x27;, rule:&#x27;TextKit은 이동/삭제 범위 사실만 답하고, selection·history의 최종 변화는 Session과 EditorModel이 결정합니다.&#x27;, path:[&#x27;NSResponder selector&#x27;,&#x27;ActiveInputController&#x27;,&#x27;EditorSession command routing&#x27;,&#x27;Text backend fact&#x27;,&#x27;EditorModel&#x27;,&#x27;Surface sync&#x27;], steps:[
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;handleCommand(_:)&#x27;,&#x27;selector를 enter/delete/undo 또는 `.navigate(viewport:)`로 분류합니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitActiveInputController.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;handleInputCommand&#x27;,&#x27;viewport-independent command와 navigation command를 분기합니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession+CommandInput.swift&#x27;],
+          [&#x27;SlopadAppKitTextKit&#x27;,&#x27;navigate / wordRange / deletionRange&#x27;,&#x27;bidi·linguistic 경계를 같은 effective text request에서 계산합니다.&#x27;,&#x27;derived&#x27;,&#x27;TextKitLayoutContext.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;navigation/deletion handler&#x27;,&#x27;backend fact를 block 경계, selection mode, composition 정책과 합칩니다.&#x27;,&#x27;semantic&#x27;,&#x27;Session/Navigation · TextInteraction&#x27;],
+          [&#x27;SlopadEditorModel&#x27;,&#x27;EditorModel.apply&#x27;,&#x27;실제 selection/document/history transition을 transaction으로 확정합니다.&#x27;,&#x27;canonical&#x27;,&#x27;Sources/SlopadEditorModel/Command&#x27;],
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;requestRender&#x27;,&#x27;first responder와 native selected range를 새 snapshot에 맞춥니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitActiveInputController.swift&#x27;]
+        ]},
+        { id:&#x27;ime&#x27;, label:&#x27;키보드 · IME 조합/확정/취소&#x27;, title:&#x27;조합 중 문자열은 Session overlay이고, 확정 순간에만 Document가 바뀝니다.&#x27;, rule:&#x27;effective content는 조합을 포함해 그리지만 documentSnapshot은 committed canonical document만 내보냅니다.&#x27;, path:[&#x27;NSTextInputClient&#x27;,&#x27;ActiveInputController&#x27;,&#x27;Session composition&#x27;,&#x27;Effective content&#x27;,&#x27;BlockLayout/TextKit&#x27;,&#x27;commit → EditorModel&#x27;], steps:[
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;setMarkedText&#x27;,&#x27;native marked range와 replacement range를 보관하고 begin/updateComposition을 보냅니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitActiveInputController.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;setComposition&#x27;,&#x27;composition과 compositionSelection을 Session runtime에 두고 layout만 dirty 처리합니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession+Composition.swift&#x27;],
+          [&#x27;SlopadBlockLayout&#x27;,&#x27;effective document projection&#x27;,&#x27;canonical block content 위에 live composition을 겹쳐 측정 request를 만듭니다.&#x27;,&#x27;derived&#x27;,&#x27;ContentProjection · TextLayoutCache&#x27;],
+          [&#x27;SlopadAppKitTextKit&#x27;,&#x27;shared TextKit context&#x27;,&#x27;marked text까지 포함한 같은 request로 height, caret, fragment를 만듭니다.&#x27;,&#x27;derived&#x27;,&#x27;TextKitLayoutContext.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;endComposition(commit:)&#x27;,&#x27;취소면 overlay만 제거하고, 확정이면 replaceText command를 적용합니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession+Composition.swift&#x27;],
+          [&#x27;SlopadEditorModel&#x27;,&#x27;one transaction&#x27;,&#x27;확정 문자열과 input rule effect를 canonical state/history에 원자적으로 기록합니다.&#x27;,&#x27;canonical&#x27;,&#x27;EditorModel+TextContentCommands.swift&#x27;]
+        ]},
+        { id:&#x27;click&#x27;, label:&#x27;마우스 · 단일 클릭 caret&#x27;, title:&#x27;좌표는 adapter가 받고, hit/selection 의미는 Session이 정합니다.&#x27;, rule:&#x27;UI가 TextKit을 직접 질의하지 않으며 Session이 document 좌표와 text-local 좌표를 연결합니다.&#x27;, path:[&#x27;NSView.mouseDown&#x27;,&#x27;ViewController&#x27;,&#x27;Session pointer&#x27;,&#x27;BlockLayout hit&#x27;,&#x27;TextKit hit&#x27;,&#x27;EditorModel selection&#x27;,&#x27;Surface sync&#x27;], steps:[
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;handleMouseDown(documentPoint:)&#x27;,&#x27;gutter/body를 구분하고 body면 `.beginTextSelection`을 보냅니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitEditorViewController.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;handlePointerEvent&#x27;,&#x27;pointer case를 beginTextPointerSelection으로 라우팅합니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession+PointerInput.swift&#x27;],
+          [&#x27;SlopadBlockLayout&#x27;,&#x27;blockID(atY:) / geometry&#x27;,&#x27;document y에서 대상 block과 frame을 찾습니다.&#x27;,&#x27;derived&#x27;,&#x27;BlockLayoutGeometry.swift&#x27;],
+          [&#x27;SlopadAppKitTextKit&#x27;,&#x27;textHitTest&#x27;,&#x27;block-local point를 grapheme TextPosition으로 역매핑합니다.&#x27;,&#x27;derived&#x27;,&#x27;TextKitLayoutContext.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;handleSelectionChange&#x27;,&#x27;hit fact를 caret/text selection 의미로 바꾸고 stale navigation context를 지웁니다.&#x27;,&#x27;semantic&#x27;,&#x27;EditorSession+SelectionTransition.swift&#x27;],
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;renderAndSyncSurface&#x27;,&#x27;canvas focus와 native selectedRange를 새 selection에 맞춥니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitEditorViewController.swift&#x27;]
+        ]},
+        { id:&#x27;double-click&#x27;, label:&#x27;마우스 · 더블클릭 단어 선택&#x27;, title:&#x27;단어 경계는 TextKit이 알지만, 단어/전체 선택 정책은 Session이 소유합니다.&#x27;, rule:&#x27;gutter 더블클릭은 block 경로로 되돌아가고 body 더블클릭만 linguistic word 경계를 사용합니다.&#x27;, path:[&#x27;double click&#x27;,&#x27;ViewController&#x27;,&#x27;Session selectWordOrAllText&#x27;,&#x27;Layout + TextKit wordRange&#x27;,&#x27;Selection update&#x27;,&#x27;Surface&#x27;], steps:[
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;handleMouseDoubleClick&#x27;,&#x27;body 좌표를 `.selectWordOrAllText` pointer event로 보냅니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitEditorViewController.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;selectWordOrAllTextFromPointer&#x27;,&#x27;block hit와 text hit를 같은 viewport에 준비합니다.&#x27;,&#x27;runtime&#x27;,&#x27;Session/TextInteraction&#x27;],
+          [&#x27;SlopadAppKitTextKit&#x27;,&#x27;wordRange(containing:)&#x27;,&#x27;platform linguistic segmentation으로 단어 범위를 반환합니다.&#x27;,&#x27;derived&#x27;,&#x27;TextKitLayoutContext.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;double-click selection state&#x27;,&#x27;반복 클릭/빈 text 조건을 포함해 word 또는 all-text selection을 정합니다.&#x27;,&#x27;semantic&#x27;,&#x27;Session/Selection&#x27;],
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;renderAndSyncSurface&#x27;,&#x27;selection rect와 native range를 snapshot에서 동기화합니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitEditorViewController.swift&#x27;]
+        ]},
+        { id:&#x27;drag&#x27;, label:&#x27;마우스 · text drag → block selection 전환&#x27;, title:&#x27;드래그는 text selection으로 시작하지만 임계값을 넘으면 block selection으로 전환될 수 있습니다.&#x27;, rule:&#x27;AppKit은 연속 좌표와 autoscroll을 운반하고, 전환 규칙과 selection은 Session이 소유합니다.&#x27;, path:[&#x27;mouseDown&#x27;,&#x27;beginTextSelection&#x27;,&#x27;mouseDragged&#x27;,&#x27;updateTextSelection&#x27;,&#x27;threshold policy&#x27;,&#x27;text 또는 blocks&#x27;,&#x27;autoscroll/snapshot&#x27;], steps:[
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;handleMouseDown&#x27;,&#x27;body에서 text drag anchor를 시작합니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitEditorViewController.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;beginTextPointerSelection&#x27;,&#x27;초기 TextPosition과 drag anchor를 Session runtime에 기록합니다.&#x27;,&#x27;runtime&#x27;,&#x27;Session/PointerSelection&#x27;],
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;handleMouseDragged&#x27;,&#x27;documentPoint, viewport, blockSelectionThreshold를 매 update마다 보냅니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitEditorViewController.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;updateTextPointerSelection&#x27;,&#x27;TextKit hit 결과와 block 경계를 이용해 text selection을 확장합니다.&#x27;,&#x27;semantic&#x27;,&#x27;Session/PointerSelection&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;threshold transition&#x27;,&#x27;정책 임계값을 넘으면 block selection으로 바꾸고 text anchor를 정리합니다.&#x27;,&#x27;semantic&#x27;,&#x27;Session/PointerSelection&#x27;],
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;dragAutoscrollController&#x27;,&#x27;adapter가 viewport를 움직인 뒤 같은 Session event 경로로 계속 갱신합니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitDragAutoscrollController.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;endTextSelection / endBlockSelection&#x27;,&#x27;mouseUp에서 runtime drag state를 닫고 최종 selection을 남깁니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession+PointerInput.swift&#x27;]
+        ]},
+        { id:&#x27;gutter&#x27;, label:&#x27;마우스 · gutter block 선택/drag&#x27;, title:&#x27;gutter는 text가 아니라 block 의미를 선택하는 별도 pointer 경로입니다.&#x27;, rule:&#x27;drag preview는 runtime projection이고 drop이 성공할 때만 canonical tree transaction이 생깁니다.&#x27;, path:[&#x27;gutter mouseDown&#x27;,&#x27;hitTest region&#x27;,&#x27;selectBlock / beginBlockDrag&#x27;,&#x27;runtime drop target&#x27;,&#x27;mouseUp&#x27;,&#x27;EditorModel move transaction&#x27;], steps:[
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;hitRegion = gutter&#x27;,&#x27;x 좌표를 adapter chrome 규칙으로 분류합니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitEditorViewController.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;session.hitTest&#x27;,&#x27;BlockLayout geometry로 block ID와 region을 확인합니다.&#x27;,&#x27;runtime&#x27;,&#x27;Session/HitTesting&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;selectBlock / beginBlockDrag&#x27;,&#x27;선택된 block이면 drag runtime, 아니면 block selection을 시작합니다.&#x27;,&#x27;semantic&#x27;,&#x27;EditorSession+PointerInput.swift&#x27;],
+          [&#x27;SlopadBlockLayout&#x27;,&#x27;drop/reveal geometry&#x27;,&#x27;document tree와 y index에서 drop target/indicator를 파생합니다.&#x27;,&#x27;derived&#x27;,&#x27;BlockLayout+Reveal · StructuralOperations&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;endBlockDrag&#x27;,&#x27;유효 drop이면 model command를 만들고 preview runtime을 제거합니다.&#x27;,&#x27;runtime&#x27;,&#x27;Session/BlockDrag&#x27;],
+          [&#x27;SlopadEditorModel&#x27;,&#x27;move transaction&#x27;,&#x27;tree 순서/parent/selection/history를 원자적으로 변경합니다.&#x27;,&#x27;canonical&#x27;,&#x27;EditorModel+BlockMoveCommands.swift&#x27;]
+        ]},
+        { id:&#x27;scroll&#x27;, label:&#x27;스크롤/resize · render pull&#x27;, title:&#x27;render는 background push가 아니라 AppKit view lifecycle이 요청하는 pull입니다.&#x27;, rule:&#x27;SessionSnapshot은 그릴 준비가 된 viewport projection이며 host가 geometry를 재구성하지 않습니다.&#x27;, path:[&#x27;scroll/resize&#x27;,&#x27;currentViewport&#x27;,&#x27;Session.render&#x27;,&#x27;BlockLayout visible slice&#x27;,&#x27;TextKit facts&#x27;,&#x27;SessionSnapshot&#x27;,&#x27;canvas convergence&#x27;], steps:[
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;scrollDocument / view lifecycle&#x27;,&#x27;adapter가 width, scrollY, height를 EditorViewport로 캡처합니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitEditorViewController.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;render(in:)&#x27;,&#x27;preparedLayout을 갱신하고 visible geometry만 조회합니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession+Rendering.swift&#x27;],
+          [&#x27;SlopadBlockLayout&#x27;,&#x27;visibleGeometries&#x27;,&#x27;visible order, y/height index, text cache에서 viewport slice를 만듭니다.&#x27;,&#x27;derived&#x27;,&#x27;SlopadBlockLayout&#x27;],
+          [&#x27;SlopadAppKitTextKit&#x27;,&#x27;measure/geometry&#x27;,&#x27;같은 prepared entry에서 text height, caret, selection, fragments를 답합니다.&#x27;,&#x27;derived&#x27;,&#x27;TextKitTextSystem.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;EditorSessionSnapshot&#x27;,&#x27;visibleBlocks, activeTextInput, selection, totalHeight, overlays를 조립합니다.&#x27;,&#x27;projection&#x27;,&#x27;EditorSessionSnapshot.swift&#x27;],
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;performSurfaceSync&#x27;,&#x27;canvas size, scroller, focus, native input, draw invalidation을 수렴시킵니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitEditorViewController.swift&#x27;]
+        ]},
+        { id:&#x27;slash&#x27;, label:&#x27;슬래시 · `/hea` 선택&#x27;, title:&#x27;query는 canonical text이지만 menu 해석은 Session runtime이며 AppKit은 표시·선택만 합니다.&#x27;, rule:&#x27;선택 시 source revision CAS 후 `/query` 삭제와 block kind 변경이 한 transaction·한 undo입니다.&#x27;, path:[&#x27;typed /&#x27;,&#x27;EditorModel slash rule&#x27;,&#x27;Session runtime&#x27;,&#x27;Snapshot anchor&#x27;,&#x27;AppKit overlay&#x27;,&#x27;CAS apply&#x27;,&#x27;one transaction&#x27;], steps:[
+          [&#x27;SlopadEditorModel&#x27;,&#x27;SlashCommandInputRule&#x27;,&#x27;오직 새로 typed `/`가 block 시작에 들어온 경우 openSlashCommand operation을 냅니다.&#x27;,&#x27;semantic&#x27;,&#x27;SlashCommandInputRule.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;updateSlashCommandRuntime&#x27;,&#x27;blockID, trigger/query ranges, query, sourceRevision을 runtime에 보관합니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession+SlashCommand.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;slashCommandPresentation&#x27;,&#x27;현재 revision과 caret geometry가 맞을 때 catalog와 anchor를 snapshot에 투영합니다.&#x27;,&#x27;projection&#x27;,&#x27;EditorSession+SlashCommand.swift&#x27;],
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;AppKitSlashCommandOverlay&#x27;,&#x27;목록, keyboard selection, Escape, 좁은 host clamp를 소유합니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitSlashCommandOverlay.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;applySlashCommand&#x27;,&#x27;composition 없음 + runtime/source/current revision 일치를 확인합니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession+SlashCommand.swift&#x27;],
+          [&#x27;SlopadEditorModel&#x27;,&#x27;deleteText + setBlockKind&#x27;,&#x27;두 command를 한 apply transaction으로 기록해 undo가 `/query`를 복원합니다.&#x27;,&#x27;canonical&#x27;,&#x27;EditorModel.apply&#x27;],
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;renderAndSyncSurface&#x27;,&#x27;menu를 닫고 새 block kind/selection을 그립니다.&#x27;,&#x27;surface&#x27;,&#x27;AppKitEditorViewController.swift&#x27;]
+        ]},
+        { id:&#x27;persistence&#x27;, label:&#x27;저장 · committed revision → snapshot&#x27;, title:&#x27;저장은 render snapshot이 아니라 viewport-independent document snapshot을 읽습니다.&#x27;, rule:&#x27;selection, viewport, layout, scroll, live IME는 저장 대상에서 제외됩니다.&#x27;, path:[&#x27;EditorModel commit&#x27;,&#x27;Session revision&#x27;,&#x27;EditorUpdate.onUpdate&#x27;,&#x27;documentSnapshot&#x27;,&#x27;host debounce&#x27;,&#x27;persistence&#x27;], steps:[
+          [&#x27;SlopadEditorModel&#x27;,&#x27;transaction outcome&#x27;,&#x27;documentChanged가 true인 semantic change를 반환합니다.&#x27;,&#x27;canonical&#x27;,&#x27;EditorCommandResult.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;takePendingDocumentRevision&#x27;,&#x27;Session lifetime 안에서만 monotonic한 committed revision을 올립니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession.swift&#x27;],
+          [&#x27;SlopadAppKitUI&#x27;,&#x27;onUpdate&#x27;,&#x27;host에 committedDocumentRevision 신호를 전달합니다.&#x27;,&#x27;projection&#x27;,&#x27;AppKitEditorViewController.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;documentSnapshot&#x27;,&#x27;전체 canonical blocks를 parent-before-child DFS로 투영합니다.&#x27;,&#x27;projection&#x27;,&#x27;EditorDocumentSnapshot.swift&#x27;],
+          [&#x27;Document host&#x27;,&#x27;debounced persistence&#x27;,&#x27;호스트 codec/storage revision 정책으로 blocks를 저장합니다.&#x27;,&#x27;external&#x27;,&#x27;docs/ARCHITECTURE.md&#x27;],
+          [&#x27;Boundary&#x27;,&#x27;never visibleBlocks&#x27;,&#x27;render snapshot과 Session revision은 persistence source/DB revision이 아닙니다.&#x27;,&#x27;guardrail&#x27;,&#x27;EditorDocumentSnapshot.swift&#x27;]
+        ]},
+        { id:&#x27;markdown&#x27;, label:&#x27;Markdown · import/export&#x27;, title:&#x27;whole-document codec은 명시적으로 호출되고 engine에 자동 연결되지 않습니다.&#x27;, rule:&#x27;parser AST는 SlopadMarkdown 밖으로 나오지 않으며 unsupported input/output은 partial result 없이 실패합니다.&#x27;, path:[&#x27;caller&#x27;,&#x27;SlopadMarkdown&#x27;,&#x27;internal swift-markdown&#x27;,&#x27;EditorBlockInput&#x27;,&#x27;DocumentPatch&#x27;,&#x27;Session CAS&#x27;,&#x27;EditorModel&#x27;], steps:[
+          [&#x27;Caller&#x27;,&#x27;SlopadMarkdown.decode&#x27;,&#x27;import/paste 시점을 caller가 명시적으로 선택합니다.&#x27;,&#x27;external&#x27;,&#x27;SlopadMarkdown.swift&#x27;],
+          [&#x27;SlopadMarkdown&#x27;,&#x27;MarkdownDecoder&#x27;,&#x27;internal import Markdown AST를 explicit stack으로 canonical vocabulary에 변환합니다.&#x27;,&#x27;format&#x27;,&#x27;MarkdownDecoder.swift&#x27;],
+          [&#x27;SlopadMarkdown&#x27;,&#x27;typed diagnostics&#x27;,&#x27;table/HTML/image 등 표현 불가 subtree를 모아 no partial blocks로 실패합니다.&#x27;,&#x27;guardrail&#x27;,&#x27;MarkdownDiagnostic.swift&#x27;],
+          [&#x27;Caller&#x27;,&#x27;EditorDocumentPatch&#x27;,&#x27;fresh IDs의 depth-first blocks와 selectionAfter를 구성합니다.&#x27;,&#x27;external&#x27;,&#x27;DownstreamMarkdownHost.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;applyDocumentPatch&#x27;,&#x27;epoch/revision/exact selection CAS와 composition 없음 조건을 검사합니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession+AssistantEditing.swift&#x27;],
+          [&#x27;SlopadEditorModel&#x27;,&#x27;replaceDocument&#x27;,&#x27;tree invariants를 검증하고 full post-image를 한 transaction으로 commit합니다.&#x27;,&#x27;canonical&#x27;,&#x27;EditorModel+DocumentReplacement.swift&#x27;],
+          [&#x27;Export&#x27;,&#x27;SlopadMarkdown.encode&#x27;,&#x27;같은 EditorBlockInput vocabulary를 deterministic Markdown으로 만들거나 no partial output으로 실패합니다.&#x27;,&#x27;format&#x27;,&#x27;MarkdownEncoder.swift&#x27;]
+        ]},
+        { id:&#x27;patch&#x27;, label:&#x27;외부 편집 · review-before-apply patch&#x27;, title:&#x27;외부 작업은 snapshot을 읽고 새 post-image를 제안할 뿐 Model을 직접 만지지 않습니다.&#x27;, rule:&#x27;Session epoch + committed revision + exact selection이 모두 같아야 적용됩니다.&#x27;, path:[&#x27;documentContextSnapshot&#x27;,&#x27;assistant/review UI&#x27;,&#x27;EditorDocumentPatch&#x27;,&#x27;Session CAS&#x27;,&#x27;EditorModel validate&#x27;,&#x27;one transaction&#x27;,&#x27;update&#x27;], steps:[
+          [&#x27;SlopadEngine&#x27;,&#x27;documentContextSnapshot&#x27;,&#x27;composition이 없을 때 source token, full document, selection, selectedContent를 함께 냅니다.&#x27;,&#x27;projection&#x27;,&#x27;EditorSession+AssistantEditing.swift&#x27;],
+          [&#x27;External reviewer&#x27;,&#x27;proposed post-image&#x27;,&#x27;public EditorBlockInput만 사용해 replacementBlocks를 만듭니다.&#x27;,&#x27;external&#x27;,&#x27;EditorDocumentPatch&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;applyDocumentPatch&#x27;,&#x27;epoch, revision, selection equality를 비교해 stale source를 거절합니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession+AssistantEditing.swift&#x27;],
+          [&#x27;SlopadEditorModel&#x27;,&#x27;replaceDocument&#x27;,&#x27;nonempty, unique IDs, parent, cycle, DFS order, selection을 검증합니다.&#x27;,&#x27;canonical&#x27;,&#x27;EditorModel+DocumentReplacement.swift&#x27;],
+          [&#x27;SlopadEngine&#x27;,&#x27;runtime reset + layout invalidation&#x27;,&#x27;navigation/drag caches를 지우고 document change를 layout에 전달합니다.&#x27;,&#x27;runtime&#x27;,&#x27;EditorSession+AssistantEditing.swift&#x27;],
+          [&#x27;Host&#x27;,&#x27;EditorUpdate + documentSnapshot&#x27;,&#x27;하나의 committed revision으로 UI와 저장을 다시 동기화합니다.&#x27;,&#x27;projection&#x27;,&#x27;EditorUpdate · EditorDocumentSnapshot&#x27;]
+        ]}
+      ];
+
+      const codeSamples = {
+        text: {
+          stack: [
+            &#x27;AppKitEditorCanvasView.insertText(_:replacementRange:)&#x27;,
+            &#x27;AppKitEditorViewController.insertTextFromNativeSurface(_:replacementRange:)&#x27;,
+            &#x27;AppKitActiveInputController.insertText(_:replacementRange:)&#x27;,
+            &#x27;AppKitActiveInputController.applyNativeReplacement(...)&#x27;,
+            &#x27;EditorSession.handleInput(.command(.replaceText(...)))&#x27;,
+            &#x27;EditorModel.insertText(...) → input rules → transaction&#x27;
+          ],
+          file: &#x27;AppKitEditorCanvasView.swift · EditorSession+InputEventDispatch.swift&#x27;,
+          code: [
+            &#x27;func insertText(_ string: Any, replacementRange: NSRange) {&#x27;,
+            &#x27;    guard let text = Self.plainText(from: string) else { return }&#x27;,
+            &#x27;    handler?.insertTextFromNativeSurface(text, replacementRange: replacementRange)&#x27;,
+            &#x27;}&#x27;,
+            &#x27;&#x27;,
+            &#x27;// Session owns semantic routing after the native transport.&#x27;,
+            &#x27;case .command(let command):&#x27;,
+            &#x27;    update = handleInputCommand(command)&#x27;
+          ].join(&#x27;\n&#x27;)
+        },
+        command: {
+          stack: [
+            &#x27;AppKitEditorCanvasView.doCommand(by:)&#x27;,
+            &#x27;AppKitEditorViewController.handleNativeCommand(_:) &#x27;,
+            &#x27;AppKitActiveInputController.handleCommand(_:) &#x27;,
+            &#x27;EditorSession.handleInput(.command(...))&#x27;,
+            &#x27;handleInputCommand(_:) → TextKit fact / EditorModel transaction&#x27;
+          ],
+          file: &#x27;AppKitEditorCanvasView.swift · EditorSession+CommandInput.swift&#x27;,
+          code: [
+            &#x27;override func doCommand(by selector: Selector) {&#x27;,
+            &#x27;    if handler?.handleNativeCommand(selector) == true { return }&#x27;,
+            &#x27;    super.doCommand(by: selector)&#x27;,
+            &#x27;}&#x27;,
+            &#x27;&#x27;,
+            &#x27;case .command(let command):&#x27;,
+            &#x27;    update = handleInputCommand(command)&#x27;
+          ].join(&#x27;\n&#x27;)
+        },
+        ime: {
+          stack: [
+            &#x27;AppKitEditorCanvasView.setMarkedText(...) / unmarkText()&#x27;,
+            &#x27;AppKitActiveInputController.setMarkedText(...)&#x27;,
+            &#x27;EditorSession.handleInput(.beginComposition / .updateComposition)&#x27;,
+            &#x27;EditorSession.setComposition(...) → effective content layout&#x27;,
+            &#x27;EditorSession.handleInput(.commitComposition)&#x27;,
+            &#x27;EditorModel replaceText transaction&#x27;
+          ],
+          file: &#x27;EditorSession+InputEventDispatch.swift&#x27;,
+          code: [
+            &#x27;case .beginComposition(let blockID, let range, let text),&#x27;,
+            &#x27;     .updateComposition(let blockID, let range, let text):&#x27;,
+            &#x27;    update = setComposition(nextTextComposition(&#x27;,
+            &#x27;        blockID: blockID, replacementRange: range, text: text&#x27;,
+            &#x27;    ))&#x27;,
+            &#x27;case .commitComposition:&#x27;,
+            &#x27;    update = endComposition(commit: true)&#x27;
+          ].join(&#x27;\n&#x27;)
+        },
+        click: {
+          stack: [
+            &#x27;AppKitEditorCanvasView.mouseDown(with:)&#x27;,
+            &#x27;AppKitEditorViewController.handleMouseDown(documentPoint:clickCount:)&#x27;,
+            &#x27;EditorSession.handleInput(.pointer(.beginTextSelection(...)))&#x27;,
+            &#x27;EditorSession.beginTextPointerSelection(...)&#x27;,
+            &#x27;BlockLayout block hit → TextKit text hit&#x27;,
+            &#x27;EditorModel selection update → surface sync&#x27;
+          ],
+          file: &#x27;EditorSession+PointerInput.swift&#x27;,
+          code: [
+            &#x27;case .beginTextSelection(let point, let viewport):&#x27;,
+            &#x27;    return beginTextPointerSelection(&#x27;,
+            &#x27;        at: point,&#x27;,
+            &#x27;        viewport: viewport&#x27;,
+            &#x27;    )&#x27;
+          ].join(&#x27;\n&#x27;)
+        },
+        &#x27;double-click&#x27;: {
+          stack: [
+            &#x27;AppKitEditorCanvasView.mouseDown(clickCount: 2)&#x27;,
+            &#x27;AppKitEditorViewController.handleMouseDoubleClick(...)&#x27;,
+            &#x27;EditorSession.handleInput(.pointer(.selectWordOrAllText(...)))&#x27;,
+            &#x27;EditorSession.selectWordOrAllTextFromPointer(...)&#x27;,
+            &#x27;TextKit wordRange(containing:) → selection update&#x27;
+          ],
+          file: &#x27;EditorSession+PointerInput.swift&#x27;,
+          code: [
+            &#x27;case .selectWordOrAllText(let point, let viewport):&#x27;,
+            &#x27;    return selectWordOrAllTextFromPointer(&#x27;,
+            &#x27;        at: point,&#x27;,
+            &#x27;        viewport: viewport&#x27;,
+            &#x27;    )&#x27;
+          ].join(&#x27;\n&#x27;)
+        },
+        drag: {
+          stack: [
+            &#x27;AppKitEditorCanvasView.mouseDragged(with:)&#x27;,
+            &#x27;AppKitEditorViewController.handleMouseDragged(documentPoint:)&#x27;,
+            &#x27;EditorSession.handleInput(.pointer(.updateTextSelection(...)))&#x27;,
+            &#x27;EditorSession.updateTextPointerSelection(...)&#x27;,
+            &#x27;text selection 또는 block selection 전환&#x27;,
+            &#x27;AppKitDragAutoscrollController.update(...)&#x27;
+          ],
+          file: &#x27;AppKitEditorViewController.swift&#x27;,
+          code: [
+            &#x27;session.handleInput(.pointer(.updateTextSelection(&#x27;,
+            &#x27;    documentPoint: point,&#x27;,
+            &#x27;    viewport: viewport,&#x27;,
+            &#x27;    blockSelectionThreshold: textDragBlockSelectionThreshold&#x27;,
+            &#x27;)))&#x27;
+          ].join(&#x27;\n&#x27;)
+        },
+        gutter: {
+          stack: [
+            &#x27;AppKitEditorViewController.handleMouseDown(...)&#x27;,
+            &#x27;EditorSession.handleInput(.pointer(.selectBlock / .beginBlockDrag))&#x27;,
+            &#x27;EditorSession.beginBlockDrag(...)&#x27;,
+            &#x27;EditorSession.updateBlockDrag(...) → drop indicator&#x27;,
+            &#x27;EditorSession.endBlockDrag(...)&#x27;,
+            &#x27;EditorModel move transaction&#x27;
+          ],
+          file: &#x27;EditorSession+PointerInput.swift&#x27;,
+          code: [
+            &#x27;case .beginBlockDrag(let point, let viewport):&#x27;,
+            &#x27;    return beginBlockDrag(at: point, viewport: viewport)&#x27;,
+            &#x27;case .updateBlockDrag(let point, let viewport):&#x27;,
+            &#x27;    return updateBlockDrag(at: point, viewport: viewport)&#x27;,
+            &#x27;case .endBlockDrag(let point, let viewport):&#x27;,
+            &#x27;    return endBlockDrag(at: point, viewport: viewport)&#x27;
+          ].join(&#x27;\n&#x27;)
+        },
+        scroll: {
+          stack: [
+            &#x27;NSScrollView / resize callback&#x27;,
+            &#x27;AppKitEditorViewController.renderAndSyncSurface(...)&#x27;,
+            &#x27;EditorSession.render(in: EditorViewport)&#x27;,
+            &#x27;BlockLayout.visibleGeometries(...)&#x27;,
+            &#x27;TextKitTextSystem geometry / drawing facts&#x27;,
+            &#x27;EditorSessionSnapshot → performSurfaceSync(...)&#x27;
+          ],
+          file: &#x27;EditorSession+Rendering.swift&#x27;,
+          code: [
+            &#x27;public func render(in viewport: EditorViewport) -&gt; EditorSessionSnapshot {&#x27;,
+            &#x27;    let revision = preparedLayout(for: viewport)&#x27;,
+            &#x27;    let visibleBlocks = renderedBlocks(geometries:&#x27;,
+            &#x27;        blockLayout.visibleGeometries(&#x27;,
+            &#x27;            yOffset: viewport.scrollY, viewportHeight: viewport.height&#x27;,
+            &#x27;        ), ...&#x27;,
+            &#x27;    )&#x27;,
+            &#x27;    return EditorSessionSnapshot(revision: revision, visibleBlocks: visibleBlocks, ...)&#x27;,
+            &#x27;}&#x27;
+          ].join(&#x27;\n&#x27;)
+        },
+        slash: {
+          stack: [
+            &#x27;typed slash → SlashCommandInputRule&#x27;,
+            &#x27;EditorOperation.openSlashCommand(...)&#x27;,
+            &#x27;EditorSession.updateSlashCommandRuntime(...)&#x27;,
+            &#x27;EditorSessionSnapshot.slashCommand → AppKitSlashCommandOverlay&#x27;,
+            &#x27;EditorSession.applySlashCommand(_:sourceRevision:)&#x27;,
+            &#x27;EditorModel.apply([deleteText, setBlockKind])&#x27;
+          ],
+          file: &#x27;EditorSession+SlashCommand.swift&#x27;,
+          code: [
+            &#x27;guard runtime.sourceRevision == sourceRevision,&#x27;,
+            &#x27;      currentDocumentRevision == sourceRevision else { return nil }&#x27;,
+            &#x27;&#x27;,
+            &#x27;let result = editorModel.apply([&#x27;,
+            &#x27;    .command(.deleteText(blockID: runtime.blockID, range: sourceRange)),&#x27;,
+            &#x27;    .command(.setBlockKind(blockID: runtime.blockID, kind: command.blockKind)),&#x27;,
+            &#x27;])&#x27;
+          ].join(&#x27;\n&#x27;)
+        },
+        persistence: {
+          stack: [
+            &#x27;EditorModel transaction outcome&#x27;,
+            &#x27;EditorSession.makeEditorUpdate(...)&#x27;,
+            &#x27;AppKitEditorViewController.onUpdate(EditorUpdate)&#x27;,
+            &#x27;host reads EditorSession.documentSnapshot&#x27;,
+            &#x27;host debounce / codec / storage&#x27;
+          ],
+          file: &#x27;EditorSession.swift&#x27;,
+          code: [
+            &#x27;public var documentSnapshot: EditorDocumentSnapshot {&#x27;,
+            &#x27;    EditorDocumentSnapshot(&#x27;,
+            &#x27;        epoch: sessionEpoch,&#x27;,
+            &#x27;        revision: currentDocumentRevision,&#x27;,
+            &#x27;        blocks: editorModel.document.editorBlockInputs&#x27;,
+            &#x27;    )&#x27;,
+            &#x27;}&#x27;
+          ].join(&#x27;\n&#x27;)
+        },
+        markdown: {
+          stack: [
+            &#x27;format caller&#x27;,
+            &#x27;SlopadMarkdown.decode(_:) / encode(_:) &#x27;,
+            &#x27;MarkdownDecoder / MarkdownEncoder&#x27;,
+            &#x27;EditorBlockInput vocabulary&#x27;,
+            &#x27;EditorDocumentPatch&#x27;,
+            &#x27;EditorSession.applyDocumentPatch(_:) → EditorModel.replaceDocument(...)&#x27;
+          ],
+          file: &#x27;SlopadMarkdown.swift&#x27;,
+          code: [
+            &#x27;public static func decode(_ markdown: String) throws -&gt; [EditorBlockInput] {&#x27;,
+            &#x27;    var decoder = MarkdownDecoder(markdown: markdown)&#x27;,
+            &#x27;    let result = decoder.decode()&#x27;,
+            &#x27;    guard result.diagnostics.isEmpty else {&#x27;,
+            &#x27;        throw MarkdownDecodingError(diagnostics: result.diagnostics)&#x27;,
+            &#x27;    }&#x27;,
+            &#x27;    return result.blocks&#x27;,
+            &#x27;}&#x27;
+          ].join(&#x27;\n&#x27;)
+        },
+        patch: {
+          stack: [
+            &#x27;EditorSession.documentContextSnapshot()&#x27;,
+            &#x27;external reviewer produces EditorDocumentPatch&#x27;,
+            &#x27;EditorSession.applyDocumentPatch(_:)&#x27;,
+            &#x27;epoch + revision + exact selection CAS&#x27;,
+            &#x27;EditorModel.replaceDocument(with:selection:)&#x27;,
+            &#x27;layout invalidation → EditorUpdate&#x27;
+          ],
+          file: &#x27;EditorSession+AssistantEditing.swift&#x27;,
+          code: [
+            &#x27;guard patch.source.sessionEpoch == sessionEpoch,&#x27;,
+            &#x27;      patch.source.revision == currentDocumentRevision,&#x27;,
+            &#x27;      patch.source.selection == editorModel.selection&#x27;,
+            &#x27;else { throw .staleSource }&#x27;,
+            &#x27;&#x27;,
+            &#x27;let result = try editorModel.replaceDocument(&#x27;,
+            &#x27;    with: patch.replacementBlocks, selection: patch.selectionAfter&#x27;,
+            &#x27;)&#x27;
+          ].join(&#x27;\n&#x27;)
+        }
+      };
+
+      const effects = {
+        canonical:&#x27;canonical&#x27;, semantic:&#x27;semantic state&#x27;, runtime:&#x27;runtime&#x27;, derived:&#x27;derived&#x27;,
+        projection:&#x27;projection&#x27;, surface:&#x27;native surface&#x27;, format:&#x27;format boundary&#x27;,
+        external:&#x27;external caller&#x27;, guardrail:&#x27;fail closed&#x27;
+      };
+
+      const tabButtons = [...root.querySelectorAll(&#x27;[data-view]&#x27;)];
+      const panels = [...root.querySelectorAll(&#x27;[data-panel]&#x27;)];
+      tabButtons.forEach(button =&gt; button.addEventListener(&#x27;click&#x27;, () =&gt; {
+        const view = button.dataset.view;
+        tabButtons.forEach(item =&gt; {
+          const selected = item === button;
+          item.setAttribute(&#x27;aria-pressed&#x27;, String(selected));
+          item.classList.toggle(&#x27;btn-primary&#x27;, selected);
+        });
+        panels.forEach(panel =&gt; { panel.hidden = panel.dataset.panel !== view; });
+        if (view === &#x27;modules&#x27;) { drawModuleGraph(); drawOverviewGraph(); }
+      }));
+
+      function listInto(selector, values) {
+        root.querySelector(selector).replaceChildren(...values.map(value =&gt; {
+          const li = document.createElement(&#x27;li&#x27;); li.textContent = value; return li;
+        }));
+      }
+
+      function updateModuleDetail() {
+        const item = moduleMap.get(moduleSelect.value);
+        root.querySelector(&#x27;#sae-module-name&#x27;).textContent = `${item.name} · ${item.layer}`;
+        root.querySelector(&#x27;#sae-module-role&#x27;).textContent = item.role;
+        listInto(&#x27;#sae-module-owns&#x27;, item.owns);
+        listInto(&#x27;#sae-module-excludes&#x27;, item.excludes);
+        const consumers = modules.filter(other =&gt; other.deps.includes(item.id)).map(other =&gt; other.name);
+        const deps = item.deps.map(id =&gt; moduleMap.get(id).name);
+        const boundary = root.querySelector(&#x27;#sae-module-boundary&#x27;);
+        const boundaryValues = [
+          `노출 범위: ${item.access}`,
+          `직접 의존 대상: ${deps.join(&#x27;, &#x27;) || &#x27;없음&#x27;}`,
+          `직접 소비자: ${consumers.join(&#x27;, &#x27;) || &#x27;없음&#x27;}`
+        ];
+        boundary.replaceChildren(...boundaryValues.map(value =&gt; {
+          const li=document.createElement(&#x27;li&#x27;); li.textContent=value; return li;
+        }));
+        const sourceItem=document.createElement(&#x27;li&#x27;);
+        sourceItem.append(&#x27;소스: &#x27;);
+        const sourceCode=document.createElement(&#x27;code&#x27;); sourceCode.textContent=item.file;
+        sourceItem.appendChild(sourceCode); boundary.appendChild(sourceItem);
+        drawModuleGraph();
+        drawOverviewGraph();
+      }
+
+      function drawModuleGraph() {
+        const svg = root.querySelector(&#x27;#sae-module-graph&#x27;);
+        if (root.querySelector(&#x27;[data-panel=&quot;modules&quot;]&#x27;).hidden) return;
+        const width = Math.max(320, Math.round(svg.getBoundingClientRect().width || 736));
+        const compact = width &lt; 540;
+        const gap = compact ? 10 : 18;
+        const outer = compact ? 12 : 18;
+        const nodeHeight = 48;
+        const selected = moduleSelect.value;
+        const selectedItem = moduleMap.get(selected);
+        const consumerItems = modules.filter(item =&gt; item.deps.includes(selected));
+        const dependencyItems = selectedItem.deps.map(id =&gt; moduleMap.get(id));
+        const positions = new Map();
+        let height;
+        if (compact) {
+          const nodeWidth = Math.min(280, width - outer * 2);
+          const nodeX = (width - nodeWidth) / 2;
+          let y = 28;
+          consumerItems.forEach(item =&gt; {
+            positions.set(item.id, { x:nodeX, y, width:nodeWidth, height:nodeHeight });
+            y += nodeHeight + gap;
+          });
+          if (consumerItems.length === 0) y += 20;
+          y += 30;
+          positions.set(selected, { x:nodeX, y, width:nodeWidth, height:nodeHeight });
+          y += nodeHeight + 48;
+          dependencyItems.forEach(item =&gt; {
+            positions.set(item.id, { x:nodeX, y, width:nodeWidth, height:nodeHeight });
+            y += nodeHeight + gap;
+          });
+          if (dependencyItems.length === 0) y += 20;
+          height = y + 8;
+        } else {
+          const layoutRow = (items, y) =&gt; {
+            if (items.length === 0) return;
+            const nodeWidth = Math.min(220, (width - outer * 2 - gap * (items.length - 1)) / items.length);
+            const used = nodeWidth * items.length + gap * (items.length - 1);
+            const startX = (width - used) / 2;
+            items.forEach((item,index) =&gt; {
+              positions.set(item.id, { x:startX + index * (nodeWidth + gap), y, width:nodeWidth, height:nodeHeight });
+            });
+          };
+          layoutRow(consumerItems, 30);
+          const selectedWidth = Math.min(280, width - outer * 2);
+          positions.set(selected, { x:(width-selectedWidth)/2, y:150, width:selectedWidth, height:nodeHeight });
+          layoutRow(dependencyItems, 270);
+          height = 338;
+        }
+        svg.setAttribute(&#x27;viewBox&#x27;, `0 0 ${width} ${height}`);
+        svg.style.height = `${height}px`;
+        svg.replaceChildren();
+        const ns = &#x27;http://www.w3.org/2000/svg&#x27;;
+        const defs = document.createElementNS(ns,&#x27;defs&#x27;);
+        const appendArrowMarker = (id, color) =&gt; {
+          const marker = document.createElementNS(ns,&#x27;marker&#x27;);
+          marker.setAttribute(&#x27;id&#x27;,id);
+          marker.setAttribute(&#x27;viewBox&#x27;,&#x27;0 0 12 12&#x27;);
+          marker.setAttribute(&#x27;refX&#x27;,&#x27;11&#x27;);
+          marker.setAttribute(&#x27;refY&#x27;,&#x27;6&#x27;);
+          marker.setAttribute(&#x27;markerWidth&#x27;,&#x27;12&#x27;);
+          marker.setAttribute(&#x27;markerHeight&#x27;,&#x27;12&#x27;);
+          marker.setAttribute(&#x27;markerUnits&#x27;,&#x27;userSpaceOnUse&#x27;);
+          marker.setAttribute(&#x27;orient&#x27;,&#x27;auto&#x27;);
+          const arrow = document.createElementNS(ns,&#x27;path&#x27;);
+          arrow.setAttribute(&#x27;d&#x27;,&#x27;M 1 1 L 11 6 L 1 11 L 4 6 z&#x27;);
+          arrow.setAttribute(&#x27;fill&#x27;,color);
+          marker.appendChild(arrow);
+          defs.appendChild(marker);
+        };
+        appendArrowMarker(&#x27;sae-arrow-dependency&#x27;,&#x27;var(--viz-series-1)&#x27;);
+        appendArrowMarker(&#x27;sae-arrow-consumer&#x27;,&#x27;var(--viz-series-2)&#x27;);
+        svg.appendChild(defs);
+        const appendLabel = (text, y) =&gt; {
+          const label=document.createElementNS(ns,&#x27;text&#x27;);
+          label.setAttribute(&#x27;x&#x27;,compact ? String(width/2) : &#x27;4&#x27;);
+          label.setAttribute(&#x27;y&#x27;,String(y));
+          if (compact) label.setAttribute(&#x27;text-anchor&#x27;,&#x27;middle&#x27;);
+          label.setAttribute(&#x27;class&#x27;,&#x27;layer-label&#x27;);
+          label.textContent=text;
+          svg.appendChild(label);
+        };
+        const appendEmpty = (text, y) =&gt; {
+          const empty=document.createElementNS(ns,&#x27;text&#x27;);
+          empty.setAttribute(&#x27;x&#x27;,String(width/2));
+          empty.setAttribute(&#x27;y&#x27;,String(y));
+          empty.setAttribute(&#x27;text-anchor&#x27;,&#x27;middle&#x27;);
+          empty.setAttribute(&#x27;class&#x27;,&#x27;layer-label&#x27;);
+          empty.textContent=text;
+          svg.appendChild(empty);
+        };
+        if (compact) {
+          const selectedPosition = positions.get(selected);
+          const firstConsumer = consumerItems[0] &amp;&amp; positions.get(consumerItems[0].id);
+          const firstDependency = dependencyItems[0] &amp;&amp; positions.get(dependencyItems[0].id);
+          appendLabel(&#x27;선택한 구성요소를 사용하는 모듈&#x27;, (firstConsumer?.y ?? 28) - 9);
+          if (consumerItems.length === 0) appendEmpty(&#x27;이 구성요소를 사용하는 모듈 없음&#x27;, 42);
+          appendLabel(&#x27;선택한 구성요소&#x27;, selectedPosition.y - 9);
+          appendLabel(&#x27;선택한 구성요소가 사용하는 모듈&#x27;, (firstDependency?.y ?? height-22) - 9);
+          if (dependencyItems.length === 0) appendEmpty(&#x27;이 구성요소가 사용하는 모듈 없음&#x27;, height-22);
+        } else {
+          appendLabel(&#x27;위 · 선택한 구성요소를 사용하는 모듈&#x27;, 18);
+          appendLabel(&#x27;선택한 구성요소&#x27;, 138);
+          appendLabel(&#x27;아래 · 선택한 구성요소가 사용하는 모듈&#x27;, 258);
+          if (consumerItems.length === 0) appendEmpty(&#x27;이 구성요소를 사용하는 모듈 없음&#x27;, 58);
+          if (dependencyItems.length === 0) appendEmpty(&#x27;이 구성요소가 사용하는 모듈 없음&#x27;, 298);
+          const selectedPosition = positions.get(selected);
+          consumerItems.forEach((item,index) =&gt; {
+            const from = positions.get(item.id);
+            const portX = selectedPosition.x + selectedPosition.width * (index + 1) / (consumerItems.length + 1);
+            const path = document.createElementNS(ns,&#x27;path&#x27;);
+            path.setAttribute(&#x27;d&#x27;,`M ${from.x+from.width/2} ${from.y+from.height} C ${from.x+from.width/2} 112, ${portX} 112, ${portX} ${selectedPosition.y-3}`);
+            path.setAttribute(&#x27;class&#x27;,&#x27;edge is-consumer&#x27;);
+            svg.appendChild(path);
+          });
+          dependencyItems.forEach((item,index) =&gt; {
+            const to = positions.get(item.id);
+            const portX = selectedPosition.x + selectedPosition.width * (index + 1) / (dependencyItems.length + 1);
+            const path = document.createElementNS(ns,&#x27;path&#x27;);
+            path.setAttribute(&#x27;d&#x27;,`M ${portX} ${selectedPosition.y+selectedPosition.height} C ${portX} 232, ${to.x+to.width/2} 232, ${to.x+to.width/2} ${to.y-3}`);
+            path.setAttribute(&#x27;class&#x27;,&#x27;edge is-dependency&#x27;);
+            svg.appendChild(path);
+          });
+        }
+        const visibleItems = [...consumerItems, selectedItem, ...dependencyItems].filter((item,index,array) =&gt; array.findIndex(candidate =&gt; candidate.id === item.id) === index);
+        const consumerIDs = new Set(consumerItems.map(item =&gt; item.id));
+        const dependencyIDs = new Set(dependencyItems.map(item =&gt; item.id));
+        visibleItems.forEach(item =&gt; {
+          const p=positions.get(item.id); if(!p) return;
+          const g=document.createElementNS(ns,&#x27;g&#x27;);
+          const classes=[&#x27;node&#x27;];
+          if(item.id===selected) classes.push(&#x27;is-selected&#x27;);
+          if(dependencyIDs.has(item.id)) classes.push(&#x27;is-related&#x27;);
+          if(consumerIDs.has(item.id)) classes.push(&#x27;is-consumer&#x27;);
+          g.setAttribute(&#x27;class&#x27;,classes.join(&#x27; &#x27;)); g.setAttribute(&#x27;data-kind&#x27;,item.kind);
+          const rect=document.createElementNS(ns,&#x27;rect&#x27;); rect.setAttribute(&#x27;x&#x27;,String(p.x)); rect.setAttribute(&#x27;y&#x27;,String(p.y)); rect.setAttribute(&#x27;width&#x27;,String(p.width)); rect.setAttribute(&#x27;height&#x27;,String(p.height)); rect.setAttribute(&#x27;rx&#x27;,&#x27;6&#x27;); g.appendChild(rect);
+          item.lines.forEach((line,lineIndex) =&gt; { const text=document.createElementNS(ns,&#x27;text&#x27;); text.setAttribute(&#x27;x&#x27;,String(p.x+p.width/2)); text.setAttribute(&#x27;y&#x27;,String(p.y+20+lineIndex*15)); text.setAttribute(&#x27;text-anchor&#x27;,&#x27;middle&#x27;); text.textContent=line; g.appendChild(text); });
+          g.style.cursor=&#x27;pointer&#x27;; g.addEventListener(&#x27;click&#x27;,()=&gt;{ moduleSelect.value=item.id; updateModuleDetail(); });
+          svg.appendChild(g);
+        });
+      }
+
+      function drawOverviewGraph() {
+        const svg = root.querySelector(&#x27;#sae-overview-graph&#x27;);
+        if (root.querySelector(&#x27;[data-panel=&quot;modules&quot;]&#x27;).hidden) return;
+        const width = Math.max(320, Math.round(svg.getBoundingClientRect().width || 736));
+        const compact = width &lt; 540;
+        const columns = compact ? 2 : 3;
+        const gap = compact ? 12 : 18;
+        const outer = compact ? 8 : 18;
+        const nodeWidth = (width - outer * 2 - gap * (columns - 1)) / columns;
+        const nodeHeight = 48;
+        const groupGap = compact ? 28 : 34;
+        const rowGap = 10;
+        const layers = [
+          [&#x27;mac-host&#x27;,&#x27;swiftui-host&#x27;,&#x27;format-caller&#x27;],
+          [&#x27;swiftui&#x27;,&#x27;appkit&#x27;,&#x27;markdown&#x27;],
+          [&#x27;appkit-ui&#x27;,&#x27;engine&#x27;,&#x27;appkit-textkit&#x27;],
+          [&#x27;editor-model&#x27;,&#x27;block-layout&#x27;,&#x27;input-rules&#x27;],
+          [&#x27;core&#x27;,&#x27;data&#x27;,&#x27;swift-markdown&#x27;]
+        ];
+        const labels = [&#x27;외부 소비자&#x27;,&#x27;퍼사드 / 선택형 제품&#x27;,&#x27;런타임 통합&#x27;,&#x27;헤드리스 소유 계층&#x27;,&#x27;기반 / 외부 의존성&#x27;];
+        const positions = new Map();
+        let y = 24;
+        layers.forEach((ids, layerIndex) =&gt; {
+          const rows = Math.ceil(ids.length / columns);
+          ids.forEach((id, index) =&gt; {
+            const row = Math.floor(index / columns);
+            const col = index % columns;
+            const countInRow = Math.min(columns, ids.length - row * columns);
+            const used = countInRow * nodeWidth + (countInRow - 1) * gap;
+            const startX = (width - used) / 2;
+            positions.set(id, {
+              x:startX + col * (nodeWidth + gap),
+              y:y + row * (nodeHeight + rowGap),
+              width:nodeWidth,
+              height:nodeHeight,
+              layer:layerIndex
+            });
+          });
+          y += rows * (nodeHeight + rowGap) + groupGap;
+        });
+        const height = y - groupGap + 10;
+        svg.setAttribute(&#x27;viewBox&#x27;,`0 0 ${width} ${height}`);
+        svg.style.height = `${height}px`;
+        svg.replaceChildren();
+        const ns = &#x27;http://www.w3.org/2000/svg&#x27;;
+        const defs = document.createElementNS(ns,&#x27;defs&#x27;);
+        const appendMarker = (id,color) =&gt; {
+          const marker=document.createElementNS(ns,&#x27;marker&#x27;);
+          marker.setAttribute(&#x27;id&#x27;,id);
+          marker.setAttribute(&#x27;viewBox&#x27;,&#x27;0 0 12 12&#x27;);
+          marker.setAttribute(&#x27;refX&#x27;,&#x27;11&#x27;);
+          marker.setAttribute(&#x27;refY&#x27;,&#x27;6&#x27;);
+          marker.setAttribute(&#x27;markerWidth&#x27;,&#x27;7&#x27;);
+          marker.setAttribute(&#x27;markerHeight&#x27;,&#x27;7&#x27;);
+          marker.setAttribute(&#x27;markerUnits&#x27;,&#x27;userSpaceOnUse&#x27;);
+          marker.setAttribute(&#x27;orient&#x27;,&#x27;auto&#x27;);
+          const arrow=document.createElementNS(ns,&#x27;path&#x27;);
+          arrow.setAttribute(&#x27;d&#x27;,&#x27;M 1 1 L 11 6 L 1 11 L 4 6 z&#x27;);
+          arrow.setAttribute(&#x27;fill&#x27;,color);
+          marker.appendChild(arrow);
+          defs.appendChild(marker);
+        };
+        appendMarker(&#x27;sae-overview-arrow-muted&#x27;,&#x27;var(--border)&#x27;);
+        appendMarker(&#x27;sae-overview-arrow-dependency&#x27;,&#x27;var(--viz-series-1)&#x27;);
+        appendMarker(&#x27;sae-overview-arrow-consumer&#x27;,&#x27;var(--viz-series-2)&#x27;);
+        svg.appendChild(defs);
+        const selected = moduleSelect.value;
+        const selectedItem = moduleMap.get(selected);
+        const consumerIDs = new Set(modules.filter(item =&gt; item.deps.includes(selected)).map(item =&gt; item.id));
+        modules.forEach(from =&gt; from.deps.forEach(toID =&gt; {
+          const a=positions.get(from.id), b=positions.get(toID);
+          if(!a || !b) return;
+          const path=document.createElementNS(ns,&#x27;path&#x27;);
+          const ax=a.x+a.width/2, ay=a.y+a.height, bx=b.x+b.width/2, by=b.y;
+          path.setAttribute(&#x27;d&#x27;,`M ${ax} ${ay} C ${ax} ${(ay+by)/2}, ${bx} ${(ay+by)/2}, ${bx} ${by-3}`);
+          path.setAttribute(&#x27;class&#x27;,`edge${from.id===selected ? &#x27; is-dependency&#x27; : &#x27;&#x27;}${toID===selected ? &#x27; is-consumer&#x27; : &#x27;&#x27;}`);
+          svg.appendChild(path);
+        }));
+        layers.forEach((ids,index) =&gt; {
+          const first=positions.get(ids[0]);
+          const label=document.createElementNS(ns,&#x27;text&#x27;);
+          label.setAttribute(&#x27;x&#x27;,&#x27;4&#x27;);
+          label.setAttribute(&#x27;y&#x27;,String(first.y-7));
+          label.setAttribute(&#x27;class&#x27;,&#x27;layer-label&#x27;);
+          label.textContent=labels[index];
+          svg.appendChild(label);
+        });
+        modules.forEach(item =&gt; {
+          const p=positions.get(item.id);
+          const g=document.createElementNS(ns,&#x27;g&#x27;);
+          const classes=[&#x27;node&#x27;];
+          if(item.id===selected) classes.push(&#x27;is-selected&#x27;);
+          if(selectedItem.deps.includes(item.id)) classes.push(&#x27;is-related&#x27;);
+          if(consumerIDs.has(item.id)) classes.push(&#x27;is-consumer&#x27;);
+          g.setAttribute(&#x27;class&#x27;,classes.join(&#x27; &#x27;));
+          g.setAttribute(&#x27;data-kind&#x27;,item.kind);
+          const rect=document.createElementNS(ns,&#x27;rect&#x27;);
+          rect.setAttribute(&#x27;x&#x27;,String(p.x));
+          rect.setAttribute(&#x27;y&#x27;,String(p.y));
+          rect.setAttribute(&#x27;width&#x27;,String(p.width));
+          rect.setAttribute(&#x27;height&#x27;,String(p.height));
+          rect.setAttribute(&#x27;rx&#x27;,&#x27;6&#x27;);
+          g.appendChild(rect);
+          item.lines.forEach((line,lineIndex) =&gt; {
+            const text=document.createElementNS(ns,&#x27;text&#x27;);
+            text.setAttribute(&#x27;x&#x27;,String(p.x+p.width/2));
+            text.setAttribute(&#x27;y&#x27;,String(p.y+20+lineIndex*15));
+            text.setAttribute(&#x27;text-anchor&#x27;,&#x27;middle&#x27;);
+            text.textContent=line;
+            g.appendChild(text);
+          });
+          g.style.cursor=&#x27;pointer&#x27;;
+          g.addEventListener(&#x27;click&#x27;,()=&gt;{ moduleSelect.value=item.id; updateModuleDetail(); });
+          svg.appendChild(g);
+        });
+      }
+
+      const scenarioSelect = root.querySelector(&#x27;#sae-scenario-select&#x27;);
+      scenarios.forEach(item =&gt; scenarioSelect.add(new Option(item.label, item.id)));
+      function updateScenario() {
+        const scenario = scenarios.find(item =&gt; item.id === scenarioSelect.value);
+        root.querySelector(&#x27;#sae-trajectory-title&#x27;).textContent = scenario.title;
+        root.querySelector(&#x27;#sae-trajectory-rule&#x27;).textContent = scenario.rule;
+        const path = root.querySelector(&#x27;#sae-trajectory-path&#x27;); path.replaceChildren();
+        scenario.path.forEach((item,index) =&gt; {
+          const code=document.createElement(&#x27;code&#x27;); code.textContent=item; path.appendChild(code);
+          if(index&lt;scenario.path.length-1){ const arrow=document.createElement(&#x27;span&#x27;); arrow.className=&#x27;arrow&#x27;; arrow.textContent=&#x27;→&#x27;; path.appendChild(arrow); }
+        });
+        const list = root.querySelector(&#x27;#sae-trajectory-steps&#x27;);
+        list.replaceChildren(...scenario.steps.map((step,index) =&gt; {
+          const li=document.createElement(&#x27;li&#x27;); li.className=&#x27;sae-step&#x27;;
+          const number=document.createElement(&#x27;span&#x27;); number.className=&#x27;sae-step-index&#x27;; number.textContent=String(index+1).padStart(2,&#x27;0&#x27;);
+          const owner=document.createElement(&#x27;div&#x27;); const badge=document.createElement(&#x27;span&#x27;); badge.className=&#x27;viz-badge&#x27;; badge.textContent=step[0]; const method=document.createElement(&#x27;code&#x27;); method.textContent=step[1]; owner.append(badge,method);
+          const action=document.createElement(&#x27;div&#x27;); const strong=document.createElement(&#x27;strong&#x27;); strong.textContent=step[2]; const file=document.createElement(&#x27;small&#x27;); file.textContent=step[4]; action.append(strong,file);
+          const effect=document.createElement(&#x27;span&#x27;); effect.className=&#x27;viz-badge&#x27;; effect.textContent=effects[step[3]] || step[3];
+          li.append(number,owner,action,effect); return li;
+        }));
+        const sample = codeSamples[scenario.id];
+        const callstack = root.querySelector(&#x27;#sae-callstack&#x27;);
+        callstack.replaceChildren(...sample.stack.map(frame =&gt; {
+          const li = document.createElement(&#x27;li&#x27;);
+          const code = document.createElement(&#x27;code&#x27;);
+          code.textContent = frame;
+          li.appendChild(code);
+          return li;
+        }));
+        root.querySelector(&#x27;#sae-code-file&#x27;).textContent = sample.file;
+        root.querySelector(&#x27;#sae-code-sample&#x27;).textContent = sample.code;
+      }
+
+      moduleSelect.addEventListener(&#x27;change&#x27;, updateModuleDetail);
+      scenarioSelect.addEventListener(&#x27;change&#x27;, updateScenario);
+      const observer = new ResizeObserver(() =&gt; { drawModuleGraph(); drawOverviewGraph(); });
+      root.querySelectorAll(&#x27;.sae-graph-wrap&#x27;).forEach(graph =&gt; observer.observe(graph));
+      updateModuleDetail();
+      updateScenario();
+    })();
+  &lt;/script&gt;
+&lt;/div&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handleLeave = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>
