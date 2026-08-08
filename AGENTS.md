@@ -71,6 +71,44 @@ For bug fixes, add a focused regression test when practical.
 
 After three materially different failed fix attempts, stop speculative editing and report the evidence, remaining candidate causes, and next diagnostic step.
 
+## Agent Orchestration
+
+The main agent is the orchestrator for issue work. It owns requirements, routing, state,
+review handoff, and merge decisions. It does not edit product source during delegated
+feature work; it may maintain orchestration configuration and documentation.
+
+Use one writer at a time. Keep at most two subagents active, and parallelize only bounded,
+independent read-only work. Never run a reviewer against a moving diff.
+
+Route work by risk:
+
+* `worker` — `gpt-5.6-terra` at `high`; narrow changes whose owner, behavior, and
+  acceptance criteria are settled.
+* `high_risk_worker` — `gpt-5.6-sol` at `high`; concurrency, IME, canonical state,
+  TextKit, performance, memory pressure, public API, or cross-layer contract changes.
+* `reviewer` — `gpt-5.6-terra` at `high`, read-only; the first fresh review of a stable
+  diff, using focused probes instead of repeating a credible full verification matrix.
+* `critical_reviewer` — `gpt-5.6-sol` at `xhigh`, read-only; only after `reviewer`
+  reports a P1 and the writer fixes it. It rechecks that P1 and directly affected lines;
+  it must not restart a broad review.
+
+The normal state flow is:
+
+```text
+ready -> working -> stable review packet -> reviewing -> fixing or ready-to-merge
+```
+
+Additional constraints:
+
+* Do not configure or automatically invoke a Sol `max` agent.
+* Do not add a separate verifier agent; the worker owns stable-head verification and the
+  orchestrator owns final integration verification.
+* Use short, self-contained task packets instead of forwarding the entire conversation
+  when spawning an agent.
+* After a correction, rerun focused checks and only the invalidated verification gates.
+* Batch status visualization after multiple merges or a material architecture-boundary
+  change instead of spawning a visualizer for every task.
+
 ## UI Changes
 
 UI work must preserve both native behavior and engine semantics.

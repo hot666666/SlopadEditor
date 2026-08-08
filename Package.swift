@@ -13,6 +13,10 @@ let package = Package(
             targets: ["SlopadEngine"]
         ),
         .library(
+            name: "SlopadMarkdown",
+            targets: ["SlopadMarkdown"]
+        ),
+        .library(
             name: "SlopadAppKit",
             targets: ["SlopadAppKit"]
         ),
@@ -37,9 +41,22 @@ let package = Package(
             targets: ["SlopadUIBenchmarkApp"]
         )
     ],
+    dependencies: [
+        .package(
+            url: "https://github.com/swiftlang/swift-markdown.git",
+            exact: "0.8.0"
+        )
+    ],
     targets: [
         .target(
             name: "SlopadCoreModel"
+        ),
+        .target(
+            name: "SlopadMarkdown",
+            dependencies: [
+                "SlopadCoreModel",
+                .product(name: "Markdown", package: "swift-markdown"),
+            ]
         ),
         .target(
             name: "SlopadDataStructure"
@@ -126,6 +143,13 @@ let package = Package(
                 "SlopadEditorModel",
                 "SlopadBlockLayout",
                 "SlopadEngine",
+            ]
+        ),
+        .testTarget(
+            name: "SlopadMarkdownTests",
+            dependencies: [
+                "SlopadCoreModel",
+                "SlopadMarkdown",
             ]
         ),
         .testTarget(
