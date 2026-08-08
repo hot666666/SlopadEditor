@@ -20,3 +20,4 @@ the decisions that led to it.
 - [0010 - Provide an AppKit platform facade](0010-appkit-platform-facade.md)
 - [0011 - Provide reviewable atomic document transactions](0011-reviewable-atomic-document-transactions.md)
 - [0012 - Decide the host embedding surface by a three-part test](0012-host-embedding-contract.md)
+- [0013 - Depend on swift-markdown behind a format target, and guarantee semantic round-trip only](0013-markdown-format-boundary.md)
