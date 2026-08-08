@@ -14,6 +14,21 @@ final class TextKitLayoutContext: @unchecked Sendable {
     )
     private var preparedLayoutState: PreparedLayoutState?
 
+    /// Attributed strings already built for a key, most-recently-used last.
+    ///
+    /// One set of TextKit objects is reused for every block, so a re-prepare always has to
+    /// re-run `setAttributedString` and `ensureLayout` — those are what the objects are. What
+    /// it does not have to redo is building the attributed string from the request, which is
+    /// pure and depends only on the key. Caching N of *those* costs a string each rather than
+    /// a whole layout manager each, which is why this is bounded at a viewport's worth of
+    /// blocks instead of a document's.
+    private var attributedStringCache: [(key: PreparedLayoutKey, value: NSAttributedString)] = []
+
+    /// Sized for the blocks a viewport can show at once plus room for the active block to
+    /// survive a scroll. Larger buys nothing: entries beyond what a frame touches are never
+    /// looked up before they age out.
+    private static let attributedStringCacheLimit = 64
+
     #if SLOPAD_BENCHMARK_INSTRUMENTATION
         /// How often a layout had to be prepared, and how often that meant rebuilding the
         /// attributed string. The gap between the two is what a shared prepared store would
@@ -438,10 +453,7 @@ final class TextKitLayoutContext: @unchecked Sendable {
             return preparedLayoutState
         }
 
-        #if SLOPAD_BENCHMARK_INSTRUMENTATION
-            Self.attributedStringBuildCount += 1
-        #endif
-        let attributed = TextKitAttributedStringBuilder.attributedString(for: request, style: style)
+        let attributed = cachedAttributedString(for: key, request: request, style: style)
         let layoutText = Self.normalizedTrailingLineBreak(in: attributed)
 
         let textWidth = style.textWidth(
@@ -473,6 +485,37 @@ final class TextKitLayoutContext: @unchecked Sendable {
         )
         preparedLayoutState = prepared
         return prepared
+    }
+
+    private func cachedAttributedString(
+        for key: PreparedLayoutKey,
+        request: BlockMeasureRequest,
+        style: TextKitEditorStyle
+    ) -> NSAttributedString {
+        if let index = attributedStringCache.firstIndex(where: { $0.key == key }) {
+            let entry = attributedStringCache.remove(at: index)
+            attributedStringCache.append(entry)
+            return entry.value
+        }
+
+        #if SLOPAD_BENCHMARK_INSTRUMENTATION
+            Self.attributedStringBuildCount += 1
+        #endif
+        let built = TextKitAttributedStringBuilder.attributedString(for: request, style: style)
+        attributedStringCache.append((key, built))
+        if attributedStringCache.count > Self.attributedStringCacheLimit {
+            attributedStringCache.removeFirst(
+                attributedStringCache.count - Self.attributedStringCacheLimit)
+        }
+        return built
+    }
+
+    /// Drops derived state that a new backend or style would invalidate.
+    func invalidateCaches() {
+        lock.lock()
+        defer { lock.unlock() }
+        attributedStringCache.removeAll(keepingCapacity: true)
+        preparedLayoutState = nil
     }
 
     private func caretRectWithoutLock(
