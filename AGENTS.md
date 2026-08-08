@@ -73,41 +73,10 @@ After three materially different failed fix attempts, stop speculative editing a
 
 ## Agent Orchestration
 
-The main agent is the orchestrator for issue work. It owns requirements, routing, state,
-review handoff, and merge decisions. It does not edit product source during delegated
-feature work; it may maintain orchestration configuration and documentation.
-
-Use one writer at a time. Keep at most two subagents active, and parallelize only bounded,
-independent read-only work. Never run a reviewer against a moving diff.
-
-Route work by risk:
-
-* `worker` — `gpt-5.6-terra` at `high`; narrow changes whose owner, behavior, and
-  acceptance criteria are settled.
-* `high_risk_worker` — `gpt-5.6-sol` at `high`; concurrency, IME, canonical state,
-  TextKit, performance, memory pressure, public API, or cross-layer contract changes.
-* `reviewer` — `gpt-5.6-terra` at `high`, read-only; the first fresh review of a stable
-  diff, using focused probes instead of repeating a credible full verification matrix.
-* `critical_reviewer` — `gpt-5.6-sol` at `xhigh`, read-only; only after `reviewer`
-  reports a P1 and the writer fixes it. It rechecks that P1 and directly affected lines;
-  it must not restart a broad review.
-
-The normal state flow is:
-
-```text
-ready -> working -> stable review packet -> reviewing -> fixing or ready-to-merge
-```
-
-Additional constraints:
-
-* Do not configure or automatically invoke a Sol `max` agent.
-* Do not add a separate verifier agent; the worker owns stable-head verification and the
-  orchestrator owns final integration verification.
-* Use short, self-contained task packets instead of forwarding the entire conversation
-  when spawning an agent.
-* After a correction, rerun focused checks and only the invalidated verification gates.
-* Batch status visualization after multiple merges or a material architecture-boundary
-  change instead of spawning a visualizer for every task.
+Use one writer at a time, and never review a moving diff. The operational role definitions,
+model settings, review flow, and current concurrency policy are in
+[Agent workflow](docs/AGENT_WORKFLOW.md); `.codex/config.toml` and
+`.codex/agents/*.toml` are their executable source of truth.
 
 ## UI Changes
 
@@ -129,38 +98,12 @@ AppKit-specific behavior belongs in the adapter; semantic editing behavior belon
 
 ## Verification
 
-Always:
+The canonical baseline entrypoints for executable changes are:
 
 ```sh
 swift test --quiet
 git diff --check
 ```
 
-For AppKit or public host API changes:
-
-```sh
-swift build --product SlopadAppKit --quiet
-swift build --product SlopadAppKitTextKit --quiet
-swift build --product SlopadAppKitUI --quiet
-swift build --package-path Fixtures/DownstreamAppKitHost --product DownstreamAppKitHost --quiet
-```
-
-For UI/runtime changes:
-
-```sh
-swift build --product SlopadDebugApp --quiet
-```
-
-For performance-sensitive UI changes:
-
-```sh
-swift build --product SlopadUIBenchmarkApp --quiet
-```
-
-For package/target graph changes:
-
-```sh
-swift package dump-package
-```
-
-Do not claim verification that was not run.
+Select the additional build, fixture, runtime, benchmark, and documentation gates from
+[Testing](docs/TESTING.md). Do not claim verification that was not run.

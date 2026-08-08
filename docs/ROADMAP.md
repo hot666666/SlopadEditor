@@ -10,14 +10,13 @@ for **what the code does today**. When the two disagree about intent, correct th
 document first, then change code.
 
 `Slopad_Semantic_Editor_Architecture_Handoff.md` is a background record of how the current
-direction was reached. It is not a work order, and its Phase list is superseded by the
-active epic below.
+direction was reached. It is not a work order.
 
-## Active Epic
+## Completed Epic
 
 **[Epic #23 — Markdown-semantic 편집 계층 정립](https://github.com/hot666666/Slopad/issues/23)**
-
-[Current integration status](epic-23-status.html)
+is complete. [Completion status and evidence](epic-23-status.html) is a historical
+projection of its integration, not the active issue queue.
 
 Two tracks run in parallel; they do not share files.
 
@@ -26,13 +25,12 @@ Two tracks run in parallel; they do not share files.
 | A — semantics | [#24](https://github.com/hot666666/Slopad/issues/24) [#25](https://github.com/hot666666/Slopad/issues/25) [#26](https://github.com/hot666666/Slopad/issues/26) [#27](https://github.com/hot666666/Slopad/issues/27) [#28](https://github.com/hot666666/Slopad/issues/28) [#29](https://github.com/hot666666/Slopad/issues/29) [#30](https://github.com/hot666666/Slopad/issues/30) [#31](https://github.com/hot666666/Slopad/issues/31) [#32](https://github.com/hot666666/Slopad/issues/32) [#33](https://github.com/hot666666/Slopad/issues/33) | inline mark reachability, editing state, command vocabulary, input rules, Markdown decode/encode |
 | B — layout | [#34](https://github.com/hot666666/Slopad/issues/34) [#35](https://github.com/hot666666/Slopad/issues/35) [#36](https://github.com/hot666666/Slopad/issues/36) [#37](https://github.com/hot666666/Slopad/issues/37) | text capability split, caret geometry path, cache key alignment, prepared layout store |
 
-The semantic foundation through [#30](https://github.com/hot666666/Slopad/issues/30), plus
-layout issues
-[#34](https://github.com/hot666666/Slopad/issues/34) through
-[#36](https://github.com/hot666666/Slopad/issues/36), are implemented. The decoder now
-unblocks inline rules in [#31](https://github.com/hot666666/Slopad/issues/31) and encoding
-in [#32](https://github.com/hot666666/Slopad/issues/32). Track B's prepared-layout store
-remains open in [#37](https://github.com/hot666666/Slopad/issues/37).
+All fourteen issues are closed: Track A establishes the canonical inline and Markdown
+boundaries, including fail-closed decode/encode and parser-free typed input rules; Track B
+establishes TextKit capability/geometry boundaries and a bounded prepared-layout store.
+The slash-only AppKit command menu completes the product-facing command discovery in this
+scope. GFM tables remain a separate future Core-vocabulary expansion in
+[#50](https://github.com/hot666666/Slopad/issues/50).
 
 ### Decisions fixed for this epic
 
@@ -48,7 +46,7 @@ These are settled. Sub-issues implement them rather than re-opening them.
 | D6 | no format plugin protocol or registry | there is one format implementation. The point of a separate target is isolating the `swift-markdown` AST, not extensibility |
 | D7 | the inline mark vocabulary is a closed set owned by the core; neither format nor backend may extend it | `TextKitAttributedStringBuilder` already only interprets marks. What a format cannot express becomes an encoder diagnostic, not a new mark |
 
-### Out of scope for this epic
+### Historical scope boundary
 
 - `DocumentStep` / `PositionMap` — blocked by D2; snapshot history stays.
 - `DocumentSchema` / `BlockSpec` / `MarkSpec` — `Document+Invariants.swift` already
@@ -61,7 +59,7 @@ These are settled. Sub-issues implement them rather than re-opening them.
   expressed as engine-verifiable completion criteria. GFM tables are not a permanent
   product non-goal: [#50](https://github.com/hot666666/Slopad/issues/50) first expands the
   Core table vocabulary, after which the Markdown adapter adds lossless table support.
-  This epic and #30 deliberately return the typed `.table` diagnostic until that Core
+  The completed codec deliberately returns the typed `.table` diagnostic until that Core
   contract exists.
 
 ## Achieved Baseline
@@ -82,11 +80,12 @@ These are settled. Sub-issues implement them rather than re-opening them.
 - `SlopadCoreModel` contains public vocabulary, backend seams, package canonical document
   values, and the narrow package-only input-rule value contract shared by Markdown syntax
   data and the editor-model runner.
-- The opt-in `SlopadMarkdown` target pins `swift-markdown` 0.8.0 exactly and exposes one
-  stateless typed-throws decode into fresh depth-first `[EditorBlockInput]` values. Its AST
-  stays behind `internal import Markdown`; unsupported syntax produces nonempty typed
-  source diagnostics and no partial blocks. A separate downstream fixture applies that
-  output unchanged through an inactive-selection `EditorDocumentPatch` and `EditorSession`.
+- The opt-in `SlopadMarkdown` target pins `swift-markdown` 0.8.0 exactly and exposes
+  stateless typed-throws decode and encode over fresh depth-first `[EditorBlockInput]`
+  values. Its AST stays behind `internal import Markdown`; unsupported syntax produces
+  nonempty typed diagnostics and no partial blocks or partial output. A separate downstream
+  fixture applies decoded output unchanged through an inactive-selection
+  `EditorDocumentPatch` and `EditorSession`.
 - Built-in typed Markdown shortcuts use the separate internal `SlopadMarkdownInputRules`
   target, not the parser-backed codec. It supplies bounded block-prefix and inline pattern
   data; the editor-model runner applies the chosen core effect in the same transaction as
@@ -153,6 +152,14 @@ These are settled. Sub-issues implement them rather than re-opening them.
   commands toggle or clear them for a selection, caret-only styles live in transient
   `EditorState.storedMarks`, and the TextKit backend consumes the resulting inline runs for
   measurement and rendering.
+- The slash-only AppKit command overlay exposes a Session-owned block-command catalog and
+  applies its selection as one semantic transaction and undo step; suggestion UI remains
+  adapter runtime state, not canonical document state.
+- `TextKitPreparedLayoutStore` retains complete coherent TextKit layout graphs with
+  deterministic LRU eviction. The selected default is a 96-entry / 6 MiB estimated-cost
+  budget, protects the active text block, and exposes instrumentation for capacity and
+  pressure behavior. See [AppKit UI benchmark results](APPKIT_UI_BENCHMARK_RESULTS.md) for
+  the evidence and its limits.
 - The AppKit UI benchmark harness covers scroll, native insert, composition, height
   expansion, block selection, block reorder, mixed interaction, subtree delete, and
   subtree reorder plus runtime style replacement and Unicode navigation at
@@ -170,28 +177,26 @@ needed before a host app can use the engine as a Notion/Craft-style editor surfa
   chrome/style customization, engine input contract, or a separate custom adapter need.
 - Clipboard support is currently plain text. Structured block copy/paste, rich inline
   paste, and format negotiation with platform pasteboards are not yet modeled.
-- Session input now exposes `toggleInlineStyle` and `clearInlineStyles`, including the real
-  AppKit `replaceText` path, and caret-only `storedMarks` apply to the next insertion. Default
-  product chrome still has no toolbar/menu/slash discovery UI for those commands;
-  [#33](https://github.com/hot666666/Slopad/issues/33) owns the slash-command part only.
+- Session input exposes `toggleInlineStyle` and `clearInlineStyles`, including the real
+  AppKit `replaceText` path, and caret-only `storedMarks` apply to the next insertion. The
+  slash-only command menu is present; toolbar and generalized suggestion policy remain
+  separate product decisions.
 - Physical character and linguistic word navigation now use the text backend, but native
   soft-line beginning/end commands still resolve to logical block start/end. A complete
   bidi insertion contract must also decide whether a backend secondary insertion location
   needs platform-neutral state beyond the current transient inline navigation context.
-- Block kind transforms exist inside `EditorModel`, and markdown prefix shortcuts exercise
-  them, but product commands such as slash menu block transform, toolbar transform, and
-  todo checkbox toggling still need host-facing input events.
+- Block kind transforms exist inside `EditorModel`; prefix shortcuts and the slash menu
+  exercise the supported command path. Toolbar transforms and todo checkbox product chrome
+  remain separate host-facing work.
 - The document is tree-capable, but collapsed subtree state, visible-order filtering,
   selection behavior, reveal behavior, and copy/paste behavior for collapsed content are
   not implemented.
-- Markdown decoding now exists as a format adapter. Product import wiring, Markdown
-  encoding, and broad import/export UX remain separate from markdown prefix shortcuts.
+- Markdown decode and encode exist as opt-in format adapters. Product import/export UX and
+  structured clipboard policy remain separate from parser-free typing shortcuts.
 
 ## Next Direction
 
-These are long-range capability buckets, not the active issue queue. While epic #23 is open,
-its dependency order in [Active Epic](#active-epic) controls execution; #30 now unlocks
-#31 and #32 while dependency-ready #33 remains a separate product-UI branch.
+These are long-range capability buckets, not the active issue queue.
 
 - P0 - AppKit integration contract hardening
   - Stabilize the reusable AppKit host surface before adding large product features.
@@ -233,11 +238,8 @@ its dependency order in [Active Epic](#active-epic) controls execution; #30 now 
 
 - P2 - Product command surface and slash discovery
   - Inline formatting reachability, caret `storedMarks`, and the command vocabulary split
-    are complete in [#25](https://github.com/hot666666/Slopad/issues/25) through
-    [#27](https://github.com/hot666666/Slopad/issues/27).
-  - [#33](https://github.com/hot666666/Slopad/issues/33) adds the remaining slash-only
-    command catalog and AppKit menu for block transforms. Toolbar UI and generalized
-    suggestion triggers remain outside that issue.
+    are complete, as is the slash-only command catalog and AppKit menu for block
+    transforms. Toolbar UI and generalized suggestion triggers remain separate work.
   - Keep canonical `BlockKind`, `BlockContent.InlineMark`, and `EditorModel` command owners;
     product UI selects commands and routes them through `EditorSession` rather than owning
     mutation semantics.
@@ -251,15 +253,15 @@ its dependency order in [Active Epic](#active-epic) controls execution; #30 now 
     resolving toolchain, and round-trip is semantic rather than byte-exact. `BlockID`s do
     not survive it; the later persistence ADR decides whether Markdown-only storage may
     accept that discontinuity or needs a native archive or sidecar.
-  - The decoder side is implemented: it preserves supported block trees and inline marks,
-    produces fresh IDs, and fails closed with typed UTF-8 source diagnostics. #32 owns the
-    matching encoder; product import/paste policy remains caller work.
+  - The codec preserves supported block trees and inline marks, produces fresh IDs on
+    decode, and fails closed with typed UTF-8 source or block diagnostics. Product
+    import/paste policy remains caller work.
   - Keep markdown as import/export format and input shortcut syntax, not canonical state.
   - Add structured block paste before broad markdown import/export if product editing
     needs copy/paste workflows first.
   - Preserve inline marks and block tree structure when Markdown can represent them. The
-    decoder fails closed with typed diagnostics for unsupported constructs; choosing a
-    separate plain-text paste fallback is caller policy, not a lossy decoder behavior.
+    codec fails closed with typed diagnostics for unsupported constructs; choosing a
+    separate plain-text paste fallback is caller policy, not a lossy codec behavior.
   - Completion signal: paste/import behavior round-trips through canonical `Document` and
     has focused engine tests plus AppKit pasteboard coverage.
 
@@ -310,5 +312,5 @@ its dependency order in [Active Epic](#active-epic) controls execution; #30 now 
   incremental layout and viewport-driven lazy measurement paths.
 - Snapshot undo/redo is simple and correct, but memory cost can become high for large
   documents.
-- Markdown prefix shortcuts and the opt-in fail-closed decoder are implemented, but the
-  encoder, broad product import/export, and rich paste are still separate features.
+- Parser-free Markdown shortcuts and the opt-in fail-closed codec are implemented, but
+  broad product import/export UX and rich/structured paste are still separate features.
