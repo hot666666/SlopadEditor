@@ -1,4 +1,5 @@
 import SlopadCoreModel
+import SlopadMarkdownInputRules
 import Testing
 
 @testable import SlopadEditorModel
@@ -7,14 +8,14 @@ import Testing
 
 @Suite("입력 규칙 실행기")
 struct EditorInputRuleRunnerTests {
-    private let runner = EditorInputRuleRunner(rules: MarkdownBlockInputRules.all)
+    private let runner = EditorInputRuleRunner(rules: MarkdownInputRules.all)
 
     @Test("트리거가 아닌 문자는 규칙을 전혀 돌리지 않는다")
     func nonTriggerNeverScans() {
         // Given: 규칙이 절대 호출되면 안 된다는 것을 매처 자체가 감시한다.
         nonisolated(unsafe) var matchCalls = 0
         let watched = EditorInputRuleRunner(rules: [
-            EditorInputRule(triggers: [" "], scanLimit: 8) { _, _ in
+            EditorInputRule(triggers: [" "], scanLimit: 8) { _ in
                 matchCalls += 1
                 return nil
             }
@@ -22,7 +23,7 @@ struct EditorInputRuleRunnerTests {
 
         // When: 한글·영문·숫자 — 마크다운 문법을 닫을 수 없는 문자들
         for committed in ["한", "글", "a", "Z", "7", "가나다"] {
-            _ = watched.effect(committedText: committed, in: "# 제목", caretOffset: 2)
+            _ = watched.effect(committedText: committed, candidate: candidate("# 제목", caretOffset: 2))
         }
 
         // Then
@@ -32,7 +33,7 @@ struct EditorInputRuleRunnerTests {
     @Test("트리거 문자여야 규칙이 돌아간다")
     func triggerReachesTheRule() {
         // Given / When
-        let effect = runner.effect(committedText: " ", in: "# ", caretOffset: 2)
+        let effect = runner.effect(committedText: " ", candidate: candidate("# ", caretOffset: 2))
 
         // Then
         #expect(effect == .convertBlock(removing: TextRange(0, 2), to: .heading(level: .h1)))
@@ -60,7 +61,7 @@ struct EditorInputRuleRunnerTests {
         for entry in cases {
             // When
             let effect = runner.effect(
-                committedText: entry.closing, in: entry.text, caretOffset: entry.text.count)
+                committedText: entry.closing, candidate: candidate(entry.text, caretOffset: entry.text.count))
 
             // Then
             #expect(
@@ -85,7 +86,7 @@ struct EditorInputRuleRunnerTests {
         for entry in rejected {
             // When
             let effect = runner.effect(
-                committedText: entry.closing, in: entry.text, caretOffset: entry.text.count)
+                committedText: entry.closing, candidate: candidate(entry.text, caretOffset: entry.text.count))
 
             // Then
             #expect(effect == nil, "\(entry.text) 는 변환되면 안 된다")
@@ -95,10 +96,13 @@ struct EditorInputRuleRunnerTests {
     @Test("스캔 범위를 넘어선 위치에서는 매칭하지 않는다")
     func staysWithinTheScanLimit() {
         // Given: 스캔 상한을 넘는 caret. 긴 문단이 짧은 문단보다 비싸지지 않게 하는 성질이다.
-        let long = String(repeating: "x", count: 400) + " "
+        let local = " "
 
         // When
-        let effect = runner.effect(committedText: " ", in: long, caretOffset: long.count)
+        let effect = runner.effect(
+            committedText: " ",
+            candidate: candidate(local, caretOffset: 1, baseOffset: 400)
+        )
 
         // Then
         #expect(effect == nil)
@@ -106,13 +110,25 @@ struct EditorInputRuleRunnerTests {
 
     @Test("커밋된 텍스트의 마지막 문자만 본다")
     func onlyTheLastCommittedCharacterGates() {
-        // Given: 붙여넣기처럼 여러 문자가 한 번에 들어오면 마지막 문자만 닫는 문자일 수 있다.
+        // Given: IME 확정처럼 여러 글자가 한 번에 들어와도 마지막 글자가 trigger를 결정한다.
         // When
-        let closes = runner.effect(committedText: "붙여넣기 ", in: "# ", caretOffset: 2)
-        let doesNot = runner.effect(committedText: " 붙여넣기", in: "# ", caretOffset: 2)
+        let closes = runner.effect(committedText: "IME ", candidate: candidate("# ", caretOffset: 2))
+        let doesNot = runner.effect(committedText: " IME", candidate: candidate("# ", caretOffset: 2))
 
         // Then
         #expect(closes != nil)
         #expect(doesNot == nil)
+    }
+
+    private func candidate(
+        _ text: String,
+        caretOffset: Int,
+        baseOffset: Int = 0
+    ) -> EditorInputRuleCandidate {
+        EditorInputRuleCandidate(
+            text: text,
+            caretOffset: caretOffset,
+            baseOffset: baseOffset
+        )
     }
 }

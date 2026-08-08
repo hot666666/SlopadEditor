@@ -31,9 +31,16 @@ extension EditorModel {
             guard state.document.containsBlock(blockID) else { throw .abort }
             let offset = position.offset
             let armedMarks = state.storedMarks
+            let shouldCaptureInputCandidate = inputRuleRunner.mayMatch(committedText: text)
+            var inputRuleCandidate: EditorInputRuleCandidate?
             try requireDocumentMutationSuccess(
                 state.document.updateContent(blockID: blockID) { content in
-                    content.insert(text, at: offset)
+                    inputRuleCandidate = content.insert(
+                        text,
+                        at: offset,
+                        capturingInputRuleCandidateWithMaximumLookback: shouldCaptureInputCandidate
+                            ? inputRuleRunner.maximumCandidateLookback : nil
+                    )
                     Self.applyStoredMarks(armedMarks, to: &content, over: offset, length: text.count)
                 })
             let newOffset = offset + text.count
@@ -42,7 +49,7 @@ extension EditorModel {
             state.selection = .caret(blockID: blockID, offset: newOffset)
             changed.insert(blockID)
             try applyInputRulesIfNeeded(
-                committedText: text, blockID: blockID, caretOffset: newOffset,
+                committedText: text, blockID: blockID, candidate: inputRuleCandidate,
                 operations: &operations, changed: &changed)
 
         case .text(let textSelection):
@@ -52,17 +59,24 @@ extension EditorModel {
             let blockID = textSelection.anchor.blockID
             guard state.document.containsBlock(blockID) else { throw .abort }
             let armedMarks = state.storedMarks
+            let shouldCaptureInputCandidate = inputRuleRunner.mayMatch(committedText: text)
+            var inputRuleCandidate: EditorInputRuleCandidate?
             try requireDocumentMutationSuccess(
                 state.document.updateContent(blockID: blockID) { content in
                     content.delete(range)
-                    content.insert(text, at: range.lowerBound)
+                    inputRuleCandidate = content.insert(
+                        text,
+                        at: range.lowerBound,
+                        capturingInputRuleCandidateWithMaximumLookback: shouldCaptureInputCandidate
+                            ? inputRuleRunner.maximumCandidateLookback : nil
+                    )
                     Self.applyStoredMarks(
                         armedMarks, to: &content, over: range.lowerBound, length: text.count)
             })
             state.selection = .caret(blockID: blockID, offset: range.lowerBound + text.count)
             changed.insert(blockID)
             try applyInputRulesIfNeeded(
-                committedText: text, blockID: blockID, caretOffset: range.lowerBound + text.count,
+                committedText: text, blockID: blockID, candidate: inputRuleCandidate,
                 operations: &operations, changed: &changed)
 
         case .blocks:
@@ -81,12 +95,21 @@ extension EditorModel {
         guard state.document.containsBlock(blockID) else { throw .abort }
         // This — not `insertText` — is what an ordinary keystroke and an IME commit arrive
         // as, so stored marks have to be honored here or arming a style would only work for
-        // programmatic insertions.
+        // programmatic insertions. A multi-character replacement is evaluated once using its
+        // final character because IME commits need that behavior. Paste is separately routed
+        // through `insertText`, where the pasted string is likewise evaluated once.
         let armedMarks = state.storedMarks
+        let shouldCaptureInputCandidate = inputRuleRunner.mayMatch(committedText: text)
+        var inputRuleCandidate: EditorInputRuleCandidate?
         try requireDocumentMutationSuccess(
             state.document.updateContent(blockID: blockID) { content in
                 content.delete(range)
-                content.insert(text, at: range.lowerBound)
+                inputRuleCandidate = content.insert(
+                    text,
+                    at: range.lowerBound,
+                    capturingInputRuleCandidateWithMaximumLookback: shouldCaptureInputCandidate
+                        ? inputRuleRunner.maximumCandidateLookback : nil
+                )
                 Self.applyStoredMarks(
                     armedMarks, to: &content, over: range.lowerBound, length: text.count)
             })
@@ -95,7 +118,7 @@ extension EditorModel {
         changed.insert(blockID)
         if !text.isEmpty {
             try applyInputRulesIfNeeded(
-                committedText: text, blockID: blockID, caretOffset: newOffset,
+                committedText: text, blockID: blockID, candidate: inputRuleCandidate,
                 operations: &operations, changed: &changed)
         }
     }

@@ -16,32 +16,47 @@ package struct EditorInputRuleRunner {
     /// without touching the block's text.
     private let triggers: Set<Character>
 
-    /// The furthest any rule will look back, so the scan window is bounded before any rule
-    /// runs.
-    private let scanLimit: Int
-
     package init(rules: [EditorInputRule]) {
         self.rules = rules
         triggers = rules.reduce(into: Set<Character>()) { $0.formUnion($1.triggers) }
-        scanLimit = rules.map(\.scanLimit).max() ?? 0
     }
 
     /// The effect to apply, or `nil` when nothing matched.
     ///
-    /// `committedText` is what was just inserted. Only its last character is consulted:
-    /// pasted or programmatically inserted runs are not typing, and running rules over them
-    /// would convert syntax the user never typed here.
+    /// `committedText` is what was just inserted. Only its last character is consulted, so a
+    /// multi-character insertion or replacement is evaluated once. IME commits reach this
+    /// through `replaceText`; the separately classified paste command reaches it through
+    /// `insertText` with the pasted string.
+    package var maximumCandidateLookback: Int {
+        // Reserve one grapheme for the right flank, so a matcher never inspects more than
+        // its declared `scanLimit` even when syntax is completed mid-paragraph.
+        max(0, (rules.map(\.scanLimit).max() ?? 0) - 1)
+    }
+
+    /// Whether an input can enter the bounded matcher path. Ordinary characters stop here
+    /// before the model captures any String window.
+    package func mayMatch(committedText: String) -> Bool {
+        guard let closing = committedText.last else { return false }
+        return triggers.contains(closing)
+    }
+
     package func effect(
         committedText: String,
-        in text: String,
-        caretOffset: Int
+        candidate: EditorInputRuleCandidate
     ) -> EditorInputRuleEffect? {
         guard let closing = committedText.last, triggers.contains(closing) else { return nil }
-        guard caretOffset > 0, caretOffset <= text.count else { return nil }
+        guard candidate.caretOffset > 0 else { return nil }
 
         for rule in rules where rule.triggers.contains(closing) {
-            guard caretOffset <= rule.scanLimit || rule.scanLimit == 0 else { continue }
-            if let effect = rule.match(text, caretOffset) { return effect }
+            switch rule.scanOrigin {
+            case .blockStart:
+                guard candidate.baseOffset == 0,
+                    candidate.caretOffset <= rule.scanLimit || rule.scanLimit == 0
+                else { continue }
+            case .caret:
+                guard rule.scanLimit > 0 else { continue }
+            }
+            if let effect = rule.match(candidate) { return effect }
         }
         return nil
     }

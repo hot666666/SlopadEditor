@@ -3,10 +3,6 @@ import SlopadCoreModel
 // MARK: - EditorModel InputRules
 
 extension EditorModel {
-    /// Static because there is one rule set today. When rules become format-supplied per
-    /// document this has to become instance state — see #31.
-    static let inputRuleRunner = EditorInputRuleRunner(rules: MarkdownBlockInputRules.all)
-
     /// Applies whatever the text just committed completed, if anything.
     ///
     /// Throws on a failed mutation instead of returning, so a rule that gets halfway cannot
@@ -16,16 +12,17 @@ extension EditorModel {
     func applyInputRulesIfNeeded(
         committedText: String,
         blockID: BlockID,
-        caretOffset: Int,
+        candidate: EditorInputRuleCandidate?,
         operations: inout [EditorOperation],
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
-        guard let block = document.block(blockID), block.kind.acceptsInputRules else { return }
+        guard let block = document.block(blockID), block.kind.acceptsInputRules,
+            let candidate
+        else { return }
         guard
-            let effect = Self.inputRuleRunner.effect(
+            let effect = inputRuleRunner.effect(
                 committedText: committedText,
-                in: block.content.text,
-                caretOffset: caretOffset
+                candidate: candidate
             )
         else { return }
 
@@ -44,6 +41,55 @@ extension EditorModel {
             operations.append(.refreshMarker)
             changed.insert(blockID)
 
+        case .applyInline(let marks, let removals, let marked):
+            guard isValidInlineEffect(removals: removals, marked: marked, in: block.content) else {
+                throw .abort
+            }
+            let mappedMarkRange = mapRangeAfterRemoving(marked, removals: removals)
+            try requireDocumentMutationSuccess(
+                state.document.updateContent(blockID: blockID) { content in
+                    for removal in removals.sorted(by: { $0.lowerBound > $1.lowerBound }) {
+                        content.delete(removal)
+                    }
+                    for mark in marks.sorted() {
+                        content.addMark(kind: mark, range: mappedMarkRange)
+                    }
+                })
+            // This remains part of the same text edit, rather than a deliberate cursor
+            // relocation: any stored style the user armed must continue through the
+            // converted inline span.
+            state.selection = .caret(blockID: blockID, offset: mappedMarkRange.upperBound)
+            changed.insert(blockID)
+
+        }
+    }
+
+    private func isValidInlineEffect(
+        removals: [TextRange],
+        marked: TextRange,
+        in content: BlockContent
+    ) -> Bool {
+        guard !removals.isEmpty, !marked.isEmpty, marked.upperBound <= content.length else {
+            return false
+        }
+        let sorted = removals.sorted { $0.lowerBound < $1.lowerBound }
+        guard sorted.allSatisfy({ !$0.isEmpty && $0.upperBound <= content.length }) else { return false }
+        guard zip(sorted, sorted.dropFirst()).allSatisfy({ $0.upperBound <= $1.lowerBound }) else {
+            return false
+        }
+        return sorted.allSatisfy { !$0.intersects(marked) }
+    }
+
+    private func mapRangeAfterRemoving(_ range: TextRange, removals: [TextRange]) -> TextRange {
+        TextRange(
+            mapOffsetAfterRemoving(range.lowerBound, removals: removals),
+            mapOffsetAfterRemoving(range.upperBound, removals: removals)
+        )
+    }
+
+    private func mapOffsetAfterRemoving(_ offset: Int, removals: [TextRange]) -> Int {
+        offset - removals.reduce(into: 0) { removed, range in
+            if range.upperBound <= offset { removed += range.length }
         }
     }
 }

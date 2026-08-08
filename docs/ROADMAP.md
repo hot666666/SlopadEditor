@@ -79,13 +79,22 @@ These are settled. Sub-issues implement them rather than re-opening them.
   checked with typed rollback, and deep hierarchy/cycle validation is iterative.
 - The SwiftPM target split is complete. `SlopadEngine` composes `SlopadEditorModel` and
   `SlopadBlockLayout`; those two targets do not import each other.
-- `SlopadCoreModel` contains only public vocabulary, backend seams, and package canonical
-  document values.
+- `SlopadCoreModel` contains public vocabulary, backend seams, package canonical document
+  values, and the narrow package-only input-rule value contract shared by Markdown syntax
+  data and the editor-model runner.
 - The opt-in `SlopadMarkdown` target pins `swift-markdown` 0.8.0 exactly and exposes one
   stateless typed-throws decode into fresh depth-first `[EditorBlockInput]` values. Its AST
   stays behind `internal import Markdown`; unsupported syntax produces nonempty typed
   source diagnostics and no partial blocks. A separate downstream fixture applies that
   output unchanged through an inactive-selection `EditorDocumentPatch` and `EditorSession`.
+- Built-in typed Markdown shortcuts use the separate internal `SlopadMarkdownInputRules`
+  target, not the parser-backed codec. It supplies bounded block-prefix and inline pattern
+  data; the editor-model runner applies the chosen core effect in the same transaction as
+  the completed input. Multi-character replacements evaluate once from their final character
+  so IME commit works. The separately classified paste command routes through `insertText`
+  and evaluates the pasted string once as well. An unmatched backtick opener keeps its candidate literal and
+  suppresses other inline shortcuts until an equal-length closing run arrives. Whole-document
+  decode remains opt-in.
 - `SlopadAppKit` is the recommended ordinary macOS host product and import. It curates
   the default AppKit controller, action, style, chrome, document, selection, update, and
   snapshot vocabulary without becoming a runtime owner.

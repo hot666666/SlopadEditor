@@ -51,6 +51,12 @@ let package = Package(
         .target(
             name: "SlopadCoreModel"
         ),
+        // Markdown typed-input syntax is intentionally separate from the opt-in codec. It
+        // contains only bounded pattern data and canonical rule effects — no parser target.
+        .target(
+            name: "SlopadMarkdownInputRules",
+            dependencies: ["SlopadCoreModel"]
+        ),
         .target(
             name: "SlopadMarkdown",
             dependencies: [
@@ -63,7 +69,7 @@ let package = Package(
         ),
         .target(
             name: "SlopadEditorModel",
-            dependencies: ["SlopadCoreModel"]
+            dependencies: ["SlopadCoreModel", "SlopadMarkdownInputRules"]
         ),
         .target(
             name: "SlopadBlockLayout",
@@ -143,6 +149,8 @@ let package = Package(
                 "SlopadEditorModel",
                 "SlopadBlockLayout",
                 "SlopadEngine",
+                "SlopadMarkdown",
+                "SlopadMarkdownInputRules",
             ]
         ),
         .testTarget(
