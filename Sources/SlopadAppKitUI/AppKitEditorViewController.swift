@@ -1367,9 +1367,8 @@ extension AppKitEditorViewController {
         }
         guard !rendered.textRender.measureRequest.text.isEmpty else { return false }
 
-        return !textLayouter.lineFragments(for: rendered.textRender.measureRequest).contains {
-            fragment in
-            documentRect(fragment.rect, in: rendered.textRender)
+        return !session.textLineFragmentRects(in: rendered.textRender).contains { rect in
+            CGRect(editorRect: rect)
                 .insetBy(
                     dx: -UX.lineFragmentHitOutsetX,
                     dy: -UX.lineFragmentHitOutsetY
@@ -1436,32 +1435,6 @@ extension AppKitEditorViewController {
     }
 
     private func caretRect(for descriptor: EditorSessionActiveTextInputDescriptor) -> CGRect? {
-        let request = descriptor.renderDescriptor.measureRequest
-        let position = TextPosition(
-            blockID: request.blockID,
-            offset: descriptor.focusOffset,
-            affinity: descriptor.focusAffinity
-        )
-        guard
-            let localRect = textLayouter.caretRect(
-                for: position,
-                navigationContext: descriptor.navigationContext,
-                in: descriptor.renderDescriptor
-            )
-        else { return nil }
-        return documentRect(localRect, in: descriptor.renderDescriptor)
-    }
-
-    private func documentRect(
-        _ localRect: EditorRect,
-        in descriptor: EditorTextRenderDescriptor
-    ) -> CGRect {
-        let localFrame = textLayouter.textFrame(for: descriptor, measuredHeight: nil)
-        return CGRect(
-            x: CGFloat(localRect.x + descriptor.frame.x - localFrame.x),
-            y: CGFloat(localRect.y + descriptor.frame.y - localFrame.y),
-            width: CGFloat(localRect.width),
-            height: CGFloat(localRect.height)
-        )
+        descriptor.caretRect.map(CGRect.init)
     }
 }
