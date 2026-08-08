@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "DownstreamAppKitHost",
+    name: "DownstreamMarkdownHost",
     platforms: [
         .macOS(.v14)
     ],
@@ -12,9 +12,10 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "DownstreamAppKitHost",
+            name: "DownstreamMarkdownHost",
             dependencies: [
-                .product(name: "SlopadAppKit", package: "Slopad")
+                .product(name: "SlopadEngine", package: "Slopad"),
+                .product(name: "SlopadMarkdown", package: "Slopad"),
             ]
         )
     ]
