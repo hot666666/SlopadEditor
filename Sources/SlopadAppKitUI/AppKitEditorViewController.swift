@@ -225,6 +225,16 @@ public final class AppKitEditorViewController: NSViewController {
     }
     private lazy var editorCanvasView = AppKitEditorCanvasView(handler: self)
     private lazy var activeInputController = AppKitActiveInputController(owner: self)
+    private lazy var slashCommandOverlay: AppKitSlashCommandOverlay = {
+        let overlay = AppKitSlashCommandOverlay(frame: .zero)
+        overlay.onCommandRequested = { [weak self] command, sourceRevision in
+            self?.selectSlashCommand(command, sourceRevision: sourceRevision)
+        }
+        overlay.onDismissRequested = { [weak self] in
+            self?.session.dismissSlashCommand()
+        }
+        return overlay
+    }()
     private lazy var dragAutoscrollController = AppKitDragAutoscrollController(
         visibleBounds: { [weak self] in
             self?.currentViewportBounds() ?? .zero
@@ -616,6 +626,7 @@ public final class AppKitEditorViewController: NSViewController {
         scrollView.contentView.postsBoundsChangedNotifications = true
         scrollView.documentView = editorCanvasView
         view.addSubview(scrollView)
+        view.addSubview(slashCommandOverlay)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(scrollViewContentBoundsDidChange(_:)),
@@ -801,6 +812,7 @@ public final class AppKitEditorViewController: NSViewController {
         }
 
         invalidateVisibleCanvas()
+        synchronizeSlashCommandOverlay(with: renderedSurface.snapshot)
         return renderedSurface
     }
 
@@ -1132,7 +1144,10 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
     // MARK: - Native Commands
 
     package func handleNativeCommand(_ commandSelector: Selector) -> Bool {
-        activeInputController.handleCommand(commandSelector)
+        if slashCommandOverlay.handleCommand(commandSelector) {
+            return true
+        }
+        return activeInputController.handleCommand(commandSelector)
     }
 
     // MARK: - Native Text Surface
@@ -1182,6 +1197,47 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
         else { return .zero }
         let windowRect = editorCanvasView.convert(caretRect, to: nil)
         return view.window?.convertToScreen(windowRect) ?? windowRect
+    }
+}
+
+// MARK: - Slash Command Overlay
+
+extension AppKitEditorViewController {
+    private func synchronizeSlashCommandOverlay(with snapshot: EditorSessionSnapshot) {
+        let anchorInContainer = snapshot.slashCommand?.anchor.map { anchor in
+            editorCanvasView.convert(CGRect(editorRect: anchor), to: view)
+        }
+        slashCommandOverlay.synchronize(
+            presentation: snapshot.slashCommand,
+            anchorInContainer: anchorInContainer,
+            containerBounds: view.bounds
+        )
+    }
+
+    /// The overlay only chooses a catalog value. Session validates the source revision and
+    /// owns the query removal plus block conversion transaction.
+    private func selectSlashCommand(
+        _ command: EditorSlashCommand,
+        sourceRevision: EditorDocumentRevision
+    ) {
+        guard let update = session.applySlashCommand(command, sourceRevision: sourceRevision)
+        else {
+            slashCommandOverlay.dismiss()
+            return
+        }
+        textSystem.setActivePreparedLayoutBlockID(
+            preparedLayoutPinnedBlockID(in: update.selection)
+        )
+        onUpdate?(update)
+        renderAndSyncSurface(makeFirstResponder: true, scrollSelectionIntoView: true)
+    }
+
+    package var isSlashCommandMenuPresented: Bool {
+        slashCommandOverlay.isPresented
+    }
+
+    package var slashCommandMenuFrame: NSRect? {
+        slashCommandOverlay.isPresented ? slashCommandOverlay.frame : nil
     }
 }
 

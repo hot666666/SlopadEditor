@@ -17,6 +17,11 @@ extension EditorSession {
         _ command: EditorCommand
     ) -> (previousSelection: EditorSelection?, invalidation: EditorUpdateInvalidation) {
         let result = editorModel.apply(command)
+        if let operation = result.outcome?.change.operations.last,
+            case .openSlashCommand(let blockID, let triggerRange) = operation
+        {
+            pendingSlashCommandTrigger = (blockID, triggerRange)
+        }
         if result.isApplied {
             textNavigationRuntimeContext = nil
         }
@@ -97,6 +102,9 @@ extension EditorSession {
             case .refreshMarker:
                 continue
 
+            case .openSlashCommand:
+                continue
+
             case .indent(let blockIDs),
                 .outdent(let blockIDs),
                 .deleteBlocks(let blockIDs),
@@ -133,6 +141,8 @@ extension BlockLayoutMutation {
             self = .deleteBlocks(blockIDs: blockIDs)
         case .resetDocumentToEmptyParagraph(let blockID):
             self = .resetDocumentToEmptyParagraph(blockID: blockID)
+        case .openSlashCommand:
+            return nil
         }
     }
 }

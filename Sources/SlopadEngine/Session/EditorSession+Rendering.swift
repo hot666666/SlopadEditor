@@ -16,6 +16,7 @@ extension EditorSession {
             composition: composition,
             viewportWidth: viewport.width
         )
+        let activeTextInput = makeActiveTextInput(in: visibleBlocks)
         return EditorSessionSnapshot(
             revision: revision,
             totalHeight: blockLayout.totalHeight,
@@ -23,7 +24,8 @@ extension EditorSession {
             selection: activeEditorSelection,
             composition: composition,
             history: historyState,
-            activeTextInput: makeActiveTextInput(in: visibleBlocks),
+            activeTextInput: activeTextInput,
+            slashCommand: slashCommandPresentation(activeTextInput: activeTextInput),
             blockDragState: blockDrag.map {
                 EditorBlockDragState(dropIndicator: $0.dropIndicator)
             },

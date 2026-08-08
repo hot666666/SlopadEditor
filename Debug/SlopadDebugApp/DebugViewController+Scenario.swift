@@ -142,6 +142,13 @@ extension DebugViewController {
             insertTextThroughNativeSurface("#")
             insertTextThroughNativeSurface(" ")
 
+        case "slash-heading":
+            focus(blockID: DebugSeedFixture.intro, offset: 0)
+            renderAndSyncSurface(makeFirstResponder: true)
+            replaceActiveText("")
+            insertTextThroughNativeSurface("/")
+            insertTextThroughNativeSurface("hea")
+
         case "native-insert":
             let offset =
                 snapshotText(for: DebugSeedFixture.intro)?.count ?? DebugSeedFixture.introText.count
@@ -285,6 +292,21 @@ extension DebugViewController {
             try require(
                 snapshotRenderedBlock(for: DebugSeedFixture.intro)?.kind == .heading(level: .h1),
                 "\(scenario): prefix shortcut did not convert intro block to heading"
+            )
+
+        case "slash-heading":
+            try assertActiveTextInput(
+                blockID: DebugSeedFixture.intro,
+                expectedText: "/hea",
+                scenario: scenario
+            )
+            try require(
+                snapshot?.slashCommand?.query == "hea",
+                "\(scenario): slash query did not project from native input"
+            )
+            try require(
+                snapshot?.slashCommand?.anchor != nil,
+                "\(scenario): slash overlay anchor was absent"
             )
 
         case "enter-split":
