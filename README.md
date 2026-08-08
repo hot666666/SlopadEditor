@@ -10,7 +10,7 @@
 
 <p align="center">
   <img alt="Status: WIP" src="https://img.shields.io/badge/status-WIP-f59e0b">
-  <img alt="Swift 6.0" src="https://img.shields.io/badge/Swift-6.0-f05138">
+  <img alt="Swift 6.2+" src="https://img.shields.io/badge/Swift-6.2%2B-f05138">
   <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111827">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2563eb">
 </p>
@@ -18,6 +18,10 @@
 Slopad is a work-in-progress Swift app project for a block text editor. The app layer is
 still early; most of the current codebase is the reusable editor foundation that the app
 will use.
+
+Building or resolving Slopad requires a Swift 6.2-or-later toolchain. The package manifest
+remains at tools version 6.0, but the exactly pinned `swift-markdown` 0.8.0 dependency uses
+tools version 6.2.
 
 That foundation is `SlopadEngine`: a headless block editor engine for
 Notion/Craft-style editors where the document is a tree of blocks, the engine owns editing
@@ -119,6 +123,11 @@ flowchart TB
         DataStructure["SlopadDataStructure<br/>pure storage"]
     end
 
+    subgraph Format["Opt-in Format Adapter"]
+        MarkdownAdapter["SlopadMarkdown<br/>stateless fail-closed decode"]
+        SwiftMarkdown["swift-markdown 0.8.0<br/>parser AST"]
+    end
+
     AppKit --> AppKitUI
     AppKit --> Engine
     AppKitUI --> Engine
@@ -132,10 +141,12 @@ flowchart TB
     BlockLayout --> CoreModel
     BlockLayout --> DataStructure
     AppKitTextKit --> CoreModel
+    MarkdownAdapter --> CoreModel
+    MarkdownAdapter --> SwiftMarkdown
 ```
 
 Arrows show direct SwiftPM target dependencies. Debug apps, benchmarks, tests, and the
-downstream fixture are outer-edge consumers and are omitted from the production graph.
+downstream fixtures are outer-edge consumers and are omitted from the production graph.
 
 ### Layer Responsibilities
 
@@ -147,6 +158,7 @@ downstream fixture are outer-edge consumers and are omitted from the production 
 | Engine Layer      | `SlopadEngine`        | Host-facing `EditorSession` facade. It accepts native-independent input, composes semantic and layout owners, and returns render, hit-test, reveal, and redraw facts. |
 | Engine Layer      | `SlopadEditorModel`   | Canonical document, selection, command, transaction, history, and semantic change owner.                                                                              |
 | Engine Layer      | `SlopadBlockLayout`   | Visible order, y/height geometry, invalidation, reveal/hit-test geometry, marker projection, text-layout cache, and block height index owner.                         |
+| Format Adapter    | `SlopadMarkdown`      | Opt-in stateless Markdown decode into fresh `[EditorBlockInput]` values; parser AST types remain internal and unsupported syntax produces typed diagnostics.         |
 | Foundation & Data | `SlopadCoreModel`     | Shared public vocabulary, canonical `Document`/`Block` values, and backend seam values such as `BlockTextLayoutProtocol`.                                             |
 | Foundation & Data | `SlopadDataStructure` | Pure storage such as `PrefixSumRedBlackTree`, with no editor, layout, or platform vocabulary.                                                                         |
 
@@ -317,6 +329,27 @@ import SlopadAppKit
 existing integrations and advanced custom-adapter work. See `Package.swift` for the exact
 product and target list.
 
+### Markdown Decoding
+
+Markdown support is opt-in and does not make Markdown canonical document state. Add the
+`SlopadMarkdown` product alongside the host product that will consume its block inputs:
+
+```swift
+.product(name: "SlopadMarkdown", package: "Slopad")
+```
+
+```swift
+import SlopadMarkdown
+
+let blocks = try SlopadMarkdown.decode("# Imported")
+```
+
+The synchronous decoder returns only core `EditorBlockInput` values with fresh IDs. It
+fails closed with `MarkdownDecodingError` when any syntax cannot be represented; the error
+contains nonempty typed diagnostics with 1-based line and 1-based UTF-8 byte columns.
+Each `MarkdownDiagnostic` exposes a `MarkdownDiagnostic.Kind` and a half-open
+`sourceRange`. `Markdown` parser AST types never cross the product boundary.
+
 ## Development Targets
 
 The repository also keeps benchmark and debug targets for development convenience. They
@@ -347,17 +380,22 @@ Debug target:
 
 ## Development Checks
 
-`Fixtures/DownstreamAppKitHost` is a compile-only consumer of the intended public host
-surface. It must not rely on `@testable` imports or package-only APIs.
+`Fixtures/DownstreamAppKitHost` and `Fixtures/DownstreamSwiftUIHost` are compile-only
+consumers of the intended public host surfaces. `Fixtures/DownstreamMarkdownHost` proves
+that decoded blocks apply unchanged through `EditorDocumentPatch` and `EditorSession` with
+an inactive selection. None may rely on `@testable` imports or package-only APIs.
 
 ```sh
 swift package dump-package
 swift test --quiet
+swift build --product SlopadMarkdown --quiet
 swift build --product SlopadAppKit --quiet
 swift build --product SlopadAppKitTextKit --quiet
 swift build --product SlopadAppKitUI --quiet
 swift build --product SlopadDebugApp --quiet
 swift build --product SlopadUIBenchmarkApp --quiet
 swift build --package-path Fixtures/DownstreamAppKitHost --product DownstreamAppKitHost --quiet
+swift build --package-path Fixtures/DownstreamSwiftUIHost --product DownstreamSwiftUIHost --quiet
+swift build --package-path Fixtures/DownstreamMarkdownHost --product DownstreamMarkdownHost --quiet
 git diff --check
 ```

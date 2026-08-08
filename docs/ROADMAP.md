@@ -26,13 +26,13 @@ Two tracks run in parallel; they do not share files.
 | A — semantics | [#24](https://github.com/hot666666/Slopad/issues/24) [#25](https://github.com/hot666666/Slopad/issues/25) [#26](https://github.com/hot666666/Slopad/issues/26) [#27](https://github.com/hot666666/Slopad/issues/27) [#28](https://github.com/hot666666/Slopad/issues/28) [#29](https://github.com/hot666666/Slopad/issues/29) [#30](https://github.com/hot666666/Slopad/issues/30) [#31](https://github.com/hot666666/Slopad/issues/31) [#32](https://github.com/hot666666/Slopad/issues/32) [#33](https://github.com/hot666666/Slopad/issues/33) | inline mark reachability, editing state, command vocabulary, input rules, Markdown decode/encode |
 | B — layout | [#34](https://github.com/hot666666/Slopad/issues/34) [#35](https://github.com/hot666666/Slopad/issues/35) [#36](https://github.com/hot666666/Slopad/issues/36) [#37](https://github.com/hot666666/Slopad/issues/37) | text capability split, caret geometry path, cache key alignment, prepared layout store |
 
-The foundation issues [#24](https://github.com/hot666666/Slopad/issues/24) through
-[#28](https://github.com/hot666666/Slopad/issues/28), plus layout issues
+The semantic foundation through [#30](https://github.com/hot666666/Slopad/issues/30), plus
+layout issues
 [#34](https://github.com/hot666666/Slopad/issues/34) through
-[#36](https://github.com/hot666666/Slopad/issues/36), are complete. The next semantic step is
-[#30](https://github.com/hot666666/Slopad/issues/30), using the dependency and round-trip
-boundary fixed by [#29](https://github.com/hot666666/Slopad/issues/29) and ADR 0013. Track B's
-prepared-layout store remains open in [#37](https://github.com/hot666666/Slopad/issues/37).
+[#36](https://github.com/hot666666/Slopad/issues/36), are implemented. The decoder now
+unblocks inline rules in [#31](https://github.com/hot666666/Slopad/issues/31) and encoding
+in [#32](https://github.com/hot666666/Slopad/issues/32). Track B's prepared-layout store
+remains open in [#37](https://github.com/hot666666/Slopad/issues/37).
 
 ### Decisions fixed for this epic
 
@@ -57,8 +57,12 @@ These are settled. Sub-issues implement them rather than re-opening them.
   [ADR 0013](../ADR/0013-markdown-format-boundary.md). Markdown does not preserve
   `BlockID`s or source spelling; a later persistence ADR must decide whether to accept that
   discontinuity or choose a native archive or hybrid/sidecar.
-- HTML artifact blocks, image/table blocks — consuming-product requirements that cannot be
-  expressed as engine-verifiable completion criteria.
+- HTML artifact and image blocks — consuming-product requirements that cannot yet be
+  expressed as engine-verifiable completion criteria. GFM tables are not a permanent
+  product non-goal: [#50](https://github.com/hot666666/Slopad/issues/50) first expands the
+  Core table vocabulary, after which the Markdown adapter adds lossless table support.
+  This epic and #30 deliberately return the typed `.table` diagnostic until that Core
+  contract exists.
 
 ## Achieved Baseline
 
@@ -77,6 +81,11 @@ These are settled. Sub-issues implement them rather than re-opening them.
   `SlopadBlockLayout`; those two targets do not import each other.
 - `SlopadCoreModel` contains only public vocabulary, backend seams, and package canonical
   document values.
+- The opt-in `SlopadMarkdown` target pins `swift-markdown` 0.8.0 exactly and exposes one
+  stateless typed-throws decode into fresh depth-first `[EditorBlockInput]` values. Its AST
+  stays behind `internal import Markdown`; unsupported syntax produces nonempty typed
+  source diagnostics and no partial blocks. A separate downstream fixture applies that
+  output unchanged through an inactive-selection `EditorDocumentPatch` and `EditorSession`.
 - `SlopadAppKit` is the recommended ordinary macOS host product and import. It curates
   the default AppKit controller, action, style, chrome, document, selection, update, and
   snapshot vocabulary without becoming a runtime owner.
@@ -166,14 +175,14 @@ needed before a host app can use the engine as a Notion/Craft-style editor surfa
 - The document is tree-capable, but collapsed subtree state, visible-order filtering,
   selection behavior, reveal behavior, and copy/paste behavior for collapsed content are
   not implemented.
-- Markdown import/export is still a product feature, not the same thing as markdown
-  prefix shortcuts.
+- Markdown decoding now exists as a format adapter. Product import wiring, Markdown
+  encoding, and broad import/export UX remain separate from markdown prefix shortcuts.
 
 ## Next Direction
 
 These are long-range capability buckets, not the active issue queue. While epic #23 is open,
-its dependency order in [Active Epic](#active-epic) controls execution; the current
-integration sequence takes #30 before dependency-ready #33.
+its dependency order in [Active Epic](#active-epic) controls execution; #30 now unlocks
+#31 and #32 while dependency-ready #33 remains a separate product-UI branch.
 
 - P0 - AppKit integration contract hardening
   - Stabilize the reusable AppKit host surface before adding large product features.
@@ -229,10 +238,13 @@ integration sequence takes #30 before dependency-ready #33.
 - P3 - Structured paste and Markdown import/export
   - The dependency boundary and the round-trip guarantee are settled in
     [ADR 0013](../ADR/0013-markdown-format-boundary.md): `swift-markdown` lives behind
-    `SlopadMarkdown` alone, adding that dependency in #30 requires a Swift 6.2-or-later
-    toolchain, and round-trip is semantic rather than byte-exact. `BlockID`s do not survive
-    it; the later persistence ADR decides whether Markdown-only storage may accept that
-    discontinuity or needs a native archive or sidecar.
+    `SlopadMarkdown` alone, its exact 0.8.0 dependency requires a Swift 6.2-or-later
+    resolving toolchain, and round-trip is semantic rather than byte-exact. `BlockID`s do
+    not survive it; the later persistence ADR decides whether Markdown-only storage may
+    accept that discontinuity or needs a native archive or sidecar.
+  - The decoder side is implemented: it preserves supported block trees and inline marks,
+    produces fresh IDs, and fails closed with typed UTF-8 source diagnostics. #32 owns the
+    matching encoder; product import/paste policy remains caller work.
   - Keep markdown as import/export format and input shortcut syntax, not canonical state.
   - Add structured block paste before broad markdown import/export if product editing
     needs copy/paste workflows first.
@@ -289,5 +301,5 @@ integration sequence takes #30 before dependency-ready #33.
   incremental layout and viewport-driven lazy measurement paths.
 - Snapshot undo/redo is simple and correct, but memory cost can become high for large
   documents.
-- Markdown prefix shortcuts are implemented, but broad markdown import/export and rich
-  paste are still separate product features.
+- Markdown prefix shortcuts and the opt-in fail-closed decoder are implemented, but the
+  encoder, broad product import/export, and rich paste are still separate features.
