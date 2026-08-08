@@ -83,3 +83,17 @@ segmentation costs are not hidden by a prefix-only position. Cold first-operatio
 recorded separately from median and p95 steady-state input cost. The checked-in values are
 post-optimization: grapheme/UTF-16 boundary maps are built lazily per prepared request and
 then reused for constant-time conversion.
+
+## Prepared Layout Store Policy
+
+Generated on 2026-08-08 from
+`a8c05f7fd75e3bcec326505129b042a86291fe3c` for the bounded TextKit prepared-layout
+store decision in #37.
+
+- `appkit-prepared-layout-store-summary-20260808.csv`: compact count/cost knee sweeps and
+  same-head one-slot-control versus selected-policy medians. It intentionally excludes raw
+  per-frame CSVs.
+
+The selected default is 96 entries with a 6 MiB estimated-cost limit. See
+`docs/APPKIT_UI_BENCHMARK_RESULTS.md` for control semantics, commands, correctness scales,
+and measurement limitations.

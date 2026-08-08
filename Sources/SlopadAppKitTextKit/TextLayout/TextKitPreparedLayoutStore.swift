@@ -5,10 +5,10 @@ import SlopadCoreModel
 // MARK: - Store Policy
 
 struct TextKitPreparedLayoutStorePolicy: Equatable, Sendable {
-    /// Provisional bounds used until #37's corrected UI benchmark selects final values.
-    static let provisional = TextKitPreparedLayoutStorePolicy(
-        entryLimit: 32,
-        estimatedCostLimit: 8 * 1_024 * 1_024
+    /// Default selected by #37's release AppKit UI benchmark sweep.
+    static let productionDefault = TextKitPreparedLayoutStorePolicy(
+        entryLimit: 96,
+        estimatedCostLimit: 6 * 1_024 * 1_024
     )
 
     let entryLimit: Int
@@ -24,9 +24,9 @@ struct TextKitPreparedLayoutStorePolicy: Equatable, Sendable {
             environment: [String: String] = ProcessInfo.processInfo.environment
         ) -> TextKitPreparedLayoutStorePolicy {
             let entryLimit = environment["SLOPAD_TEXTKIT_PREPARED_ENTRY_LIMIT"]
-                .flatMap(Int.init) ?? provisional.entryLimit
+                .flatMap(Int.init) ?? productionDefault.entryLimit
             let estimatedCostLimit = environment["SLOPAD_TEXTKIT_PREPARED_COST_LIMIT"]
-                .flatMap(Int.init) ?? provisional.estimatedCostLimit
+                .flatMap(Int.init) ?? productionDefault.estimatedCostLimit
             return TextKitPreparedLayoutStorePolicy(
                 entryLimit: entryLimit,
                 estimatedCostLimit: estimatedCostLimit

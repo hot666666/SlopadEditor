@@ -32,7 +32,7 @@ final class TextKitLayoutContext: @unchecked Sendable {
         #if SLOPAD_BENCHMARK_INSTRUMENTATION
             self.init(policy: .benchmarkConfigured())
         #else
-            self.init(policy: .provisional)
+            self.init(policy: .productionDefault)
         #endif
     }
 

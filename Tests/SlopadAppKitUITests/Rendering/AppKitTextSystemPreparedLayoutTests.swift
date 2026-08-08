@@ -94,7 +94,7 @@
             // Then
             #expect(controller.snapshot?.activeTextInput == nil)
             #expect(snapshot.pinnedEntryCount == 1)
-            #expect(snapshot.residentEntryCount <= 32)
+            #expect(snapshot.residentEntryCount <= 96)
         }
 
         @Test("visible block이 limit보다 많아도 initial render와 draw에서 active는 한 번만 준비한다")
@@ -110,7 +110,7 @@
             let afterDraw = controller.preparedLayoutInstrumentation
 
             // Then
-            #expect(visibleCount > 32)
+            #expect(visibleCount > 96)
             #expect(afterRender.pinnedEntryCount == 1)
             #expect(afterDraw.lookups - afterRender.lookups == visibleCount)
             #expect(afterDraw.hits - afterRender.hits == 1)
@@ -136,7 +136,7 @@
             let afterDraw = controller.preparedLayoutInstrumentation
 
             // Then
-            #expect(visibleCount > 32)
+            #expect(visibleCount > 96)
             #expect(afterRender.pinnedEntryCount == 1)
             #expect(afterDraw.hits - afterRender.hits == 1)
             #expect(afterDraw.prepares - afterRender.prepares == visibleCount - 1)
@@ -156,7 +156,7 @@
             let afterDraw = controller.preparedLayoutInstrumentation
 
             // Then
-            #expect(visibleCount > 32)
+            #expect(visibleCount > 96)
             #expect(afterRender.pinnedEntryCount == 1)
             #expect(afterDraw.hits - afterRender.hits == 1)
             #expect(afterDraw.prepares - afterRender.prepares == visibleCount - 1)
@@ -185,7 +185,7 @@
             let afterDraw = controller.preparedLayoutInstrumentation
 
             // Then
-            #expect(visibleCount > 32)
+            #expect(visibleCount > 96)
             #expect(controller.snapshot?.selection == .caret(blockID: newActiveBlockID, offset: 1))
             #expect(afterRender.pinnedEntryCount == 1)
             #expect(afterRender.prepares - beforePatch.prepares == 1)
@@ -244,14 +244,14 @@
                 selection: .caret(blockID: blocks[0].id, offset: 1)
             )
             controller.loadView()
-            controller.view.frame = NSRect(x: 0, y: 0, width: 640, height: 4_000)
+            controller.view.frame = NSRect(x: 0, y: 0, width: 640, height: 12_000)
             controller.scrollView.frame = controller.view.bounds
             controller.scrollView.contentView.frame = controller.scrollView.bounds
             return controller
         }
 
         private func makeBlocks(prefix: String) -> [EditorBlockInput] {
-            (0..<40).map { index in
+            (0..<104).map { index in
                 EditorBlockInput(
                     id: BlockID("\(prefix)-\(index)"),
                     content: BlockContent(text: "Block \(index) text")

@@ -670,6 +670,27 @@ struct TextKitPreparedLayoutStorePolicyTests {
         #expect(policy.estimatedCostLimit == 1)
     }
 
+    @Test("생산 기본 policy는 benchmark knee인 96개와 6 MiB를 사용한다")
+    func productionDefaultMatchesSelectedBenchmarkKnee() {
+        // Given / When
+        let policy = TextKitPreparedLayoutStorePolicy.productionDefault
+
+        // Then
+        #expect(policy.entryLimit == 96)
+        #expect(policy.estimatedCostLimit == 6 * 1_024 * 1_024)
+    }
+
+    #if SLOPAD_BENCHMARK_INSTRUMENTATION
+        @Test("benchmark override가 없으면 생산 기본 policy와 동일하다")
+        func benchmarkFallbackMatchesProductionDefault() {
+            // Given / When
+            let policy = TextKitPreparedLayoutStorePolicy.benchmarkConfigured(environment: [:])
+
+            // Then
+            #expect(policy == .productionDefault)
+        }
+    #endif
+
     private func makeStore(entryLimit: Int) -> TextKitPreparedLayoutStore {
         TextKitPreparedLayoutStore(
             policy: TextKitPreparedLayoutStorePolicy(

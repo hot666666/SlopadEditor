@@ -120,8 +120,8 @@ private struct UIBenchmarkCommandLineOptions {
     var frameCount = 120
     var outputPath = "/tmp/slopad-ui-benchmark.csv"
     var subtreeNodeCount: Int?
-    var preparedEntryLimit = 32
-    var preparedEstimatedCostLimit = 8 * 1_024 * 1_024
+    var preparedEntryLimit = 96
+    var preparedEstimatedCostLimit = 6 * 1_024 * 1_024
 
     init(arguments: [String]) {
         var iterator = arguments.dropFirst().makeIterator()
