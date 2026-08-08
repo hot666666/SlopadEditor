@@ -14,6 +14,19 @@ final class TextKitLayoutContext: @unchecked Sendable {
     )
     private var preparedLayoutState: PreparedLayoutState?
 
+    #if SLOPAD_BENCHMARK_INSTRUMENTATION
+        /// How often a layout had to be prepared, and how often that meant rebuilding the
+        /// attributed string. The gap between the two is what a shared prepared store would
+        /// close, so #37 cannot be judged without these.
+        private(set) nonisolated(unsafe) static var prepareLayoutCallCount = 0
+        private(set) nonisolated(unsafe) static var attributedStringBuildCount = 0
+
+        static func resetInstrumentation() {
+            prepareLayoutCallCount = 0
+            attributedStringBuildCount = 0
+        }
+    #endif
+
     private static let trailingLineBreakSentinel = "\u{200B}"
 
     private struct PreparedLayoutKey: Equatable {
@@ -417,11 +430,17 @@ final class TextKitLayoutContext: @unchecked Sendable {
         for request: BlockMeasureRequest,
         style: TextKitEditorStyle
     ) -> PreparedLayoutState {
+        #if SLOPAD_BENCHMARK_INSTRUMENTATION
+            Self.prepareLayoutCallCount += 1
+        #endif
         let key = PreparedLayoutKey(request: request, style: style)
         if let preparedLayoutState, preparedLayoutState.key == key {
             return preparedLayoutState
         }
 
+        #if SLOPAD_BENCHMARK_INSTRUMENTATION
+            Self.attributedStringBuildCount += 1
+        #endif
         let attributed = TextKitAttributedStringBuilder.attributedString(for: request, style: style)
         let layoutText = Self.normalizedTrailingLineBreak(in: attributed)
 

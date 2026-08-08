@@ -354,6 +354,9 @@ final class UIBenchmarkRecorder {
             currentSample?.layoutOutputBlockCount = metrics.layoutOutputBlockCount
             currentSample?.cacheHitCount = metrics.cacheHitCount
             currentSample?.cacheMissCount = metrics.cacheMissCount
+            let prepared = TextKitBlockTextLayouter.preparedLayoutCounts
+            currentSample?.prepareLayoutCount = prepared.prepares
+            currentSample?.attributedStringBuildCount = prepared.attributedStringBuilds
             currentSample?.heightIndexRebuildCount = metrics.heightIndexRebuildCount
             currentSample?.heightIndexInsertCount = metrics.heightIndexInsertCount
             currentSample?.heightIndexRemoveCount = metrics.heightIndexRemoveCount
@@ -443,6 +446,8 @@ final class UIBenchmarkRecorder {
         "layoutOutputBlockCount",
         "cacheHitCount",
         "cacheMissCount",
+        "prepareLayoutCount",
+        "attributedStringBuildCount",
         "heightIndexRebuildCount",
         "heightIndexInsertCount",
         "heightIndexRemoveCount",
@@ -482,6 +487,8 @@ struct UIBenchmarkFrameSample {
     var layoutOutputBlockCount: Int = 0
     var cacheHitCount: Int = 0
     var cacheMissCount: Int = 0
+    var prepareLayoutCount: Int = 0
+    var attributedStringBuildCount: Int = 0
     var heightIndexRebuildCount: Int = 0
     var heightIndexInsertCount: Int = 0
     var heightIndexRemoveCount: Int = 0
@@ -497,7 +504,8 @@ struct UIBenchmarkFrameSample {
     }
 
     func csvRow(blockCount: Int, scenario: String) -> String {
-        [
+        // Split so the type checker does not have to solve one oversized literal.
+        let head: [String] = [
             scenario,
             String(blockCount),
             String(frame),
@@ -511,18 +519,23 @@ struct UIBenchmarkFrameSample {
             String(drawCount),
             format(dirtyArea),
             layoutMode,
+        ]
+        let rest: [String] = [
             String(visibleOrderEntryCount),
             String(visibleRenderedBlockCount),
             String(layoutInputBlockCount),
             String(layoutOutputBlockCount),
             String(cacheHitCount),
             String(cacheMissCount),
+            String(prepareLayoutCount),
+            String(attributedStringBuildCount),
             String(heightIndexRebuildCount),
             String(heightIndexInsertCount),
             String(heightIndexRemoveCount),
             String(heightIndexMoveCount),
             String(heightIndexUpdateHeightCount),
-        ].map(csvEscape).joined(separator: ",")
+        ]
+        return (head + rest).map(csvEscape).joined(separator: ",")
     }
 
     private func milliseconds(_ nanoseconds: UInt64) -> Double {

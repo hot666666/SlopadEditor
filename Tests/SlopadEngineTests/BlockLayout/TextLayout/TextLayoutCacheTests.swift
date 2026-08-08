@@ -140,6 +140,66 @@ struct TextLayoutCacheTests {
         #expect(textLayouter.measuredBlockIDs == ["a", "a"])
     }
 
+    @Test("조합 중인 텍스트는 확정 텍스트와 다른 측정값으로 본다")
+    func compositionIsMeasuredSeparately() {
+        // Given: 키에서 compositionRevision 이 빠진 자리를 무엇이 메우는지 고정한다. 답은
+        // "block 이 이미 조합 반영본으로 들어온다"이고, 그 전제가 깨지면 이 테스트가 깨진다.
+        var cache = TextLayoutCache()
+        let blockID: BlockID = "a"
+        let base = Block(id: blockID, kind: .paragraph, content: BlockContent(text: "AB"))
+        let document = makeFlatDocument([base])
+        let composing = EffectiveDocumentSnapshot(
+            document: document,
+            composition: TextComposition(
+                blockID: blockID, replacementRange: TextRange(0, 2), text: "조합중인긴텍스트",
+                revision: 1)
+        )
+        let settled = EffectiveDocumentSnapshot(document: document)
+        let textLayouter = RecordingBlockTextLayouter(measurementsByBlockID: [
+            blockID: BlockMeasurement(height: 20)
+        ])
+        let visible = VisibleBlock(blockID: blockID, depth: 0, parentID: nil)
+
+        // When: 각 스냅샷이 주는 effective block 으로 측정한다.
+        for snapshot in [composing, settled] {
+            guard let effective = snapshot.block(for: blockID) else { continue }
+            _ = cache.measurement(
+                for: effective, visibleBlock: visible, contentSnapshot: snapshot,
+                availableWidth: 300, textLayoutRevision: 0, textLayouter: textLayouter)
+        }
+
+        // Then
+        #expect(textLayouter.measuredBlockIDs == [blockID, blockID])
+    }
+
+    @Test("폭과 깊이가 달라도 다시 측정한다")
+    func widthAndDepthAreMeasuredSeparately() {
+        // Given
+        var cache = TextLayoutCache()
+        let input = makeTextLayoutCacheInput(blockID: "a", text: "A")
+        let textLayouter = RecordingBlockTextLayouter(measurementsByBlockID: [
+            "a": BlockMeasurement(height: 20)
+        ])
+
+        // When
+        _ = cache.measurement(
+            for: input.block, visibleBlock: input.visibleBlock,
+            contentSnapshot: input.contentSnapshot, availableWidth: 300,
+            textLayoutRevision: 0, textLayouter: textLayouter)
+        _ = cache.measurement(
+            for: input.block, visibleBlock: input.visibleBlock,
+            contentSnapshot: input.contentSnapshot, availableWidth: 200,
+            textLayoutRevision: 0, textLayouter: textLayouter)
+        _ = cache.measurement(
+            for: input.block,
+            visibleBlock: VisibleBlock(blockID: "a", depth: 1, parentID: nil),
+            contentSnapshot: input.contentSnapshot, availableWidth: 300,
+            textLayoutRevision: 0, textLayouter: textLayouter)
+
+        // Then
+        #expect(textLayouter.measuredBlockIDs == ["a", "a", "a"])
+    }
+
     @Test("inline mark만 달라도 다시 측정한다")
     func differentMarksAreMeasuredAgain() {
         // Given: chrome signature 문자열은 BlockKind 만 담았기 때문에 mark 변화는 오직
