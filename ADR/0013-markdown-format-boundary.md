@@ -20,8 +20,8 @@ is the same class of decision as ADR 0002.
 **Second: what does round-trip mean?** `**bold**` and `__bold__` describe the same emphasis.
 If the canonical document holds `.strong` over a range and the encoder writes one spelling,
 a document that arrives with the other spelling comes back changed. Whether that is
-acceptable determines whether Markdown can be a storage format at all, and the persistence
-choice was left waiting on an answer that was never given.
+acceptable constrains the later persistence choice, which was left waiting on a round-trip
+answer that was never given.
 
 ## Measurements
 
@@ -29,17 +29,17 @@ Taken against `swift-markdown` 0.8.0 with a probe package rather than estimated.
 
 | | |
 | --- | --- |
-| Resolved version | `swift-markdown` 0.8.0, released 2026-05-07 |
-| Transitive | `swift-cmark` 0.8.0 — a C library (cmark-gfm) |
-| Its manifest | `swift-tools-version:6.2` |
-| Slopad's manifest | `swift-tools-version:6.0` — unchanged; SwiftPM accepts the mixed versions |
+| Probed version | `swift-markdown` 0.8.0, released 2026-05-07 |
+| Resolved transitive version | `swift-cmark` 0.8.0 — a C library (cmark-gfm) |
+| Upstream manifest | `swift-tools-version:6.2`; its targets explicitly use Swift 5 mode |
+| Slopad manifest | `swift-tools-version:6.0` — unchanged; its targets currently compile in Swift 6 mode |
 | Cold build | 109 files, ~10s on an 8-core arm64 machine |
 | `Sendable` | **`Document` and `Markup` do not conform.** What is allowed is narrower than "clean" — see below |
 
 The one real constraint is not in the table's first column. `swift-markdown`'s manifest is
-`6.2`, so **the toolchain building Slopad must be able to parse a 6.2 manifest — Swift 6.2 or
-later** — even though Slopad's own tools version stays at 6.0. That is the minimum-toolchain
-answer #29 asked for.
+`6.2`, so **once #30 adds it, the toolchain building Slopad must be Swift 6.2 or later** even
+though Slopad's own tools version stays at 6.0. That is the minimum-toolchain answer #29
+asked for; this docs-only PR does not change the current build graph.
 
 ### What the `Sendable` result actually is
 
@@ -49,51 +49,76 @@ around. The probe that produced it only sent a locally-parsed value into a `Task
 Swift's region-based isolation permits by proving exclusivity. It never asked whether the
 type conforms.
 
-It does not. `requireSendable(Document.self)` fails to compile. Re-probed under
-`.swiftLanguageMode(.v6)`, the boundary is:
+It does not. `requireSendable(Document.self)` fails to compile. Re-probed from a Swift 6
+client target, the boundary is:
 
 | shape | result |
 | --- | --- |
 | Parse locally, send into a `Task`, do not touch the original again | allowed — region isolation proves exclusivity |
 | Send a `Document` received as a parameter | **error** — `SendingClosureRisksDataRace` |
 | Send a local value and keep using it afterwards | **error** — `SendingRisksDataRace` |
-| Store a parsed value in shared state | reachable only through `@unchecked Sendable`, i.e. unchecked |
+| Keep and use a value inside one actor or other isolation domain | allowed — it does not cross that domain |
+| Share it as `Sendable` state | reachable only through an unchecked wrapper, i.e. unchecked |
 
-So a parse can happen and its result can move once, but a parser value cannot be held,
-shared, or passed across an isolation boundary. Note also that `swift-markdown` itself does
-not build under Swift 6 language mode — `HTMLFormatterOptions` is a non-`Sendable` mutable
-global — so it is consumed in Swift 5 mode, as Slopad's own targets are today.
+So a parser value can be held and used inside one isolation domain, and region isolation can
+move a disconnected local value once. It cannot satisfy a `Sendable` API or be shared
+arbitrarily across domains. `swift-markdown` 0.8.0 itself explicitly selects Swift 5 mode;
+Slopad's targets compile in Swift 6 mode, so the adapter is a Swift 6 client of a Swift 5
+dependency.
 
-This does not weaken the isolation rule below; it independently supports it. An adapter that
-converts to core types before returning never holds a parser value long enough for any of
-this to bite. One that returned an AST for a caller to walk would collide with all of it.
+This independently supports the isolation rule below. Parsing and conversion execute inside
+one caller isolation domain and return only core values; no AST crosses that boundary. An
+API that returned an AST for a caller to walk would violate both the import boundary and the
+concurrency design.
 
 ## Decision
 
 ### The dependency lives behind one target
 
-`SlopadMarkdown` depends on `SlopadCoreModel` and on `swift-markdown`. Nothing else in the
-package depends on `swift-markdown`.
+`SlopadMarkdown` is a separate, opt-in library product and target. Its target depends on
+`SlopadCoreModel` and on the `Markdown` product from `swift-markdown`; it is not folded into
+`SlopadEngine`, `SlopadAppKit`, or `SlopadSwiftUI`.
 
 Its public surface is expressed entirely in core vocabulary — `EditorBlockInput`,
 `BlockContent`, `BlockKind`, `BlockContent.InlineMark`, and diagnostics defined in that
-target. `Markdown.Document`, `Markup`, `Paragraph`, `Strong`, `Emphasis`, and every other
-parser type stay inside it.
+target. Every source file that uses parser types declares `internal import Markdown`.
+Swift then rejects any `public` or `package` declaration in that file whose signature uses
+`Markdown.Document`, `Markup`, `Paragraph`, `Strong`, `Emphasis`, or another parser type.
+That is the compiler-enforced public API boundary.
+
+SwiftPM target separation alone is not claimed to make the module physically unimportable:
+a transitive module can still be visible to another target in the resolved graph. #30
+therefore also adds a repository architecture test that requires every Markdown import to
+be spelled `internal import Markdown` inside `Sources/SlopadMarkdown` and rejects it anywhere
+else under `Sources/`. A dedicated downstream fixture depends on the opt-in
+`SlopadMarkdown` product plus `SlopadEngine`, decodes through the public core-vocabulary API,
+passes the resulting blocks through `EditorDocumentPatch` and `EditorSession`, and never
+imports `Markdown`.
 
 The reason is not concurrency and not extensibility. It is that a parser AST is a *format's*
 model of a document, and letting it reach `EditorSession` or `BlockLayout` would put Markdown
 syntax where ADR 0003 keeps TextKit out — a layer answering questions in some other system's
-terms. Confining it to one target makes the compiler enforce that instead of a review
-convention.
+terms. The separate product names the boundary; `internal import Markdown` makes leakage
+through its exported API a compiler error, and the architecture test guards off-target
+imports that SwiftPM alone does not forbid.
 
-`swift-markdown` is pinned `from: "0.8.0"`. It is pre-1.0, so a minor bump can break source;
-the pin is a floor to be raised deliberately, and `Package.resolved` is what actually fixes
-the build.
+`swift-markdown` is pinned with `exact: "0.8.0"`. It is pre-1.0, so a minor bump can break
+source; raising the exact requirement is a deliberate reviewed change. A downstream root
+that requires an incompatible exact version will fail dependency resolution; that is the
+accepted cost of preventing an unreviewed pre-1.0 minor update. A root
+`Package.resolved` still records the selected transitive graph, but it is not the pin: each
+downstream fixture or host is its own resolution root and does not inherit Slopad's lockfile.
+
+That propagation is intentional. Once #30 adds the package dependency, every host resolving
+Slopad must resolve and parse `swift-markdown`'s manifest, so those roots need a Swift
+6.2-or-later toolchain even if their own manifest uses an older tools version. Only a host
+that selects the opt-in `SlopadMarkdown` product needs to build and link its Markdown and C
+targets. #30 updates the README requirement when that package-graph change lands.
 
 ### Round-trip is semantic, not byte-exact
 
-**A document encoded to Markdown and decoded again is equal in meaning. Nothing guarantees
-the bytes are the same.**
+**A supported document successfully encoded to Markdown and decoded again is equal in
+meaning. Nothing guarantees the bytes are the same.**
 
 Concretely, the guarantee is one direction:
 
@@ -102,64 +127,87 @@ decode(encode(document)) ≡ document        보장한다
 encode(decode(markdown)) == markdown       보장하지 않는다
 ```
 
-`≡` compares block structure — kind, parent, sibling order — and content — text and inline
-mark ranges. It does **not** compare `BlockID`s: decoding produces fresh ones, because plain
-Markdown has nowhere to carry them.
+`≡` first requires equal block counts, then pairs blocks by canonical depth-first position,
+not by ID. A block's parent path is the sequence of sibling indexes from the root; paired
+blocks must have the same parent path, sibling order, full `BlockKind` value, text, and
+normalized inline marks including each mark's kind, associated value, and canonical
+`TextRange`. `BlockID` values themselves are excluded: decoding produces fresh ones because
+plain Markdown has nowhere to carry them. This gives #30 and #32 one concrete comparator to
+share without allowing a `zip` to ignore a trailing block.
 
 What this permits, deliberately:
 
-- `**bold**` and `__bold__` both decode to `.strong` and encode to whichever spelling the
-  encoder prefers. A user's choice of delimiter is not preserved.
-- Insignificant whitespace, list marker style, and heading style may normalize.
+- `**bold**` and `__bold__` both decode to `.strong`; the encoder always emits `**bold**`.
+  `.emphasis` similarly emits `_emphasis_`. A user's delimiter choice is not preserved, and
+  the same canonical document always chooses the same delimiters.
+- Source-syntax whitespace that is not represented in `BlockContent.text`, plus list-marker
+  and heading-marker style, may normalize. Every whitespace character that is part of
+  canonical text is significant and compares exactly.
 
 What it forbids:
 
 - Losing an inline mark, a block, or an ordering.
-- Silently dropping a construct. Anything the encoder cannot express is reported as a
-  diagnostic (ADR to follow with the encoder in #32), never omitted quietly.
+- Silently dropping a construct in either direction.
+
+Unsupported constructs are fail-closed. When decoding recognizes a block or inline node
+that core vocabulary cannot represent — tables, images, and raw HTML are current examples —
+the result contains typed diagnostics with source ranges and **no partial
+`[EditorBlockInput]` success value**. It does not flatten the node to text, preserve raw
+Markdown as canonical text, or omit it. When encoding encounters a canonical value it cannot
+express, it likewise returns diagnostics and no successful Markdown value. #30 and #32 may
+choose the concrete result-type names, but not weaken this all-or-nothing boundary.
 
 ### Consequence for persistence, stated now rather than discovered later
 
-`BlockID`s do not survive a Markdown round-trip, and three things address blocks by ID.
+`BlockID`s do not survive a Markdown round-trip, so selection, undo, and external references
+need separate consequences stated explicitly.
 
 **Selection.** `TextPosition` names a `BlockID`, and `BlockSelection` holds `blockIDs`,
-`anchor`, and `focus` as `BlockID`s. A selection captured before a save refers to nothing
-after a reload.
+`anchor`, and `focus` as `BlockID`s. A selection captured before any Markdown decode/import
+refers to nothing in its fresh output, even when that import happens in the same process.
 
 **Undo history — not affected, which is worth stating so nobody defends against it.**
 `EditorTransaction` carries whole `EditorState` values, and `replaceDocument` appends one
 rather than clearing the stack. Undoing an import therefore restores the previous document
-*with its original identities*, which is correct. Identity only breaks across a process
-boundary, where there is no history to misapply.
+*with its original identities*, which is correct. The import creates an identity
+discontinuity between two internally consistent states; the undo transaction keeps both.
 
-**Agent references.** An agent that named a block in one turn cannot name it in the next.
+**Agent references.** An agent may reuse a named block only while the same canonical identity
+set remains current. A reference captured before a Markdown reload/import cannot name a
+block after it, whether that boundary falls between turns or inside one process.
 
-Worth being precise about what this is *not*: `EditorDocumentPatch`'s staleness check does
-not compare `BlockID`s. `EditorSession+AssistantEditing` gates on session epoch, committed
-revision, and selection equality; `BlockID` appears only in structural validation of the
-incoming replacement set — duplicate, missing parent, cycle. An earlier draft of this ADR
-said the compare-and-swap was ID-based, which would have sent whoever wrote the #30 tests
-looking in the wrong place. The identity problem is real; it lives in selection, history, and
-external references, not in the CAS token.
+Worth being precise about the compare-and-swap boundary. `EditorSession+AssistantEditing`
+gates on session epoch, committed revision, and exact selection equality. That selection may
+contain `BlockID`s, so its CAS component is identity-bearing. The gate does not separately
+compare the old document's complete ID set; incoming replacement IDs are checked later by
+structural validation for duplicates, missing parents, and cycles. An earlier draft reduced
+this nuance to "CAS is ID-based" and a later one overcorrected to "CAS does not compare
+IDs". Neither is accurate. A selection or external reference captured before a Markdown
+reload cannot be reused afterwards; undo remains safe because it restores the whole prior
+state.
 
-So **Markdown is an import and export format, not a storage format**, unless a future
-decision adds a sidecar carrying identity. That choice is not made here; what is settled is
-that it cannot be avoided by claiming Markdown alone is sufficient.
+This ADR does not choose the persistence source of truth. Markdown-only persistence remains
+a possible later product decision only if it explicitly accepts identity discontinuity and
+syntax normalization. A native archive or hybrid/sidecar can preserve identity instead.
+The later persistence ADR chooses among those trade-offs; this one supplies the round-trip
+and identity facts it must not ignore.
 
 ## Consequences
 
-- `swift-markdown` may not be added to any other target. A second target needing Markdown
-  means `SlopadMarkdown` is missing an API, not that the dependency should spread.
-- Building Slopad now requires a Swift 6.2 or later toolchain. Record this wherever build
-  requirements are stated.
+- Only `SlopadMarkdown` declares or imports the `Markdown` product. A second target needing
+  Markdown means the opt-in product is missing an API, not that the dependency should spread.
+- Adding the package dependency in #30 raises the effective build-toolchain requirement to
+  Swift 6.2 or later and updates the README then; this docs-only decision does not change the
+  current package graph.
 - Round-trip fixtures assert semantic equality with `BlockID`s excluded. A fixture asserting
   byte equality is testing something this ADR does not promise and should be rejected.
 - A selection captured before an import must not be reapplied after it. Undo needs no
   special handling: it restores whole states, identities included.
-- The adapter converts to core types before returning. It may not expose a parser value for a
-  caller to walk, and may not retain one — the `Sendable` boundary above makes that a
-  compile-time matter and not only a design preference.
-- The encoder owes a diagnostic for every construct it cannot express. "It round-trips" is
-  not sufficient if the way it round-trips is by discarding.
-- Raising the `swift-markdown` floor is a deliberate change with its own review, not a
-  routine bump, while the dependency remains pre-1.0.
+- The adapter converts to core types before returning and does not retain the AST. An
+  explicit `internal import Markdown` makes parser-type leakage through `public` or `package`
+  signatures a compile error; the non-`Sendable` AST is a separate reason to finish the
+  conversion inside one isolation domain.
+- Decoder and encoder failures return diagnostics without a partial success value. "It
+  round-trips" is not sufficient if the way it round-trips is by discarding.
+- Changing the exact `swift-markdown` version is a deliberate change with its own review,
+  not a routine bump, while the dependency remains pre-1.0.

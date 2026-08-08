@@ -24,10 +24,13 @@ Two tracks run in parallel; they do not share files.
 | A — semantics | [#24](https://github.com/hot666666/Slopad/issues/24) [#25](https://github.com/hot666666/Slopad/issues/25) [#26](https://github.com/hot666666/Slopad/issues/26) [#27](https://github.com/hot666666/Slopad/issues/27) [#28](https://github.com/hot666666/Slopad/issues/28) [#29](https://github.com/hot666666/Slopad/issues/29) [#30](https://github.com/hot666666/Slopad/issues/30) [#31](https://github.com/hot666666/Slopad/issues/31) [#32](https://github.com/hot666666/Slopad/issues/32) [#33](https://github.com/hot666666/Slopad/issues/33) | inline mark reachability, editing state, command vocabulary, input rules, Markdown decode/encode |
 | B — layout | [#34](https://github.com/hot666666/Slopad/issues/34) [#35](https://github.com/hot666666/Slopad/issues/35) [#36](https://github.com/hot666666/Slopad/issues/36) [#37](https://github.com/hot666666/Slopad/issues/37) | text capability split, caret geometry path, cache key alignment, prepared layout store |
 
-The highest-priority item is [#25](https://github.com/hot666666/Slopad/issues/25): inline
-marks exist in the canonical model and in the TextKit render path, but no input event
-reaches `applyTextStyle`, so **no mark can be created during editing at all**. Input rules
-and Markdown inline conversion both depend on it.
+The foundation issues [#24](https://github.com/hot666666/Slopad/issues/24) through
+[#28](https://github.com/hot666666/Slopad/issues/28), plus layout issues
+[#34](https://github.com/hot666666/Slopad/issues/34) through
+[#36](https://github.com/hot666666/Slopad/issues/36), are complete. The next semantic step is
+[#30](https://github.com/hot666666/Slopad/issues/30), using the dependency and round-trip
+boundary fixed by [#29](https://github.com/hot666666/Slopad/issues/29) and ADR 0013. Track B's
+prepared-layout store remains open in [#37](https://github.com/hot666666/Slopad/issues/37).
 
 ### Decisions fixed for this epic
 
@@ -49,9 +52,9 @@ These are settled. Sub-issues implement them rather than re-opening them.
 - `DocumentSchema` / `BlockSpec` / `MarkSpec` — `Document+Invariants.swift` already
   enforces the listed checks, and extension blocks have no first consumer.
 - Persistence source-of-truth choice — the round-trip criterion is now fixed by
-  [ADR 0013](../ADR/0013-markdown-format-boundary.md), which rules out Markdown alone
-  because `BlockID`s do not survive it. The remaining choice between a native archive and a
-  hybrid needs its own ADR.
+  [ADR 0013](../ADR/0013-markdown-format-boundary.md). Markdown does not preserve
+  `BlockID`s or source spelling; a later persistence ADR must decide whether to accept that
+  discontinuity or choose a native archive or hybrid/sidecar.
 - HTML artifact blocks, image/table blocks — consuming-product requirements that cannot be
   expressed as engine-verifiable completion criteria.
 
@@ -125,8 +128,11 @@ These are settled. Sub-issues implement them rather than re-opening them.
 - The editing model already supports block split/merge, indent/outdent, block movement,
   block kind changes, todo toggling, snapshot-based undo/redo with a bounded budget, and
   markdown prefix shortcuts for common block kinds.
-- The inline content model already stores bold, italic, code, and link marks, and the
-  TextKit backend consumes inline runs for measurement and rendering.
+- The inline content model stores `strong`, `emphasis`, `code`, `strikethrough`, and `link`
+  marks; legacy `bold`/`italic` spellings decode to the format-neutral names. Public Session
+  commands toggle or clear them for a selection, caret-only styles live in transient
+  `EditorState.storedMarks`, and the TextKit backend consumes the resulting inline runs for
+  measurement and rendering.
 - The AppKit UI benchmark harness covers scroll, native insert, composition, height
   expansion, block selection, block reorder, mixed interaction, subtree delete, and
   subtree reorder plus runtime style replacement and Unicode navigation at
@@ -144,16 +150,10 @@ needed before a host app can use the engine as a Notion/Craft-style editor surfa
   chrome/style customization, engine input contract, or a separate custom adapter need.
 - Clipboard support is currently plain text. Structured block copy/paste, rich inline
   paste, and format negotiation with platform pasteboards are not yet modeled.
-- Inline marks exist in the canonical model and TextKit rendering path, but there is no
-  public `EditorInputEvent` command surface for toolbar/menu shortcuts such as bold,
-  italic, code, link edit, or clear formatting. The consequence is stronger than a missing
-  convenience: `applyTextStyle` and `clearTextStyles` are reachable only from tests, so no
-  inline mark is ever created during editing. Marks enter a document only through the
-  initial `[EditorBlockInput]`. This blocks Markdown inline input rules, so it is the first
-  item of the active epic ([#25](https://github.com/hot666666/Slopad/issues/25)).
-- `BlockContent.InlineMark.Kind` carries four cases (`bold`, `italic`, `code`, `link`).
-  `strikethrough` is absent even though GFM and the planned input rules need it, and the
-  two presentational names conflict with the format-neutral vocabulary rule (D7).
+- Session input now exposes `toggleInlineStyle` and `clearInlineStyles`, including the real
+  AppKit `replaceText` path, and caret-only `storedMarks` apply to the next insertion. Default
+  product chrome still has no toolbar/menu/slash discovery UI for those commands;
+  [#33](https://github.com/hot666666/Slopad/issues/33) owns the slash-command part only.
 - Physical character and linguistic word navigation now use the text backend, but native
   soft-line beginning/end commands still resolve to logical block start/end. A complete
   bidi insertion contract must also decide whether a backend secondary insertion location
@@ -169,7 +169,9 @@ needed before a host app can use the engine as a Notion/Craft-style editor surfa
 
 ## Next Direction
 
-Priority order:
+These are long-range capability buckets, not the active issue queue. While epic #23 is open,
+its dependency order in [Active Epic](#active-epic) controls execution; the current
+integration sequence takes #30 before dependency-ready #33.
 
 - P0 - AppKit integration contract hardening
   - Stabilize the reusable AppKit host surface before adding large product features.
@@ -209,29 +211,32 @@ Priority order:
   - Completion signal: each user-visible block selection transition has a Session test and
     a real AppKit verification path.
 
-- P2 - Product command surface for block transforms and inline formatting
-  - Tracked by the active epic: [#25](https://github.com/hot666666/Slopad/issues/25),
-    [#26](https://github.com/hot666666/Slopad/issues/26),
-    [#27](https://github.com/hot666666/Slopad/issues/27). Promoted ahead of P0/P1 work
-    because nothing else in the inline path can proceed without it.
-  - Add host-facing input events for block kind transform, todo toggling, inline mark
-    toggle/application, link editing, code styling, and clear formatting.
-  - Reuse the existing canonical `BlockKind`, `BlockContent.InlineMark`, and `EditorModel`
-    command owners instead of exposing `EditorModel` directly.
-  - Completion signal: toolbar/menu/slash-command style hosts can express product editing
-    commands only through `EditorSession` input values.
+- P2 - Product command surface and slash discovery
+  - Inline formatting reachability, caret `storedMarks`, and the command vocabulary split
+    are complete in [#25](https://github.com/hot666666/Slopad/issues/25) through
+    [#27](https://github.com/hot666666/Slopad/issues/27).
+  - [#33](https://github.com/hot666666/Slopad/issues/33) adds the remaining slash-only
+    command catalog and AppKit menu for block transforms. Toolbar UI and generalized
+    suggestion triggers remain outside that issue.
+  - Keep canonical `BlockKind`, `BlockContent.InlineMark`, and `EditorModel` command owners;
+    product UI selects commands and routes them through `EditorSession` rather than owning
+    mutation semantics.
+  - Completion signal: the slash menu applies a block command as one transaction and one undo
+    without exposing `EditorModel` or storing suggestion UI state canonically.
 
 - P3 - Structured paste and Markdown import/export
   - The dependency boundary and the round-trip guarantee are settled in
     [ADR 0013](../ADR/0013-markdown-format-boundary.md): `swift-markdown` lives behind
-    `SlopadMarkdown` alone, building requires a Swift 6.2 or later toolchain, and round-trip
-    is semantic rather than byte-exact. `BlockID`s do not survive it, so Markdown is an
-    import/export format and cannot be the storage format on its own.
+    `SlopadMarkdown` alone, adding that dependency in #30 requires a Swift 6.2-or-later
+    toolchain, and round-trip is semantic rather than byte-exact. `BlockID`s do not survive
+    it; the later persistence ADR decides whether Markdown-only storage may accept that
+    discontinuity or needs a native archive or sidecar.
   - Keep markdown as import/export format and input shortcut syntax, not canonical state.
   - Add structured block paste before broad markdown import/export if product editing
     needs copy/paste workflows first.
-  - Preserve inline marks and block tree structure when the pasted/imported format can
-    carry them; fall back to plain text when it cannot.
+  - Preserve inline marks and block tree structure when Markdown can represent them. The
+    decoder fails closed with typed diagnostics for unsupported constructs; choosing a
+    separate plain-text paste fallback is caller policy, not a lossy decoder behavior.
   - Completion signal: paste/import behavior round-trips through canonical `Document` and
     has focused engine tests plus AppKit pasteboard coverage.
 
