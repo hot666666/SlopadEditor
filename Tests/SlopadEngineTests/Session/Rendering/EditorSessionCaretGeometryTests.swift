@@ -102,6 +102,30 @@ struct EditorSessionCaretGeometryTests {
         #expect(counting.caretRectCalls == 1)
     }
 
+    @Test("백엔드를 교체하면 기하를 다시 계산한다")
+    func recomputesAfterBackendReplacement() {
+        // Given: 스타일 교체는 글리프 지표를 바꾸면서 텍스트·폭·깊이·선택·caret 위치는
+        // 그대로 둘 수 있다. 메모 키는 "무엇을 물었는가"만 담고 "누가 답했는가"는 담지
+        // 못하므로, 교체 시 버리지 않으면 이전 폰트로 잰 사각형을 계속 돌려준다.
+        let first = CountingGeometryLayouter()
+        let blockID: BlockID = "block"
+        let session = EditorSession(
+            blocks: [EditorBlockInput(id: blockID, content: BlockContent(text: "Body text"))],
+            selection: .caret(blockID: blockID, offset: 0),
+            textLayouter: first
+        )
+        _ = session.render(in: viewport)
+        #expect(first.caretRectCalls == 1)
+
+        // When: 키에 들어가는 값은 하나도 바꾸지 않고 백엔드만 갈아끼운다.
+        let second = CountingGeometryLayouter()
+        session.replaceTextLayoutBackend(with: second)
+        _ = session.render(in: viewport)
+
+        // Then
+        #expect(second.caretRectCalls == 1)
+    }
+
     @Test("선택이 바뀌면 기하를 다시 계산한다")
     func recomputesWhenTheSelectionChanges() {
         // Given
