@@ -123,7 +123,8 @@ flowchart TB
         DataStructure["SlopadDataStructure<br/>pure storage"]
     end
 
-    subgraph Format["Opt-in Format Adapter"]
+    subgraph Format["Markdown Syntax and Opt-in Format Adapter"]
+        MarkdownInputRules["SlopadMarkdownInputRules<br/>bounded typed-input pattern data"]
         MarkdownAdapter["SlopadMarkdown<br/>stateless fail-closed decode"]
         SwiftMarkdown["swift-markdown 0.8.0<br/>parser AST"]
     end
@@ -138,6 +139,7 @@ flowchart TB
     Engine --> CoreModel
 
     EditorModel --> CoreModel
+    EditorModel --> MarkdownInputRules
     BlockLayout --> CoreModel
     BlockLayout --> DataStructure
     AppKitTextKit --> CoreModel
@@ -158,8 +160,9 @@ downstream fixtures are outer-edge consumers and are omitted from the production
 | Engine Layer      | `SlopadEngine`        | Host-facing `EditorSession` facade. It accepts native-independent input, composes semantic and layout owners, and returns render, hit-test, reveal, and redraw facts. |
 | Engine Layer      | `SlopadEditorModel`   | Canonical document, selection, command, transaction, history, and semantic change owner.                                                                              |
 | Engine Layer      | `SlopadBlockLayout`   | Visible order, y/height geometry, invalidation, reveal/hit-test geometry, marker projection, text-layout cache, and block height index owner.                         |
+| Format Syntax     | `SlopadMarkdownInputRules` | Internal non-product target holding immutable bounded Markdown typed-input patterns. The editor model owns trigger gating, matching execution, and atomic application. |
 | Format Adapter    | `SlopadMarkdown`      | Opt-in stateless Markdown decode into fresh `[EditorBlockInput]` values; parser AST types remain internal and unsupported syntax produces typed diagnostics.         |
-| Foundation & Data | `SlopadCoreModel`     | Shared public vocabulary, canonical `Document`/`Block` values, and backend seam values such as `BlockTextLayoutProtocol`.                                             |
+| Foundation & Data | `SlopadCoreModel`     | Shared public vocabulary, canonical `Document`/`Block` values, backend seam values such as `BlockTextLayoutProtocol`, and narrow package-only cross-target rule-effect values.                                             |
 | Foundation & Data | `SlopadDataStructure` | Pure storage such as `PrefixSumRedBlackTree`, with no editor, layout, or platform vocabulary.                                                                         |
 
 `SlopadEditorModel` and `SlopadBlockLayout` do not import each other. `EditorSession`
@@ -355,6 +358,14 @@ by canonical block identity. `decode(encode(blocks))` preserves canonical tree/c
 semantics while creating fresh IDs. Strong emits `**`; emphasis prefers `_` and uses a
 deterministic `*` fallback only where CommonMark delimiter parsing would lose semantics.
 `Markdown` parser AST types never cross the product boundary.
+
+Typing shortcuts are different from conversion: the ordinary editor links the internal
+`SlopadMarkdownInputRules` target, which has no parser dependency and checks only a bounded
+candidate after a closing-character gate. It supplies prefix and inline (`**strong**`,
+`_emphasis_`, `` `code` ``, `~~strike~~`, `[label](url)`) pattern data; the editor model
+owns the transaction and undo semantics. This does not make the `SlopadMarkdown` codec a
+required host product. An unmatched backtick opener stays literal and suppresses other inline
+shortcuts until an equal-length closing run completes the code span.
 
 ## Development Targets
 

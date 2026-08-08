@@ -2,8 +2,51 @@
 
 extension BlockContent {
     package mutating func insert(_ insertedText: String, at offset: Int) {
+        insert(insertedText, at: offset, capturingInputRuleCandidateWithMaximumLookback: nil)
+    }
+
+    /// Inserts text while its pre-mutation String index is still valid and, only on the
+    /// caller's trigger path, captures the bounded candidate an input rule may inspect.
+    /// This deliberately forms the candidate before `String` mutation: a String index may
+    /// be invalidated by insertion, and recovering it from `startIndex` would make a
+    /// triggered mid-paragraph edit proportional to paragraph length.
+    @discardableResult
+    package mutating func insert(
+        _ insertedText: String,
+        at offset: Int,
+        capturingInputRuleCandidateWithMaximumLookback maximumLookback: Int?
+    ) -> EditorInputRuleCandidate? {
         let offset = TextRange.point(offset).clamped(to: text.count).lowerBound
         let index = text.indexAtGraphemeOffset(offset)
+        let candidate: EditorInputRuleCandidate?
+        if let maximumLookback {
+            // The bound counts every grapheme before the caret, including a committed IME
+            // string. Keep only its suffix so even a large replacement cannot turn a
+            // closing-character trigger into a paragraph-sized matcher input.
+            var insertedLowerIndex = insertedText.endIndex
+            var insertedCount = 0
+            while insertedLowerIndex > insertedText.startIndex, insertedCount < maximumLookback {
+                insertedLowerIndex = insertedText.index(before: insertedLowerIndex)
+                insertedCount += 1
+            }
+            let insertedSuffix = String(insertedText[insertedLowerIndex...])
+            var lowerIndex = index
+            var lookbackCount = 0
+            while lowerIndex > text.startIndex, lookbackCount + insertedCount < maximumLookback {
+                lowerIndex = text.index(before: lowerIndex)
+                lookbackCount += 1
+            }
+            let leadingText = String(text[lowerIndex..<index])
+            let trailingIndex = index < text.endIndex ? text.index(after: index) : index
+            let trailingText = String(text[index..<trailingIndex])
+            candidate = EditorInputRuleCandidate(
+                text: leadingText + insertedSuffix + trailingText,
+                caretOffset: leadingText.count + insertedCount,
+                baseOffset: offset + insertedText.count - leadingText.count - insertedCount
+            )
+        } else {
+            candidate = nil
+        }
         text.insert(contentsOf: insertedText, at: index)
         let delta = insertedText.count
         marks = marks.compactMap { mark in
@@ -17,6 +60,7 @@ extension BlockContent {
         }
         normalizeMarks()
         revision += 1
+        return candidate
     }
 
     package mutating func delete(_ range: TextRange) {

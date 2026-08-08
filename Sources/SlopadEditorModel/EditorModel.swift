@@ -1,4 +1,5 @@
 import SlopadCoreModel
+import SlopadMarkdownInputRules
 
 // MARK: - EditorModel
 
@@ -14,6 +15,9 @@ package final class EditorModel {
     let undoConfiguration: EditorUndoConfiguration
     var undoStack: [EditorTransaction]
     var redoStack: [EditorTransaction]
+    /// Runtime-owned bounded matcher. The patterns are injected as immutable data from the
+    /// lightweight Markdown syntax target; the model keeps transaction semantics local.
+    let inputRuleRunner: EditorInputRuleRunner
 
     package convenience init(
         document: Document,
@@ -32,6 +36,7 @@ package final class EditorModel {
         undoConfiguration: EditorUndoConfiguration = EditorUndoConfiguration()
     ) {
         self.undoConfiguration = undoConfiguration
+        self.inputRuleRunner = EditorInputRuleRunner(rules: MarkdownInputRules.all)
         if let selection {
             state = EditorState(document: document, selection: selection)
         } else if let firstID = document.rootBlockIDs.first {

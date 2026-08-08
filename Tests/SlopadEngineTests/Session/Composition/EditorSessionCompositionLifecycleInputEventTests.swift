@@ -5,6 +5,37 @@ import SlopadCoreModel
 
 @Suite("에디터 세션 조합 lifecycle 입력 이벤트")
 struct EditorSessionCompositionLifecycleInputEventTests {
+    @Test("조합 중에는 inline 규칙을 실행하지 않고 확정 때 한 번 적용한다")
+    func defersInlineRuleUntilCompositionCommit() throws {
+        // Given
+        let blockID: BlockID = "inline-composition"
+        let session = EditorSession(document: .singleParagraph("", id: blockID))
+
+        // When
+        _ = try #require(session.handleInput(
+            .beginComposition(
+                blockID: blockID,
+                replacementRange: TextRange.point(0),
+                text: "**bold**"
+            )
+        ))
+
+        // Then
+        #expect(session.document.block(blockID)?.content == BlockContent())
+        #expect(session.composition?.text == "**bold**")
+
+        // When
+        let update = try #require(session.handleInput(.commitComposition))
+
+        // Then
+        #expect(session.document.block(blockID)?.content == BlockContent(
+            text: "bold",
+            marks: [BlockContent.InlineMark(kind: .strong, range: TextRange(0, 4))]
+        ))
+        #expect(update.selection == .caret(blockID: blockID, offset: 4))
+        #expect(session.composition == nil)
+    }
+
     @Test("조합 입력 이벤트는 런타임 활성 입력 상태의 조합으로 반영된다")
     func handlesCompositionInputEvents() throws {
         // Given

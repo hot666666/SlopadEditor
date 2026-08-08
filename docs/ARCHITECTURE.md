@@ -36,7 +36,8 @@ flowchart TB
         DataStructure["SlopadDataStructure<br/>pure storage"]
     end
 
-    subgraph Format["Opt-in Format Adapter"]
+    subgraph Format["Markdown Syntax and Opt-in Format Adapter"]
+        MarkdownInputRules["SlopadMarkdownInputRules<br/>bounded typed-input pattern data"]
         MarkdownAdapter["SlopadMarkdown<br/>stateless decode"]
         SwiftMarkdown["swift-markdown 0.8.0<br/>parser AST"]
     end
@@ -51,6 +52,7 @@ flowchart TB
     Engine --> CoreModel
 
     EditorModel --> CoreModel
+    EditorModel --> MarkdownInputRules
     BlockLayout --> CoreModel
     BlockLayout --> DataStructure
     AppKitTextKit --> CoreModel
@@ -71,6 +73,9 @@ The graph is also a design constraint:
 - `SlopadAppKitUI` is the runtime integration point for the default macOS path.
 - `SlopadAppKit` is the recommended ordinary host product/import. It curates the default
   AppKit stack without becoming another runtime or semantic owner.
+- `SlopadMarkdownInputRules` is an internal, non-product target. It holds only immutable
+  Markdown prefix/inline pattern data and emits package-only canonical rule effects;
+  `SlopadEditorModel` owns the bounded trigger runner and atomic transaction application.
 - `SlopadMarkdown` depends on `SlopadCoreModel` and the external parser only. It does not
   depend on `SlopadEngine`; hosts decide when decoded values enter a Session transaction.
 
@@ -90,6 +95,12 @@ Tests also consume the target that owns the behavior under test. Their folder st
 mirrors responsibility rather than production file symmetry.
 
 ## Markdown Format Boundary
+
+Markdown has two deliberately different integration points. `SlopadMarkdownInputRules` is
+linked into the ordinary editor path because typed shortcuts need no parser and evaluate only
+a bounded candidate after a closing-character gate. It is not a product, registry, or codec:
+it cannot parse a whole document and imports no `Markdown` AST. `SlopadMarkdown` remains the
+separate opt-in product for explicit whole-document import/export below.
 
 `SlopadMarkdown` is an opt-in format product, not an engine owner and not a plugin
 registry. Its call site is deliberately small and synchronous:
