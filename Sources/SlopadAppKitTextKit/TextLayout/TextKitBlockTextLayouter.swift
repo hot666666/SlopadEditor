@@ -10,6 +10,19 @@ public struct TextKitBlockTextLayouter: BlockTextLayoutProtocol, Sendable {
         self.init(style: style, layoutContext: TextKitLayoutContext())
     }
 
+    #if SLOPAD_BENCHMARK_INSTRUMENTATION
+        /// Backend-side counters for #37: how often a layout was prepared, and how often that
+        /// required rebuilding the attributed string.
+        public static var preparedLayoutCounts: (prepares: Int, attributedStringBuilds: Int) {
+            (TextKitLayoutContext.prepareLayoutCallCount,
+             TextKitLayoutContext.attributedStringBuildCount)
+        }
+
+        public static func resetPreparedLayoutCounts() {
+            TextKitLayoutContext.resetInstrumentation()
+        }
+    #endif
+
     public func measure(_ request: BlockMeasureRequest) -> BlockMeasurement {
         let baseFont = TextKitAttributedStringBuilder.baseFont(for: request.kind, style: style)
         let metrics = TextKitBlockChromeMetrics.metrics(for: request.kind)
