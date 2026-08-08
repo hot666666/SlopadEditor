@@ -6,7 +6,7 @@ import SlopadEngine
 /// AppKit presentation for the fixed slash-command vocabulary.
 ///
 /// It holds only ephemeral presentation state (frame and highlighted row). The command and
-/// source revision remain Engine values, and selecting a row merely reports that identity to
+/// opaque source token remain Engine values, and selecting a row merely reports that identity to
 /// the controller; it never owns document mutation semantics.
 @MainActor
 final class AppKitSlashCommandOverlay: NSView {
@@ -25,7 +25,7 @@ final class AppKitSlashCommandOverlay: NSView {
     private var displayedCommands: [EditorSlashCommand] = []
     private var highlightedIndex = 0
     private var rowButtons: [RowButton] = []
-    var onCommandRequested: ((EditorSlashCommand, EditorDocumentRevision) -> Void)?
+    var onCommandRequested: ((EditorSlashCommand, EditorSlashCommandSource) -> Void)?
     var onDismissRequested: (() -> Void)?
 
     override var isFlipped: Bool { true }
@@ -179,6 +179,6 @@ final class AppKitSlashCommandOverlay: NSView {
             presentation.commands.indices.contains(highlightedIndex)
         else { return }
         let command = presentation.commands[highlightedIndex]
-        onCommandRequested?(command, presentation.sourceRevision)
+        onCommandRequested?(command, presentation.source)
     }
 }

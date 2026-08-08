@@ -5,30 +5,36 @@ import SlopadEditorModel
 
 extension EditorSession {
     struct SlashCommandRuntime: Equatable {
-        let blockID: BlockID
-        let triggerRange: TextRange
-        let queryRange: TextRange
+        let source: EditorSlashCommandSource
         let query: String
-        let sourceRevision: EditorDocumentRevision
+
+        var blockID: BlockID { source.blockID }
+        var triggerRange: TextRange { source.triggerRange }
+        var queryRange: TextRange { source.queryRange }
 
         var commands: [EditorSlashCommand] {
             EditorSlashCommand.allCases.filter { $0.matches(query: query) }
         }
     }
 
-    /// Applies the selected slash command only if the rendered query still names the current
-    /// document revision. Removing the source query and converting the block are recorded as
-    /// one editor-model transaction, so one undo restores the exact `/query` text.
+    /// Applies the selected slash command only if the opaque rendered source still names the
+    /// exact Session, canonical document, selection, block, and trigger/query ranges. Removing
+    /// the source query and converting the block are recorded as one editor-model transaction,
+    /// so one undo restores the exact `/query` text and prior block kind.
     @discardableResult
     package func applySlashCommand(
         _ command: EditorSlashCommand,
-        sourceRevision: EditorDocumentRevision
+        source: EditorSlashCommandSource
     ) -> EditorUpdate? {
         guard
             composition == nil,
             let runtime = slashCommandRuntime,
-            runtime.sourceRevision == sourceRevision,
-            currentDocumentRevision == sourceRevision,
+            source.sessionEpoch == sessionEpoch,
+            source.revision == currentDocumentRevision,
+            source.selection == editorModel.selection,
+            source.blockID == runtime.blockID,
+            source.triggerRange == runtime.triggerRange,
+            source.queryRange == runtime.queryRange,
             runtime.commands.contains(command)
         else {
             slashCommandRuntime = nil
@@ -115,11 +121,15 @@ extension EditorSession {
             return
         }
         slashCommandRuntime = SlashCommandRuntime(
-            blockID: trigger.blockID,
-            triggerRange: trigger.triggerRange,
-            queryRange: TextRange(trigger.triggerRange.upperBound, position.offset),
-            query: "",
-            sourceRevision: sourceRevision
+            source: EditorSlashCommandSource(
+                sessionEpoch: sessionEpoch,
+                revision: sourceRevision,
+                selection: editorModel.selection,
+                blockID: trigger.blockID,
+                triggerRange: trigger.triggerRange,
+                queryRange: TextRange(trigger.triggerRange.upperBound, position.offset)
+            ),
+            query: ""
         )
     }
 
@@ -155,11 +165,15 @@ extension EditorSession {
         }
 
         slashCommandRuntime = SlashCommandRuntime(
-            blockID: position.blockID,
-            triggerRange: runtime.triggerRange,
-            queryRange: TextRange(queryStart, position.offset),
-            query: query,
-            sourceRevision: sourceRevision ?? runtime.sourceRevision
+            source: EditorSlashCommandSource(
+                sessionEpoch: sessionEpoch,
+                revision: sourceRevision ?? runtime.source.revision,
+                selection: editorModel.selection,
+                blockID: position.blockID,
+                triggerRange: runtime.triggerRange,
+                queryRange: TextRange(queryStart, position.offset)
+            ),
+            query: query
         )
     }
 
@@ -168,7 +182,9 @@ extension EditorSession {
     ) -> EditorSlashCommandPresentation? {
         guard
             let runtime = slashCommandRuntime,
-            runtime.sourceRevision == currentDocumentRevision
+            runtime.source.sessionEpoch == sessionEpoch,
+            runtime.source.revision == currentDocumentRevision,
+            runtime.source.selection == editorModel.selection
         else {
             slashCommandRuntime = nil
             return nil
@@ -185,7 +201,7 @@ extension EditorSession {
             triggerRange: runtime.triggerRange,
             queryRange: runtime.queryRange,
             query: runtime.query,
-            sourceRevision: runtime.sourceRevision,
+            source: runtime.source,
             anchor: anchor,
             commands: runtime.commands
         )

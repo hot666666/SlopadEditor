@@ -227,8 +227,8 @@ public final class AppKitEditorViewController: NSViewController {
     private lazy var activeInputController = AppKitActiveInputController(owner: self)
     private lazy var slashCommandOverlay: AppKitSlashCommandOverlay = {
         let overlay = AppKitSlashCommandOverlay(frame: .zero)
-        overlay.onCommandRequested = { [weak self] command, sourceRevision in
-            self?.selectSlashCommand(command, sourceRevision: sourceRevision)
+        overlay.onCommandRequested = { [weak self] command, source in
+            self?.selectSlashCommand(command, source: source)
         }
         overlay.onDismissRequested = { [weak self] in
             self?.session.dismissSlashCommand()
@@ -1214,13 +1214,13 @@ extension AppKitEditorViewController {
         )
     }
 
-    /// The overlay only chooses a catalog value. Session validates the source revision and
-    /// owns the query removal plus block conversion transaction.
+    /// The overlay only chooses a catalog value. Session validates the opaque source and owns
+    /// the query removal plus block conversion transaction.
     private func selectSlashCommand(
         _ command: EditorSlashCommand,
-        sourceRevision: EditorDocumentRevision
+        source: EditorSlashCommandSource
     ) {
-        guard let update = session.applySlashCommand(command, sourceRevision: sourceRevision)
+        guard let update = session.applySlashCommand(command, source: source)
         else {
             slashCommandOverlay.dismiss()
             return

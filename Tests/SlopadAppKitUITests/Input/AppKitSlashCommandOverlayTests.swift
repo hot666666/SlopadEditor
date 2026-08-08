@@ -64,6 +64,35 @@ struct AppKitSlashCommandOverlayTests {
         #expect(context.controller.documentSnapshot.blocks.first?.kind == .heading(level: .h1))
         #expect(context.window.firstResponder === context.controller.canvasView)
     }
+
+    @Test("document reset은 이전 slash menu를 닫고 새 Session을 변환하지 않는다")
+    func resetDismissesStaleMenu() {
+        // Given
+        let context = SlashContext()
+        context.typeSlashQuery("hea")
+        let previousEpoch = context.controller.documentSnapshot.epoch
+        #expect(context.controller.isSlashCommandMenuPresented)
+
+        // When
+        context.controller.resetDocument(
+            blocks: [
+                EditorBlockInput(
+                    id: context.blockID,
+                    content: BlockContent(text: "/hea")
+                )
+            ],
+            selection: .caret(blockID: context.blockID, offset: 4)
+        )
+
+        // Then
+        #expect(context.controller.documentSnapshot.epoch != previousEpoch)
+        #expect(context.controller.documentSnapshot.revision.rawValue == 0)
+        #expect(context.controller.documentSnapshot.blocks.first?.content.text == "/hea")
+        #expect(context.controller.documentSnapshot.blocks.first?.kind == .paragraph)
+        #expect(context.controller.snapshot?.history.canUndo == false)
+        #expect(context.controller.snapshot?.slashCommand == nil)
+        #expect(!context.controller.isSlashCommandMenuPresented)
+    }
 }
 
 @MainActor
