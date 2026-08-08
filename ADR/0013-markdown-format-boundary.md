@@ -138,8 +138,11 @@ share without allowing a `zip` to ignore a trailing block.
 What this permits, deliberately:
 
 - `**bold**` and `__bold__` both decode to `.strong`; the encoder always emits `**bold**`.
-  `.emphasis` similarly emits `_emphasis_`. A user's delimiter choice is not preserved, and
-  the same canonical document always chooses the same delimiters.
+  `.emphasis` prefers `_emphasis_`. When CommonMark delimiter rules would reinterpret that
+  underscore spelling at a nested delimiter seam or an adjacent Unicode boundary, the
+  encoder deterministically falls back to `*emphasis*`; it never emits a spelling that loses
+  semantic content on decode. A user's delimiter choice is not preserved, and the same
+  canonical document always chooses the same delimiters.
 - Source-syntax whitespace that is not represented in `BlockContent.text`, plus list-marker
   and heading-marker style, may normalize. Every whitespace character that is part of
   canonical text is significant and compares exactly.

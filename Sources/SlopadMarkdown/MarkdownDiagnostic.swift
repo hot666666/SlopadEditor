@@ -1,3 +1,5 @@
+import SlopadCoreModel
+
 /// A position in Markdown source text.
 ///
 /// Lines and UTF-8 byte columns are both one-based.
@@ -69,6 +71,57 @@ public struct MarkdownDecodingError: Error, Hashable, Sendable {
 
     init(diagnostics: [MarkdownDiagnostic]) {
         precondition(!diagnostics.isEmpty, "A decoding error requires a diagnostic")
+        self.diagnostics = diagnostics
+    }
+}
+
+/// One fail-closed Markdown encoding diagnostic.
+///
+/// Markdown output does not exist when encoding fails, so diagnostics identify canonical
+/// input by block identity rather than by a source-text range.
+public struct MarkdownEncodingDiagnostic: Hashable, Sendable {
+    /// The typed reason encoding cannot produce a lossless Markdown value.
+    public enum Kind: Hashable, Sendable {
+        case emptyDocument
+        case duplicateBlockID
+        case missingParent
+        case cycle
+        case noncanonicalDepthFirstOrder
+        case unsupportedChildHierarchy
+        case excessiveNesting(maximumDepth: Int)
+        case noncanonicalInlineMarks
+        case crossingInlineMarks
+        case intersectingLinks
+        case unsupportedInlineCodeNesting
+        case inlineCodeContainsLineBreak
+        case unrepresentableText
+        case nonemptyDivider
+        case inlineMarksInCodeBlock
+        case codeBlockRequiresTrailingLineBreak
+        case invalidCodeBlockLanguage
+        case invalidOrderedListRestart
+        case invalidLinkDestination
+        case ambiguousEmptyContainer
+        case unrepresentableEmptyParagraph
+    }
+
+    public let kind: Kind
+    public let blockID: BlockID?
+
+    init(kind: Kind, blockID: BlockID?) {
+        self.kind = kind
+        self.blockID = blockID
+    }
+}
+
+/// An all-or-nothing Markdown encoding failure.
+///
+/// `diagnostics` is guaranteed to be nonempty and ordered by canonical input occurrence.
+public struct MarkdownEncodingError: Error, Hashable, Sendable {
+    public let diagnostics: [MarkdownEncodingDiagnostic]
+
+    init(diagnostics: [MarkdownEncodingDiagnostic]) {
+        precondition(!diagnostics.isEmpty, "An encoding error requires a diagnostic")
         self.diagnostics = diagnostics
     }
 }
