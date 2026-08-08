@@ -87,6 +87,10 @@ public final class EditorSession {
     var textSelectionDragAnchor: TextPosition?
     var textDoubleClickSelection: (blockID: BlockID, wordRange: TextRange)?
     var textNavigationRuntimeContext: EditorSessionTextNavigationRuntimeContext?
+    /// Runtime interpretation of an ordinary leading `/query`; never canonical document
+    /// state and never part of editor history.
+    var slashCommandRuntime: SlashCommandRuntime?
+    var pendingSlashCommandTrigger: (blockID: BlockID, triggerRange: TextRange)?
     private var compositionRevisionCounter: Int
     /// Identity of this Session instance. Serves both the persistence path
     /// (`EditorDocumentSnapshot`, `EditorUpdate`) and the patch CAS token
@@ -116,6 +120,8 @@ public final class EditorSession {
         self.textSelectionDragAnchor = nil
         self.textDoubleClickSelection = nil
         self.textNavigationRuntimeContext = nil
+        self.slashCommandRuntime = nil
+        self.pendingSlashCommandTrigger = nil
         self.compositionRevisionCounter = 0
         self.sessionEpoch = EditorSessionEpoch()
         self.documentChangeRevision = 0

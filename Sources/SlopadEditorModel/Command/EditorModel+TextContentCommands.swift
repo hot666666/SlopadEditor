@@ -32,6 +32,7 @@ extension EditorModel {
             let offset = position.offset
             let armedMarks = state.storedMarks
             let shouldCaptureInputCandidate = inputRuleRunner.mayMatch(committedText: text)
+                || text == "/"
             var inputRuleCandidate: EditorInputRuleCandidate?
             try requireDocumentMutationSuccess(
                 state.document.updateContent(blockID: blockID) { content in
@@ -39,7 +40,10 @@ extension EditorModel {
                         text,
                         at: offset,
                         capturingInputRuleCandidateWithMaximumLookback: shouldCaptureInputCandidate
-                            ? inputRuleRunner.maximumCandidateLookback : nil
+                            ? max(
+                                inputRuleRunner.maximumCandidateLookback,
+                                SlashCommandInputRule.maximumCandidateLookback
+                            ) : nil
                     )
                     Self.applyStoredMarks(armedMarks, to: &content, over: offset, length: text.count)
                 })
@@ -60,6 +64,7 @@ extension EditorModel {
             guard state.document.containsBlock(blockID) else { throw .abort }
             let armedMarks = state.storedMarks
             let shouldCaptureInputCandidate = inputRuleRunner.mayMatch(committedText: text)
+                || text == "/"
             var inputRuleCandidate: EditorInputRuleCandidate?
             try requireDocumentMutationSuccess(
                 state.document.updateContent(blockID: blockID) { content in
@@ -68,7 +73,10 @@ extension EditorModel {
                         text,
                         at: range.lowerBound,
                         capturingInputRuleCandidateWithMaximumLookback: shouldCaptureInputCandidate
-                            ? inputRuleRunner.maximumCandidateLookback : nil
+                            ? max(
+                                inputRuleRunner.maximumCandidateLookback,
+                                SlashCommandInputRule.maximumCandidateLookback
+                            ) : nil
                     )
                     Self.applyStoredMarks(
                         armedMarks, to: &content, over: range.lowerBound, length: text.count)
@@ -100,6 +108,7 @@ extension EditorModel {
         // through `insertText`, where the pasted string is likewise evaluated once.
         let armedMarks = state.storedMarks
         let shouldCaptureInputCandidate = inputRuleRunner.mayMatch(committedText: text)
+            || text == "/"
         var inputRuleCandidate: EditorInputRuleCandidate?
         try requireDocumentMutationSuccess(
             state.document.updateContent(blockID: blockID) { content in
@@ -108,7 +117,10 @@ extension EditorModel {
                     text,
                     at: range.lowerBound,
                     capturingInputRuleCandidateWithMaximumLookback: shouldCaptureInputCandidate
-                        ? inputRuleRunner.maximumCandidateLookback : nil
+                        ? max(
+                            inputRuleRunner.maximumCandidateLookback,
+                            SlashCommandInputRule.maximumCandidateLookback
+                        ) : nil
                 )
                 Self.applyStoredMarks(
                     armedMarks, to: &content, over: range.lowerBound, length: text.count)

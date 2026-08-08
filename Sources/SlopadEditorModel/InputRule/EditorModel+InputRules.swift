@@ -19,15 +19,11 @@ extension EditorModel {
         guard let block = document.block(blockID), block.kind.acceptsInputRules,
             let candidate
         else { return }
-        guard
-            let effect = inputRuleRunner.effect(
-                committedText: committedText,
-                candidate: candidate
-            )
+        guard let outcome = inputRuleOutcome(committedText: committedText, candidate: candidate)
         else { return }
 
-        switch effect {
-        case .convertBlock(let removing, let kind):
+        switch outcome {
+        case .canonical(.convertBlock(let removing, let kind)):
             try requireDocumentMutationSuccess(
                 state.document.updateContent(blockID: blockID) { content in
                     content.delete(removing)
@@ -41,7 +37,7 @@ extension EditorModel {
             operations.append(.refreshMarker)
             changed.insert(blockID)
 
-        case .applyInline(let marks, let removals, let marked):
+        case .canonical(.applyInline(let marks, let removals, let marked)):
             guard isValidInlineEffect(removals: removals, marked: marked, in: block.content) else {
                 throw .abort
             }
@@ -61,7 +57,31 @@ extension EditorModel {
             state.selection = .caret(blockID: blockID, offset: mappedMarkRange.upperBound)
             changed.insert(blockID)
 
+        case .slashTrigger(let triggerRange):
+            guard
+                triggerRange == TextRange(0, 1),
+                block.content.text == "/"
+            else {
+                throw .abort
+            }
+            operations.append(.openSlashCommand(blockID: blockID, triggerRange: triggerRange))
+
         }
+    }
+
+    private func inputRuleOutcome(
+        committedText: String,
+        candidate: EditorInputRuleCandidate?
+    ) -> EditorModelInputRuleOutcome? {
+        guard let candidate else { return nil }
+        if let triggerRange = SlashCommandInputRule.triggerRange(
+            committedText: committedText,
+            candidate: candidate
+        ) {
+            return .slashTrigger(triggerRange: triggerRange)
+        }
+        return inputRuleRunner.effect(committedText: committedText, candidate: candidate)
+            .map(EditorModelInputRuleOutcome.canonical)
     }
 
     private func isValidInlineEffect(
