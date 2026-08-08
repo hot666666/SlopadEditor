@@ -69,18 +69,34 @@ package enum EditorSlashCommand: CaseIterable, Hashable, Sendable {
     }
 }
 
+// MARK: - EditorSlashCommandSource
+
+/// An opaque compare-and-apply token for one projected slash-command context.
+///
+/// The AppKit adapter carries this value from presentation to selection without reading
+/// its fields. Session creates and validates it because document identity, canonical
+/// revision, selection, and slash-query meaning all belong behind the Session boundary.
+package struct EditorSlashCommandSource: Hashable, Sendable {
+    let sessionEpoch: EditorSessionEpoch
+    let revision: EditorDocumentRevision
+    let selection: EditorSelection
+    let blockID: BlockID
+    let triggerRange: TextRange
+    let queryRange: TextRange
+}
+
 // MARK: - EditorSlashCommandPresentation
 
 /// Noncanonical slash-query data projected with a rendered snapshot.
 ///
-/// `sourceRevision` is the compare-and-swap token for choosing a command. The query itself
+/// `source` is the opaque compare-and-apply token for choosing a command. The query itself
 /// remains ordinary document text; this value is only Session runtime interpretation of it.
 package struct EditorSlashCommandPresentation: Hashable, Sendable {
     package let blockID: BlockID
     package let triggerRange: TextRange
     package let queryRange: TextRange
     package let query: String
-    package let sourceRevision: EditorDocumentRevision
+    package let source: EditorSlashCommandSource
     /// Caret geometry in document coordinates. It is absent when the active text block is
     /// outside this render snapshot, in which case a platform overlay must dismiss.
     package let anchor: EditorRect?
@@ -91,7 +107,7 @@ package struct EditorSlashCommandPresentation: Hashable, Sendable {
         triggerRange: TextRange,
         queryRange: TextRange,
         query: String,
-        sourceRevision: EditorDocumentRevision,
+        source: EditorSlashCommandSource,
         anchor: EditorRect?,
         commands: [EditorSlashCommand]
     ) {
@@ -99,7 +115,7 @@ package struct EditorSlashCommandPresentation: Hashable, Sendable {
         self.triggerRange = triggerRange
         self.queryRange = queryRange
         self.query = query
-        self.sourceRevision = sourceRevision
+        self.source = source
         self.anchor = anchor
         self.commands = commands
     }
