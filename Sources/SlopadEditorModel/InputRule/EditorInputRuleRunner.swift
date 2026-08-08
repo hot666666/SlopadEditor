@@ -46,13 +46,4 @@ package struct EditorInputRuleRunner {
         return nil
     }
 
-    /// Whether this character can close anything at all.
-    ///
-    /// Exposed so a caller can skip building a candidate string for the overwhelmingly
-    /// common case.
-    package func isTrigger(_ character: Character) -> Bool {
-        triggers.contains(character)
-    }
-
-    package var maximumScanLimit: Int { scanLimit }
 }

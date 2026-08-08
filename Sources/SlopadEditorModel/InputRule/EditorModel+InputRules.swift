@@ -3,6 +3,8 @@ import SlopadCoreModel
 // MARK: - EditorModel InputRules
 
 extension EditorModel {
+    /// Static because there is one rule set today. When rules become format-supplied per
+    /// document this has to become instance state — see #31.
     static let inputRuleRunner = EditorInputRuleRunner(rules: MarkdownBlockInputRules.all)
 
     /// Applies whatever the text just committed completed, if anything.
@@ -42,19 +44,6 @@ extension EditorModel {
             operations.append(.refreshMarker)
             changed.insert(blockID)
 
-        case .markInline(let replacing, let replacement, let mark):
-            try requireDocumentMutationSuccess(
-                state.document.updateContent(blockID: blockID) { content in
-                    content.delete(replacing)
-                    content.insert(replacement, at: replacing.lowerBound)
-                    content.addMark(
-                        kind: mark,
-                        range: TextRange(replacing.lowerBound, replacing.lowerBound + replacement.count)
-                    )
-                })
-            state.selection = .caret(
-                blockID: blockID, offset: replacing.lowerBound + replacement.count)
-            changed.insert(blockID)
         }
     }
 }

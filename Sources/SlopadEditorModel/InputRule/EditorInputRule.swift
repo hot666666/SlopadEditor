@@ -11,12 +11,6 @@ import SlopadCoreModel
 package enum EditorInputRuleEffect: Equatable {
     /// Remove the marker text and become a different kind of block. `# ` → heading.
     case convertBlock(removing: TextRange, to: BlockKind)
-
-    /// Remove the delimiters and mark what they surrounded. `**x**` → strong `x`.
-    ///
-    /// Unused until inline rules land, but declared now so the runner's contract does not
-    /// have to change to accept them.
-    case markInline(replacing: TextRange, with: String, mark: BlockContent.InlineMark.Kind)
 }
 
 // MARK: - EditorInputRule

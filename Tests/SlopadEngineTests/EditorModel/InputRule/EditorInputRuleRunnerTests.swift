@@ -102,7 +102,6 @@ struct EditorInputRuleRunnerTests {
 
         // Then
         #expect(effect == nil)
-        #expect(runner.maximumScanLimit < 400)
     }
 
     @Test("커밋된 텍스트의 마지막 문자만 본다")
