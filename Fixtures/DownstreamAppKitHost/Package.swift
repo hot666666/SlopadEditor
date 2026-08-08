@@ -8,7 +8,7 @@ let package = Package(
         .macOS(.v14)
     ],
     dependencies: [
-        .package(path: "../..")
+        .package(name: "Slopad", path: "../..")
     ],
     targets: [
         .executableTarget(

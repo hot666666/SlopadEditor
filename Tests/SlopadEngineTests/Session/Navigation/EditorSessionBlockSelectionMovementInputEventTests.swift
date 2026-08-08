@@ -19,8 +19,8 @@ struct EditorSessionBlockSelectionMovementInputEventTests {
         let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)
 
         // When
-        let upUpdate = try #require(session.handleInput(.command(.moveUp(viewport: viewport))))
-        let downUpdate = try #require(session.handleInput(.command(.moveDown(viewport: viewport))))
+        let upUpdate = try #require(session.handleInput(.command(.navigate(.moveUp(viewport: viewport)))))
+        let downUpdate = try #require(session.handleInput(.command(.navigate(.moveDown(viewport: viewport)))))
 
         // Then
         #expect(sessionBlockSelection(upUpdate.selection)?.blockIDs == [a, b])
@@ -41,8 +41,8 @@ struct EditorSessionBlockSelectionMovementInputEventTests {
 
         // When
         let downUpdate = try #require(
-            session.handleInput(.command(.extendDown(viewport: viewport))))
-        let upUpdate = try #require(session.handleInput(.command(.extendUp(viewport: viewport))))
+            session.handleInput(.command(.navigate(.extendDown(viewport: viewport)))))
+        let upUpdate = try #require(session.handleInput(.command(.navigate(.extendUp(viewport: viewport)))))
 
         // Then
         let extended = try #require(sessionBlockSelection(downUpdate.selection))
@@ -66,8 +66,8 @@ struct EditorSessionBlockSelectionMovementInputEventTests {
         let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)
 
         // When
-        let left = session.handleInput(.command(.moveLeft(viewport: viewport)))
-        let right = session.handleInput(.command(.moveRight(viewport: viewport)))
+        let left = session.handleInput(.command(.navigate(.moveLeft(viewport: viewport))))
+        let right = session.handleInput(.command(.navigate(.moveRight(viewport: viewport))))
 
         // Then
         #expect(left == nil)

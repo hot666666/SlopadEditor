@@ -1,13 +1,23 @@
 import SlopadCoreModel
+import SlopadMarkdownInputRules
 
 // MARK: - EditorModel
 
 package final class EditorModel {
-    package internal(set) var document: Document
-    package internal(set) var selection: EditorSelection
+    /// The value being edited. Mutated only from inside this module; transitions and history
+    /// are this class's job.
+    var state: EditorState
+
+    package var document: Document { state.document }
+    package var selection: EditorSelection { state.selection }
+    package var storedMarks: Set<BlockContent.InlineMark.Kind> { state.storedMarks }
+
     let undoConfiguration: EditorUndoConfiguration
     var undoStack: [EditorTransaction]
     var redoStack: [EditorTransaction]
+    /// Runtime-owned bounded matcher. The patterns are injected as immutable data from the
+    /// lightweight Markdown syntax target; the model keeps transaction semantics local.
+    let inputRuleRunner: EditorInputRuleRunner
 
     package convenience init(
         document: Document,
@@ -25,17 +35,22 @@ package final class EditorModel {
         selection: EditorSelection? = nil,
         undoConfiguration: EditorUndoConfiguration = EditorUndoConfiguration()
     ) {
-        self.document = document
         self.undoConfiguration = undoConfiguration
+        self.inputRuleRunner = EditorInputRuleRunner(rules: MarkdownInputRules.all)
         if let selection {
-            self.selection = selection
+            state = EditorState(document: document, selection: selection)
         } else if let firstID = document.rootBlockIDs.first {
-            self.selection = .caret(
-                blockID: firstID, offset: document.block(firstID)?.content.length ?? 0)
+            state = EditorState(
+                document: document,
+                selection: .caret(
+                    blockID: firstID, offset: document.block(firstID)?.content.length ?? 0)
+            )
         } else {
             let id = BlockID()
-            self.document = Document.singleParagraph("", id: id)
-            self.selection = .caret(blockID: id, offset: 0)
+            state = EditorState(
+                document: Document.singleParagraph("", id: id),
+                selection: .caret(blockID: id, offset: 0)
+            )
         }
         self.undoStack = []
         self.redoStack = []

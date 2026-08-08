@@ -10,6 +10,27 @@ public struct TextKitBlockTextLayouter: BlockTextLayoutProtocol, Sendable {
         self.init(style: style, layoutContext: TextKitLayoutContext())
     }
 
+    #if SLOPAD_BENCHMARK_INSTRUMENTATION
+        /// Monotonic backend-wide events and current resident-store gauges for #37.
+        package static var preparedLayoutInstrumentation:
+            TextKitPreparedLayoutInstrumentationSnapshot
+        {
+            TextKitLayoutContext.aggregateInstrumentationSnapshot
+        }
+
+        /// Per-context values verify one production-composed text system without interference
+        /// from other concurrently running systems.
+        package var contextPreparedLayoutInstrumentation:
+            TextKitPreparedLayoutInstrumentationSnapshot
+        {
+            layoutContext.instrumentationSnapshot()
+        }
+
+        package var layoutContextIdentifierForInstrumentation: ObjectIdentifier {
+            ObjectIdentifier(layoutContext)
+        }
+    #endif
+
     public func measure(_ request: BlockMeasureRequest) -> BlockMeasurement {
         let baseFont = TextKitAttributedStringBuilder.baseFont(for: request.kind, style: style)
         let metrics = TextKitBlockChromeMetrics.metrics(for: request.kind)

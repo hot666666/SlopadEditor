@@ -4,7 +4,7 @@ Date: 2026-07-08
 
 ## Status
 
-Accepted
+Accepted. Amended 2026-08-08 — see "Amendment: narrow contracts, one backend".
 
 ## Context
 
@@ -80,3 +80,55 @@ next surface.
   canonical model.
 - The default AppKit chrome/theme hook cannot replace backend text layout or drawing.
 - Hosts do not mutate layout revision counters independently of the backend instance.
+
+
+## Amendment: narrow contracts, one backend
+
+Date: 2026-08-08 — issue #34, epic #23.
+
+The original decision said the seam covers more than height, and warned against renaming
+`textLayouter` to `textMeasurer`. That still holds: measurement, geometry, navigation, and
+drawing must agree on the same shaped text, so they come from one coherent backend.
+
+What it did not say is how *narrow* each consumer's view of that backend should be. In
+practice `BlockLayout` was handed all ten methods and called exactly one:
+
+| method | BlockLayout | EditorSession | AppKit UI |
+| --- | :---: | :---: | :---: |
+| `measure` | used | | |
+| `textFrame` | | used | used |
+| `lineFragments` | | used | used |
+| `caretRect` | | used | used |
+| `selectionRects` | | used | used |
+| `textPosition` | | via `textHitTest` default | |
+| `textHitTest` | | used | |
+| `navigate` | | used | |
+| `wordRange` | | used | |
+| `deletionRange` | | used | |
+
+Handing a layer that owns derived geometry the ability to ask about word boundaries invites
+it to start answering questions about text meaning, which is the boundary this ADR exists to
+protect. `EditorSession` uses everything except `measure`, `selectionRects`, and
+`textPosition`; it is typed to exclude measurement for the same reason, since measuring
+outside `BlockLayout` would bypass that layer's cache.
+
+`BlockTextLayoutProtocol` is therefore split into `BlockMeasuring`,
+`TextGeometryResolving`, `TextNavigationResolving`, and `TextDeletionResolving`, with
+`BlockTextLayoutProtocol` refining all four. A backend adopts the whole seam as before;
+`BlockLayout` is injected `any BlockMeasuring` only.
+
+Consequences added by this amendment:
+
+- Splitting the contracts is not splitting the implementation. A backend that answered
+  geometry from a different layout than it measured with would violate the original
+  decision, and nothing here permits that.
+- Do not create a SwiftPM target per capability. The protocols live where the seam already
+  lived, in `SlopadCoreModel/Layout`.
+- Caret and selection rectangles arrive through the Session snapshot (issue #35), resolved
+  in document coordinates so an adapter draws rather than asks. `EditorSession` memoizes them
+  across the adapter's surface-convergence renders, which run many times per paint.
+- One synchronous query stays: `EditorSession.textLineFragmentRects(in:)`, used to decide
+  whether a mouse-down lands on text. Unlike the caret, its input is an ad hoc pointer
+  position rather than tracked selection state, so there is no snapshot slot it could arrive
+  in and no render to attach it to. It is still a Session call — the adapter does not reach
+  the backend — but it is answered live.

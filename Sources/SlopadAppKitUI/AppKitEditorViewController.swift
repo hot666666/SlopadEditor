@@ -199,6 +199,14 @@ public final class AppKitEditorViewController: NSViewController {
     package var onDrawOverlay: ((NSRect, EditorSessionSnapshot) -> Void)?
     package var onDrawCompleted: ((NSRect, UInt64) -> Void)?
 
+    #if SLOPAD_BENCHMARK_INSTRUMENTATION
+        package var preparedLayoutInstrumentation:
+            TextKitPreparedLayoutInstrumentationSnapshot
+        {
+            textLayouter.contextPreparedLayoutInstrumentation
+        }
+    #endif
+
     var canvasView: AppKitEditorCanvasView {
         editorCanvasView
     }
@@ -217,6 +225,16 @@ public final class AppKitEditorViewController: NSViewController {
     }
     private lazy var editorCanvasView = AppKitEditorCanvasView(handler: self)
     private lazy var activeInputController = AppKitActiveInputController(owner: self)
+    private lazy var slashCommandOverlay: AppKitSlashCommandOverlay = {
+        let overlay = AppKitSlashCommandOverlay(frame: .zero)
+        overlay.onCommandRequested = { [weak self] command, sourceRevision in
+            self?.selectSlashCommand(command, sourceRevision: sourceRevision)
+        }
+        overlay.onDismissRequested = { [weak self] in
+            self?.session.dismissSlashCommand()
+        }
+        return overlay
+    }()
     private lazy var dragAutoscrollController = AppKitDragAutoscrollController(
         visibleBounds: { [weak self] in
             self?.currentViewportBounds() ?? .zero
@@ -258,6 +276,7 @@ public final class AppKitEditorViewController: NSViewController {
         self.blockChromeRenderer = blockChromeRenderer
         self.focusOnAppear = focusOnAppear
         super.init(nibName: nil, bundle: nil)
+        textSystem.setActivePreparedLayoutBlockID(session.activeTextBlockID)
     }
 
     @available(*, unavailable)
@@ -402,6 +421,7 @@ public final class AppKitEditorViewController: NSViewController {
         guard style != editorStyle else { return }
 
         let replacementTextSystem = AppKitTextSystem(style: style)
+        replacementTextSystem.setActivePreparedLayoutBlockID(session.activeTextBlockID)
         _ = session.replaceTextLayoutBackend(with: replacementTextSystem.textLayouter)
         textSystem = replacementTextSystem
         renderCanvasPreservingNativeSurface(
@@ -426,11 +446,15 @@ public final class AppKitEditorViewController: NSViewController {
         selection: EditorSelection? = nil
     ) {
         dragAutoscrollController.stop()
-        session = EditorSession(
+        textSystem.setActivePreparedLayoutBlockID(nil)
+        textSystem.removeAllPreparedLayouts()
+        let replacementSession = EditorSession(
             blocks: blocks,
             selection: selection,
             textLayouter: textLayouter
         )
+        textSystem.setActivePreparedLayoutBlockID(replacementSession.activeTextBlockID)
+        session = replacementSession
         snapshot = nil
         activeInputController.hide()
     }
@@ -602,6 +626,7 @@ public final class AppKitEditorViewController: NSViewController {
         scrollView.contentView.postsBoundsChangedNotifications = true
         scrollView.documentView = editorCanvasView
         view.addSubview(scrollView)
+        view.addSubview(slashCommandOverlay)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(scrollViewContentBoundsDidChange(_:)),
@@ -740,6 +765,7 @@ public final class AppKitEditorViewController: NSViewController {
     private func performSurfaceSync(
         _ request: SurfaceSyncRequest
     ) -> (viewport: EditorViewport, snapshot: EditorSessionSnapshot) {
+        textSystem.setActivePreparedLayoutBlockID(session.activeTextBlockID)
         var renderedSurface = renderAndResizeCanvas()
 
         switch request.viewportAction {
@@ -786,7 +812,14 @@ public final class AppKitEditorViewController: NSViewController {
         }
 
         invalidateVisibleCanvas()
+        synchronizeSlashCommandOverlay(with: renderedSurface.snapshot)
         return renderedSurface
+    }
+
+    package func handlePreparedLayoutMemoryPressure(
+        _ pressure: TextKitPreparedLayoutMemoryPressure
+    ) {
+        textSystem.handlePreparedLayoutMemoryPressure(pressure)
     }
 
     private func isActiveSnapshotPublication(
@@ -1111,7 +1144,10 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
     // MARK: - Native Commands
 
     package func handleNativeCommand(_ commandSelector: Selector) -> Bool {
-        activeInputController.handleCommand(commandSelector)
+        if slashCommandOverlay.handleCommand(commandSelector) {
+            return true
+        }
+        return activeInputController.handleCommand(commandSelector)
     }
 
     // MARK: - Native Text Surface
@@ -1164,6 +1200,47 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
     }
 }
 
+// MARK: - Slash Command Overlay
+
+extension AppKitEditorViewController {
+    private func synchronizeSlashCommandOverlay(with snapshot: EditorSessionSnapshot) {
+        let anchorInContainer = snapshot.slashCommand?.anchor.map { anchor in
+            editorCanvasView.convert(CGRect(editorRect: anchor), to: view)
+        }
+        slashCommandOverlay.synchronize(
+            presentation: snapshot.slashCommand,
+            anchorInContainer: anchorInContainer,
+            containerBounds: view.bounds
+        )
+    }
+
+    /// The overlay only chooses a catalog value. Session validates the source revision and
+    /// owns the query removal plus block conversion transaction.
+    private func selectSlashCommand(
+        _ command: EditorSlashCommand,
+        sourceRevision: EditorDocumentRevision
+    ) {
+        guard let update = session.applySlashCommand(command, sourceRevision: sourceRevision)
+        else {
+            slashCommandOverlay.dismiss()
+            return
+        }
+        textSystem.setActivePreparedLayoutBlockID(
+            preparedLayoutPinnedBlockID(in: update.selection)
+        )
+        onUpdate?(update)
+        renderAndSyncSurface(makeFirstResponder: true, scrollSelectionIntoView: true)
+    }
+
+    package var isSlashCommandMenuPresented: Bool {
+        slashCommandOverlay.isPresented
+    }
+
+    package var slashCommandMenuFrame: NSRect? {
+        slashCommandOverlay.isPresented ? slashCommandOverlay.frame : nil
+    }
+}
+
 // MARK: - Native Input Owner
 
 extension AppKitEditorViewController: AppKitActiveInputOwner {
@@ -1178,6 +1255,9 @@ extension AppKitEditorViewController: AppKitActiveInputOwner {
     @discardableResult
     func handleNativeInputEvent(_ inputEvent: EditorInputEvent) -> EditorUpdate? {
         guard let update = session.handleInput(inputEvent) else { return nil }
+        textSystem.setActivePreparedLayoutBlockID(
+            preparedLayoutPinnedBlockID(in: update.selection)
+        )
         onUpdate?(update)
         return update
     }
@@ -1367,9 +1447,8 @@ extension AppKitEditorViewController {
         }
         guard !rendered.textRender.measureRequest.text.isEmpty else { return false }
 
-        return !textLayouter.lineFragments(for: rendered.textRender.measureRequest).contains {
-            fragment in
-            documentRect(fragment.rect, in: rendered.textRender)
+        return !session.textLineFragmentRects(in: rendered.textRender).contains { rect in
+            CGRect(editorRect: rect)
                 .insetBy(
                     dx: -UX.lineFragmentHitOutsetX,
                     dy: -UX.lineFragmentHitOutsetY
@@ -1380,6 +1459,17 @@ extension AppKitEditorViewController {
 
     private func currentActiveTextBlockID() -> BlockID? {
         activeTextPosition()?.blockID
+    }
+
+    private func preparedLayoutPinnedBlockID(in selection: EditorSelection) -> BlockID? {
+        switch selection {
+        case .caret(let position):
+            return position.blockID
+        case .text(let selection) where selection.isSingleBlock:
+            return selection.focus.blockID
+        case .inactive, .blocks, .text:
+            return nil
+        }
     }
 
     private func snapshotRenderedBlock(for blockID: BlockID) -> EditorRenderedBlock? {
@@ -1436,32 +1526,6 @@ extension AppKitEditorViewController {
     }
 
     private func caretRect(for descriptor: EditorSessionActiveTextInputDescriptor) -> CGRect? {
-        let request = descriptor.renderDescriptor.measureRequest
-        let position = TextPosition(
-            blockID: request.blockID,
-            offset: descriptor.focusOffset,
-            affinity: descriptor.focusAffinity
-        )
-        guard
-            let localRect = textLayouter.caretRect(
-                for: position,
-                navigationContext: descriptor.navigationContext,
-                in: descriptor.renderDescriptor
-            )
-        else { return nil }
-        return documentRect(localRect, in: descriptor.renderDescriptor)
-    }
-
-    private func documentRect(
-        _ localRect: EditorRect,
-        in descriptor: EditorTextRenderDescriptor
-    ) -> CGRect {
-        let localFrame = textLayouter.textFrame(for: descriptor, measuredHeight: nil)
-        return CGRect(
-            x: CGFloat(localRect.x + descriptor.frame.x - localFrame.x),
-            y: CGFloat(localRect.y + descriptor.frame.y - localFrame.y),
-            width: CGFloat(localRect.width),
-            height: CGFloat(localRect.height)
-        )
+        descriptor.caretRect.map(CGRect.init)
     }
 }

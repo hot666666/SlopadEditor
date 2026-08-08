@@ -52,7 +52,7 @@ struct EditorModelBlockIndentCommandTests {
         let result = editor.apply(.indentBlock(selection))
 
         // Then
-        #expect(result == nil)
+        #expect(result.isApplied == false)
         #expect(editor.document.rootBlockIDs == [a, b])
         #expect(editor.document.blocks[a]?.parentID == nil)
     }
@@ -73,7 +73,7 @@ struct EditorModelBlockIndentCommandTests {
         let result = editor.apply(.indentBlock(selection))
 
         // Then
-        #expect(result == nil)
+        #expect(result.isApplied == false)
         #expect(editor.document.rootBlockIDs == [a])
         #expect(editor.document.blocks[a]?.childIDs == [b])
         #expect(editor.document.blocks[b]?.parentID == a)

@@ -4,43 +4,37 @@ import SlopadCoreModel
 
 extension EditorModel {
     @discardableResult
-    package func apply(
-        _ command: EditorCommand
-    ) -> (selectionBefore: EditorSelection, change: EditorChange)? {
+    package func apply(_ command: EditorCommand) -> EditorCommandResult {
         apply([.command(command)])
     }
 
     @discardableResult
-    package func apply(
-        _ steps: [EditorTransactionStep]
-    ) -> (selectionBefore: EditorSelection, change: EditorChange)? {
-        guard !steps.isEmpty else { return nil }
-        let beforeDocument = document
-        let beforeSelection = selection
+    package func apply(_ entries: [EditorTransactionEntry]) -> EditorCommandResult {
+        guard !entries.isEmpty else { return .notApplicable }
+        let beforeState = state
         var operations: [EditorOperation] = []
         var changed: Set<BlockID> = []
 
         do throws(EditorCommandAbort) {
-            for step in steps {
-                switch step {
+            for entry in entries {
+                switch entry {
                 case .command(let command):
                     try perform(command, operations: &operations, changed: &changed)
                 case .replaceSelection(let selection):
-                    self.selection = selection
+                    state.replaceSelection(selection)
                 }
             }
 
-            let documentChanged = !beforeDocument.hasSameCanonicalContent(as: document)
-            guard documentChanged || beforeSelection != selection || !operations.isEmpty
+            let documentChanged = !beforeState.document.hasSameCanonicalContent(as: document)
+            guard documentChanged || beforeState.selection != selection
+                || beforeState.storedMarks != state.storedMarks || !operations.isEmpty
             else {
-                return nil
+                return .notApplicable
             }
 
             let transaction = EditorTransaction(
-                beforeSnapshot: beforeDocument,
-                afterSnapshot: document,
-                selectionBefore: beforeSelection,
-                selectionAfter: selection,
+                before: beforeState,
+                after: state,
                 change: EditorChange(
                     documentChanged: documentChanged,
                     changedBlockIDs: changed,
@@ -51,15 +45,15 @@ extension EditorModel {
             trimUndoStackToBudget()
             redoStack.removeAll()
             assertDocumentValidInDebug()
-            return (
+            let outcome = EditorCommandOutcome(
                 selectionBefore: transaction.selectionBefore,
                 change: transaction.change
             )
+            return documentChanged ? .document(outcome) : .selectionOnly(outcome)
         } catch {
-            document = beforeDocument
-            selection = beforeSelection
+            state = beforeState
             assertDocumentValidInDebug()
-            return nil
+            return .notApplicable
         }
     }
 
@@ -100,6 +94,24 @@ extension EditorModel {
         case .setBlockKind(let blockID, let kind):
             try setBlockKind(
                 blockID: blockID, kind: kind, operations: &operations, changed: &changed)
+
+        case .toggleStoredStyle(let style):
+            guard case .caret = selection else { throw .abort }
+            state.toggleStoredMark(style)
+
+        case .clearStoredStyles:
+            guard case .caret = selection, !state.storedMarks.isEmpty else { throw .abort }
+            state.storedMarks = []
+
+        case .removeTextStyle(let blockID, let range, let style):
+            try removeTextStyle(
+                blockID: blockID, range: range, style: style, operations: &operations,
+                changed: &changed)
+
+        case .toggleTextStyle(let blockID, let range, let style):
+            try toggleTextStyle(
+                blockID: blockID, range: range, style: style, operations: &operations,
+                changed: &changed)
 
         case .applyTextStyle(let blockID, let range, let style):
             try applyTextStyle(

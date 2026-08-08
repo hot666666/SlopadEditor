@@ -26,7 +26,7 @@ func makeBlockLayoutTestInput(
 func runBlockLayoutPass(
     _ blockLayout: inout BlockLayout,
     input: BlockLayoutTestInput,
-    textLayouter: any BlockTextLayoutProtocol
+    textLayouter: any BlockMeasuring
 ) -> EditorSnapshotRevision {
     let revision = blockLayout.layout(
         contentSnapshot: input.contentSnapshot,
@@ -50,7 +50,7 @@ func runBlockLayoutIncrementalPass(
     _ blockLayout: inout BlockLayout,
     input: BlockLayoutTestInput,
     blockIDs: Set<BlockID>,
-    textLayouter: any BlockTextLayoutProtocol
+    textLayouter: any BlockMeasuring
 ) -> EditorSnapshotRevision? {
     let revision = blockLayout.applyIncrementalLayout(
         contentSnapshot: input.contentSnapshot,

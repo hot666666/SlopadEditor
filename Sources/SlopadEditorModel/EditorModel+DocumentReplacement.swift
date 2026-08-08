@@ -17,10 +17,7 @@ extension EditorModel {
     package func replaceDocument(
         with blockInputs: [EditorBlockInput],
         selection selectionAfter: EditorSelection
-    ) throws(EditorDocumentReplacementError) -> (
-        selectionBefore: EditorSelection,
-        change: EditorChange
-    )? {
+    ) throws(EditorDocumentReplacementError) -> EditorCommandResult {
         do {
             try Document.validateCanonicalReplacement(
                 blockInputs: blockInputs,
@@ -39,15 +36,18 @@ extension EditorModel {
         let documentChanged = !beforeDocument.hasSameCanonicalContent(as: candidateDocument)
 
         guard documentChanged || beforeSelection != selectionAfter else {
-            return nil
+            return .notApplicable
         }
 
         var afterDocument = candidateDocument
         if documentChanged {
             afterDocument.revision = beforeDocument.revision + 1
         }
-        document = afterDocument
-        selection = selectionAfter
+        let beforeState = state
+        // A whole new document is not a place the caret was aiming at, so anything armed for
+        // the old one is dropped. Agent patches land here too: a style armed before a patch
+        // must not attach itself to unrelated replacement content.
+        state = EditorState(document: afterDocument, selection: selectionAfter)
 
         let changedBlockIDs = documentChanged
             ? Set(beforeDocument.blocks.keys).union(afterDocument.blocks.keys)
@@ -57,18 +57,13 @@ extension EditorModel {
             changedBlockIDs: changedBlockIDs,
             operations: documentChanged ? [.replaceDocument] : []
         )
-        let transaction = EditorTransaction(
-            beforeSnapshot: beforeDocument,
-            afterSnapshot: afterDocument,
-            selectionBefore: beforeSelection,
-            selectionAfter: selectionAfter,
-            change: change
-        )
+        let transaction = EditorTransaction(before: beforeState, after: state, change: change)
         undoStack.append(transaction)
         trimUndoStackToBudget()
         redoStack.removeAll()
         assertDocumentValidInDebug()
-        return (selectionBefore: beforeSelection, change: change)
+        let outcome = EditorCommandOutcome(selectionBefore: beforeSelection, change: change)
+        return documentChanged ? .document(outcome) : .selectionOnly(outcome)
     }
 }
 

@@ -11,14 +11,14 @@ extension EditorModel {
     ) throws(EditorCommandAbort) {
         let createdID = BlockID()
         let split: DocumentMutationResult.Split
-        switch document.splitBlock(blockID: blockID, offset: offset, newBlockID: createdID) {
+        switch state.document.splitBlock(blockID: blockID, offset: offset, newBlockID: createdID) {
         case .success(let result):
             split = result
 
         case .failure:
             throw .abort
         }
-        selection = .caret(blockID: createdID, offset: 0)
+        state.selection = .caret(blockID: createdID, offset: 0)
         changed.formUnion([blockID, createdID])
         changed.formUnion(split.transferredChildIDs)
         operations.append(.splitBlock(original: blockID, created: createdID))
@@ -31,14 +31,14 @@ extension EditorModel {
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
         let merge: DocumentMutationResult.Merge
-        switch document.mergeBlocks(target: target, source: source) {
+        switch state.document.mergeBlocks(target: target, source: source) {
         case .success(let result):
             merge = result
 
         case .failure:
             throw .abort
         }
-        selection = .caret(blockID: target, offset: merge.targetOriginalLength)
+        state.selection = .caret(blockID: target, offset: merge.targetOriginalLength)
         changed.formUnion([target, source])
         changed.formUnion(merge.appendedChildIDs)
         operations.append(.mergeBlocks(target: target, source: source))

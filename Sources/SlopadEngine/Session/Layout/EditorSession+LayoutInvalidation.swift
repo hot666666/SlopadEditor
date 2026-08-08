@@ -11,7 +11,7 @@ extension EditorSession {
     public func replaceTextLayoutBackend(
         with textLayouter: any BlockTextLayoutProtocol
     ) -> EditorUpdate {
-        self.textLayouter = textLayouter
+        replaceTextBackend(textLayouter)
         textNavigationRuntimeContext = nil
         if let blockDrag {
             self.blockDrag = (
@@ -28,6 +28,10 @@ extension EditorSession {
 
     @discardableResult
     func invalidateLayoutMeasurements(blockIDs: Set<BlockID>) -> EditorUpdate {
+        // Same premise as a backend swap: the request is unchanged but the answer may
+        // not be, and CaretGeometryKey cannot see that. Currently unreachable from any host,
+        // so this is the cheap moment to close it rather than after a caller exists.
+        cachedCaretGeometry = nil
         guard !blockIDs.isEmpty else {
             return makeEditorUpdate(invalidation: EditorUpdateInvalidation())
         }
@@ -39,6 +43,10 @@ extension EditorSession {
 
     @discardableResult
     func invalidateAllLayoutMeasurements() -> EditorUpdate {
+        // Same premise as a backend swap: the request is unchanged but the answer may
+        // not be, and CaretGeometryKey cannot see that. Currently unreachable from any host,
+        // so this is the cheap moment to close it rather than after a caller exists.
+        cachedCaretGeometry = nil
         blockLayout.invalidateAllMeasurements()
         return makeEditorUpdate(
             invalidation: EditorUpdateInvalidation(layoutGeometryChanged: true)

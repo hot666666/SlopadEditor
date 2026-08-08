@@ -49,6 +49,9 @@ enum TextKitAttributedStringBuilder {
                 attributes[.link] = link
                 attributes[.underlineStyle] = NSUnderlineStyle.single.rawValue
             }
+            if run.marks.contains(.strikethrough) {
+                attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+            }
             mutable.addAttributes(attributes, range: range)
         }
 
@@ -106,10 +109,10 @@ enum TextKitAttributedStringBuilder {
 
         let manager = NSFontManager.shared
         var font = codeFont
-        if marks.contains(.bold) {
+        if marks.contains(.strong) {
             font = manager.convert(font, toHaveTrait: .boldFontMask)
         }
-        if marks.contains(.italic) {
+        if marks.contains(.emphasis) {
             font = manager.convert(font, toHaveTrait: .italicFontMask)
         }
         return font

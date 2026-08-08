@@ -7,6 +7,29 @@ import SlopadEngine
 @MainActor
 @Suite("AppKit active input 조합 전달")
 struct AppKitActiveInputControllerCompositionTests {
+    @Test("실제 AppKit replaceText 경로도 완료 inline syntax를 canonical mark로 바꾼다")
+    func appliesInlineRuleThroughNativeReplacement() throws {
+        // Given
+        let blockID: BlockID = "inline-native"
+        let owner = CompositionRecordingOwner(
+            blockID: blockID,
+            text: "",
+            selection: .caret(blockID: blockID, offset: 0)
+        )
+        let inputController = try owner.makeInputController()
+
+        // When: NSTextInputClient의 production replacement 경로를 탄다.
+        inputController.insertText("**bold**", replacementRange: NSRange(location: NSNotFound, length: 0))
+        owner.controller.renderAndSyncSurface(makeFirstResponder: false)
+
+        // Then
+        #expect(owner.controller.documentSnapshot.blocks.first?.content == BlockContent(
+            text: "bold",
+            marks: [BlockContent.InlineMark(kind: .strong, range: TextRange(0, 4))]
+        ))
+        #expect(owner.controller.snapshot?.selection == .caret(blockID: blockID, offset: 4))
+    }
+
     @Test("marked 선택은 최초 begin과 후속 update 뒤 유효 grapheme 범위로 전달된다")
     func forwardsMarkedSelectionInEffectiveText() throws {
         // Given

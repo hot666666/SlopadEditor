@@ -21,7 +21,7 @@ struct EditorModelBlockEditingCommandTests {
         let result = editor.apply(.splitBlock(blockID: blockID, offset: 5))
 
         // Then
-        let change = try #require(result?.change)
+        let change = try #require(result.outcome?.change)
         let createdID = try #require(createdBlockID(in: change))
         #expect(editor.document.blocks[blockID]?.content.text == expectedOriginalText)
         #expect(editor.document.blocks[createdID]?.content.text == expectedCreatedText)
@@ -43,7 +43,7 @@ struct EditorModelBlockEditingCommandTests {
         let result = editor.apply(.splitBlock(blockID: parent, offset: 5))
 
         // Then
-        let change = try #require(result?.change)
+        let change = try #require(result.outcome?.change)
         let createdID = try #require(createdBlockID(in: change))
         #expect(editor.document.blocks[parent]?.childIDs == expectedOriginalChildIDs)
         #expect(editor.document.blocks[createdID]?.childIDs == expectedCreatedChildIDs)
@@ -65,7 +65,7 @@ struct EditorModelBlockEditingCommandTests {
         let result = editor.apply(.splitBlock(blockID: blockID, offset: 1))
 
         // Then
-        let change = try #require(result?.change)
+        let change = try #require(result.outcome?.change)
         let createdID = try #require(createdBlockID(in: change))
         #expect(editor.document.blocks[blockID]?.kind == expectedOriginalKind)
         #expect(editor.document.blocks[createdID]?.kind == expectedCreatedKind)
@@ -88,7 +88,7 @@ struct EditorModelBlockEditingCommandTests {
         let result = editor.apply(.splitBlock(blockID: blockID, offset: 5))
 
         // Then
-        let change = try #require(result?.change)
+        let change = try #require(result.outcome?.change)
         let createdID = try #require(createdBlockID(in: change))
         #expect(editor.document.blocks[blockID]?.kind == expectedOriginalKind)
         #expect(editor.document.blocks[createdID]?.kind == expectedCreatedKind)
@@ -110,7 +110,7 @@ struct EditorModelBlockEditingCommandTests {
         let result = editor.apply(.splitBlock(blockID: blockID, offset: 4))
 
         // Then
-        let change = try #require(result?.change)
+        let change = try #require(result.outcome?.change)
         let createdID = try #require(createdBlockID(in: change))
         #expect(editor.document.blocks[createdID]?.kind == expectedCreatedKind)
     }

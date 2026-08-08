@@ -5,20 +5,21 @@ import SlopadCoreModel
 extension EditorSession {
     @discardableResult
     public func handleInput(_ inputEvent: EditorInputEvent) -> EditorUpdate? {
+        let update: EditorUpdate?
         switch inputEvent {
         case .command(let command):
-            return handleInputCommand(command)
+            update = handleInputCommand(command)
 
         case .pointer(let pointerEvent):
-            return handlePointerEvent(pointerEvent)
+            update = handlePointerEvent(pointerEvent)
 
         case .activeTextSelectionChanged(let blockID, let selectedRange):
-            return handleActiveTextSelectionChanged(blockID: blockID, selectedRange: selectedRange)
+            update = handleActiveTextSelectionChanged(blockID: blockID, selectedRange: selectedRange)
 
         case .beginComposition(let blockID, let replacementRange, let text),
             .updateComposition(let blockID, let replacementRange, let text):
             guard canReceiveCompositionInput(blockID: blockID) else { return nil }
-            return setComposition(
+            update = setComposition(
                 nextTextComposition(
                     blockID: blockID,
                     replacementRange: replacementRange,
@@ -27,10 +28,12 @@ extension EditorSession {
             )
 
         case .commitComposition:
-            return endComposition(commit: true)
+            update = endComposition(commit: true)
 
         case .cancelComposition:
-            return endComposition(commit: false)
+            update = endComposition(commit: false)
         }
+        updateSlashCommandRuntime(after: inputEvent, update: update)
+        return update
     }
 }

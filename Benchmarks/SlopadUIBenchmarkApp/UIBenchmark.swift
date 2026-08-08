@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 import Foundation
 import SlopadAppKitTextKit
 import SlopadAppKitUI
@@ -12,6 +13,14 @@ struct UIBenchmarkOptions {
     var frameCount: Int
     var outputPath: String
     var subtreeNodeCount: Int?
+    var preparedEntryLimit: Int
+    var preparedEstimatedCostLimit: Int
+
+    var preparedLayoutRunRole: String {
+        preparedEntryLimit == 1
+            ? "same-head-entry-limit-1-control"
+            : "bounded-store-candidate"
+    }
 }
 
 @MainActor
@@ -27,6 +36,13 @@ private enum UIBenchmarkScenario: String {
     case subtreeReorder = "subtree-reorder"
     case styleChange = "style-change"
     case unicodeNavigation = "unicode-navigation"
+    case repeatedViewport = "repeated-viewport"
+    case forwardReverseScroll = "forward-reverse-scroll"
+    case widthResize = "width-resize"
+    case pressureRecovery = "pressure-recovery"
+    case longActiveParagraph = "long-active-paragraph"
+    case coldFirstLayout = "cold-first-layout"
+    case textSelectionDrag = "text-selection-drag"
 
     init(argument: String) {
         self = UIBenchmarkScenario(rawValue: argument) ?? .scroll
@@ -37,20 +53,36 @@ private enum UIBenchmarkScenario: String {
         case .subtreeDelete, .subtreeReorder:
             return true
         case .scroll, .nativeInsert, .composition, .heightExpansion, .blockSelection,
-            .blockReorder, .styleChange, .unicodeNavigation, .mixed:
+            .blockReorder, .styleChange, .unicodeNavigation, .repeatedViewport,
+            .forwardReverseScroll, .widthResize, .pressureRecovery, .longActiveParagraph,
+            .coldFirstLayout, .textSelectionDrag, .mixed:
             return false
         }
     }
 
     var requiresFreshDocumentPerFrame: Bool {
         switch self {
-        case .subtreeDelete:
+        case .subtreeDelete, .coldFirstLayout:
             return true
         case .scroll, .nativeInsert, .composition, .heightExpansion, .blockSelection,
-            .blockReorder, .subtreeReorder, .styleChange, .unicodeNavigation, .mixed:
+            .blockReorder, .subtreeReorder, .styleChange, .unicodeNavigation,
+            .repeatedViewport, .forwardReverseScroll, .widthResize, .pressureRecovery,
+            .longActiveParagraph, .textSelectionDrag, .mixed:
             return false
         }
     }
+}
+
+private enum UIBenchmarkValidationError: Error {
+    case widthResizeDidNotReachWindowWidth(expected: Double, actual: Double)
+    case requestWidthDoesNotMatchViewport(viewport: Double, request: Double)
+    case viewportWidthDidNotResize(Double)
+    case textSelectionDragGeometryUnavailable(BlockID)
+    case textSelectionDragDidNotProduceTextSelection
+    case forwardReverseScrollExceededLocalSpan(actual: Double, limit: Double)
+    case forwardReverseScrollStepTooLarge(actual: Double, limit: Double)
+    case forwardReverseScrollHadNoReversePathHits
+    case sameHeadControlDidNotCaptureDisplayPrepare
 }
 
 @MainActor
@@ -71,6 +103,8 @@ enum UIBenchmarkFixture {
             for: blockCount,
             override: subtreeNodeCount
         )
+        let resolvedActiveTextLength =
+            activeTextLength ?? (scenario == .longActiveParagraph ? 16_384 : nil)
         var blocks: [EditorBlockInput] = []
         blocks.reserveCapacity(blockCount)
         var firstBlockID: BlockID?
@@ -94,10 +128,10 @@ enum UIBenchmarkFixture {
                     parentID: parentID,
                     kind: kind(for: index),
                     content: BlockContent(
-                        text: scenario == .unicodeNavigation
+                        text: scenario == .unicodeNavigation || scenario == .longActiveParagraph
                             ? unicodeNavigationText(
                                 for: index,
-                                length: index == targetIndex ? activeTextLength : nil
+                                length: index == targetIndex ? resolvedActiveTextLength : nil
                             )
                             : text(for: index)
                     )
@@ -307,6 +341,29 @@ final class UIBenchmarkHost {
         editorViewController.updateEditorStyle(style)
     }
 
+    func handlePreparedLayoutMemoryPressure(_ pressure: TextKitPreparedLayoutMemoryPressure) {
+        editorViewController.handlePreparedLayoutMemoryPressure(pressure)
+    }
+
+    func handleMouseDown(documentPoint: EditorPoint) {
+        editorViewController.handleMouseDown(
+            documentPoint: CGPoint(x: CGFloat(documentPoint.x), y: CGFloat(documentPoint.y)),
+            clickCount: 1
+        )
+    }
+
+    func handleMouseDragged(documentPoint: EditorPoint) {
+        editorViewController.handleMouseDragged(
+            documentPoint: CGPoint(x: CGFloat(documentPoint.x), y: CGFloat(documentPoint.y))
+        )
+    }
+
+    func handleMouseUp(documentPoint: EditorPoint) {
+        editorViewController.handleMouseUp(
+            documentPoint: CGPoint(x: CGFloat(documentPoint.x), y: CGFloat(documentPoint.y))
+        )
+    }
+
     fileprivate func resetUIBenchmarkDocument(
         blockCount: Int,
         scenario: UIBenchmarkScenario,
@@ -330,9 +387,35 @@ final class UIBenchmarkHost {
 final class UIBenchmarkRecorder {
     private(set) var samples: [UIBenchmarkFrameSample] = []
     private var currentSample: UIBenchmarkFrameSample?
+    private let preparedEntryLimit: Int
+    private let preparedEstimatedCostLimit: Int
+    private let preparedLayoutRunRole: String
+    #if SLOPAD_BENCHMARK_INSTRUMENTATION
+        private var instrumentationAtFrameStart =
+            TextKitPreparedLayoutInstrumentationSnapshot.zero
+        private var instrumentationAtDisplayStart =
+            TextKitPreparedLayoutInstrumentationSnapshot.zero
+    #endif
+
+    init(
+        preparedEntryLimit: Int,
+        preparedEstimatedCostLimit: Int,
+        preparedLayoutRunRole: String
+    ) {
+        self.preparedEntryLimit = preparedEntryLimit
+        self.preparedEstimatedCostLimit = preparedEstimatedCostLimit
+        self.preparedLayoutRunRole = preparedLayoutRunRole
+    }
 
     func beginFrame(index: Int, scrollY: Double) {
         currentSample = UIBenchmarkFrameSample(frame: index, scrollY: scrollY)
+        currentSample?.preparedLayoutEntryLimit = preparedEntryLimit
+        currentSample?.preparedLayoutEstimatedCostLimit = preparedEstimatedCostLimit
+        currentSample?.preparedLayoutRunRole = preparedLayoutRunRole
+        #if SLOPAD_BENCHMARK_INSTRUMENTATION
+            instrumentationAtFrameStart = TextKitBlockTextLayouter.preparedLayoutInstrumentation
+            instrumentationAtDisplayStart = instrumentationAtFrameStart
+        #endif
     }
 
     func recordRender(durationNanoseconds: UInt64, visibleRenderedBlockCount: Int) {
@@ -367,6 +450,23 @@ final class UIBenchmarkRecorder {
         currentSample?.displayNanoseconds = durationNanoseconds
     }
 
+    func beginDisplay() {
+        #if SLOPAD_BENCHMARK_INSTRUMENTATION
+            instrumentationAtDisplayStart =
+                TextKitBlockTextLayouter.preparedLayoutInstrumentation
+        #endif
+    }
+
+    func recordWidths(
+        windowContentWidth: Double,
+        viewportWidth: Double,
+        requestAvailableWidth: Double
+    ) {
+        currentSample?.windowContentWidth = windowContentWidth
+        currentSample?.viewportWidth = viewportWidth
+        currentSample?.requestAvailableWidth = requestAvailableWidth
+    }
+
     func recordOperation(name: String, durationNanoseconds: UInt64) {
         currentSample?.operation = name
         currentSample?.operationNanoseconds = durationNanoseconds
@@ -378,13 +478,66 @@ final class UIBenchmarkRecorder {
         currentSample?.dirtyArea += Double(dirtyRect.width * dirtyRect.height)
     }
 
-    func finishFrame(totalNanoseconds: UInt64) {
+    func finishFrame(totalNanoseconds: UInt64, processPhysicalFootprintBytes: UInt64) {
         currentSample?.frameNanoseconds = totalNanoseconds
+        currentSample?.processPhysicalFootprintBytes = processPhysicalFootprintBytes
+        #if SLOPAD_BENCHMARK_INSTRUMENTATION
+            recordPreparedLayoutInstrumentation(
+                TextKitBlockTextLayouter.preparedLayoutInstrumentation
+            )
+        #endif
         if let currentSample {
             samples.append(currentSample)
         }
         currentSample = nil
     }
+
+    #if SLOPAD_BENCHMARK_INSTRUMENTATION
+        private func recordPreparedLayoutInstrumentation(
+            _ end: TextKitPreparedLayoutInstrumentationSnapshot
+        ) {
+            let start = instrumentationAtFrameStart
+            currentSample?.preparedLayoutLookupCount = max(0, end.lookups - start.lookups)
+            currentSample?.preparedLayoutHitCount = max(0, end.hits - start.hits)
+            currentSample?.prepareLayoutCount = max(0, end.prepares - start.prepares)
+            currentSample?.displayPrepareLayoutCount = max(
+                0,
+                end.prepares - instrumentationAtDisplayStart.prepares
+            )
+            currentSample?.attributedStringBuildCount = max(
+                0,
+                end.attributedStringBuilds - start.attributedStringBuilds
+            )
+            currentSample?.preparedLayoutCapacityEvictionCount = max(
+                0,
+                end.capacityEvictions - start.capacityEvictions
+            )
+            currentSample?.preparedLayoutCapacityRejectionCount = max(
+                0,
+                end.capacityRejections - start.capacityRejections
+            )
+            currentSample?.preparedLayoutPressureEvictionCount = max(
+                0,
+                end.pressureEvictions - start.pressureEvictions
+            )
+            currentSample?.preparedLayoutInvalidationRemovalCount = max(
+                0,
+                end.invalidationRemovals - start.invalidationRemovals
+            )
+            currentSample?.preparedLayoutOversizedPinnedInsertionCount = max(
+                0,
+                end.oversizedPinnedInsertions - start.oversizedPinnedInsertions
+            )
+            currentSample?.preparedLayoutResidentEntryCount = end.residentEntryCount
+            currentSample?.preparedLayoutResidentEstimatedCost = end.residentEstimatedCost
+            currentSample?.preparedLayoutResidentEntryHighWater = end.residentEntryHighWater
+            currentSample?.preparedLayoutResidentEstimatedCostHighWater =
+                end.residentEstimatedCostHighWater
+            currentSample?.preparedLayoutPinnedEntryCount = end.pinnedEntryCount
+            currentSample?.preparedLayoutOverBudgetContextCount =
+                end.overEstimatedCostLimitContextCount
+        }
+    #endif
 
     func csv(blockCount: Int, scenario: String) -> String {
         let rows =
@@ -443,11 +596,34 @@ final class UIBenchmarkRecorder {
         "layoutOutputBlockCount",
         "cacheHitCount",
         "cacheMissCount",
+        "prepareLayoutCount",
+        "displayPrepareLayoutCount",
+        "attributedStringBuildCount",
         "heightIndexRebuildCount",
         "heightIndexInsertCount",
         "heightIndexRemoveCount",
         "heightIndexMoveCount",
         "heightIndexUpdateHeightCount",
+        "preparedLayoutLookupCount",
+        "preparedLayoutHitCount",
+        "preparedLayoutCapacityEvictionCount",
+        "preparedLayoutCapacityRejectionCount",
+        "preparedLayoutPressureEvictionCount",
+        "preparedLayoutInvalidationRemovalCount",
+        "preparedLayoutOversizedPinnedInsertionCount",
+        "preparedLayoutResidentEntryCount",
+        "preparedLayoutResidentEstimatedCost",
+        "preparedLayoutResidentEntryHighWater",
+        "preparedLayoutResidentEstimatedCostHighWater",
+        "preparedLayoutPinnedEntryCount",
+        "preparedLayoutOverBudgetContextCount",
+        "processPhysicalFootprintBytes",
+        "preparedLayoutRunRole",
+        "preparedLayoutEntryLimit",
+        "preparedLayoutEstimatedCostLimit",
+        "windowContentWidth",
+        "viewportWidth",
+        "requestAvailableWidth",
     ].joined(separator: ",")
 
     private func percentile(_ percentile: Double, in sortedValues: [Double]) -> Double {
@@ -482,11 +658,34 @@ struct UIBenchmarkFrameSample {
     var layoutOutputBlockCount: Int = 0
     var cacheHitCount: Int = 0
     var cacheMissCount: Int = 0
+    var prepareLayoutCount: Int = 0
+    var displayPrepareLayoutCount: Int = 0
+    var attributedStringBuildCount: Int = 0
     var heightIndexRebuildCount: Int = 0
     var heightIndexInsertCount: Int = 0
     var heightIndexRemoveCount: Int = 0
     var heightIndexMoveCount: Int = 0
     var heightIndexUpdateHeightCount: Int = 0
+    var preparedLayoutLookupCount: Int = 0
+    var preparedLayoutHitCount: Int = 0
+    var preparedLayoutCapacityEvictionCount: Int = 0
+    var preparedLayoutCapacityRejectionCount: Int = 0
+    var preparedLayoutPressureEvictionCount: Int = 0
+    var preparedLayoutInvalidationRemovalCount: Int = 0
+    var preparedLayoutOversizedPinnedInsertionCount: Int = 0
+    var preparedLayoutResidentEntryCount: Int = 0
+    var preparedLayoutResidentEstimatedCost: Int = 0
+    var preparedLayoutResidentEntryHighWater: Int = 0
+    var preparedLayoutResidentEstimatedCostHighWater: Int = 0
+    var preparedLayoutPinnedEntryCount: Int = 0
+    var preparedLayoutOverBudgetContextCount: Int = 0
+    var processPhysicalFootprintBytes: UInt64 = 0
+    var preparedLayoutRunRole: String = "unavailable"
+    var preparedLayoutEntryLimit: Int = 0
+    var preparedLayoutEstimatedCostLimit: Int = 0
+    var windowContentWidth: Double = 0
+    var viewportWidth: Double = 0
+    var requestAvailableWidth: Double = 0
 
     var frameMilliseconds: Double {
         milliseconds(frameNanoseconds)
@@ -497,7 +696,8 @@ struct UIBenchmarkFrameSample {
     }
 
     func csvRow(blockCount: Int, scenario: String) -> String {
-        [
+        // Split so the type checker does not have to solve one oversized literal.
+        let head: [String] = [
             scenario,
             String(blockCount),
             String(frame),
@@ -511,18 +711,44 @@ struct UIBenchmarkFrameSample {
             String(drawCount),
             format(dirtyArea),
             layoutMode,
+        ]
+        let rest: [String] = [
             String(visibleOrderEntryCount),
             String(visibleRenderedBlockCount),
             String(layoutInputBlockCount),
             String(layoutOutputBlockCount),
             String(cacheHitCount),
             String(cacheMissCount),
+            String(prepareLayoutCount),
+            String(displayPrepareLayoutCount),
+            String(attributedStringBuildCount),
             String(heightIndexRebuildCount),
             String(heightIndexInsertCount),
             String(heightIndexRemoveCount),
             String(heightIndexMoveCount),
             String(heightIndexUpdateHeightCount),
-        ].map(csvEscape).joined(separator: ",")
+            String(preparedLayoutLookupCount),
+            String(preparedLayoutHitCount),
+            String(preparedLayoutCapacityEvictionCount),
+            String(preparedLayoutCapacityRejectionCount),
+            String(preparedLayoutPressureEvictionCount),
+            String(preparedLayoutInvalidationRemovalCount),
+            String(preparedLayoutOversizedPinnedInsertionCount),
+            String(preparedLayoutResidentEntryCount),
+            String(preparedLayoutResidentEstimatedCost),
+            String(preparedLayoutResidentEntryHighWater),
+            String(preparedLayoutResidentEstimatedCostHighWater),
+            String(preparedLayoutPinnedEntryCount),
+            String(preparedLayoutOverBudgetContextCount),
+            String(processPhysicalFootprintBytes),
+            preparedLayoutRunRole,
+            String(preparedLayoutEntryLimit),
+            String(preparedLayoutEstimatedCostLimit),
+            format(windowContentWidth),
+            format(viewportWidth),
+            format(requestAvailableWidth),
+        ]
+        return (head + rest).map(csvEscape).joined(separator: ",")
     }
 
     private func milliseconds(_ nanoseconds: UInt64) -> Double {
@@ -541,6 +767,24 @@ struct UIBenchmarkFrameSample {
     }
 }
 
+private func processPhysicalFootprintBytes() -> UInt64 {
+    var info = task_vm_info_data_t()
+    var count = mach_msg_type_number_t(
+        MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size
+    )
+    let result = withUnsafeMutablePointer(to: &info) { pointer in
+        pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { rebound in
+            task_info(
+                mach_task_self_,
+                task_flavor_t(TASK_VM_INFO),
+                rebound,
+                &count
+            )
+        }
+    }
+    return result == KERN_SUCCESS ? info.phys_footprint : 0
+}
+
 @MainActor
 enum UIBenchmarkRunner {
     static func run(
@@ -548,19 +792,27 @@ enum UIBenchmarkRunner {
         viewController: UIBenchmarkHost,
         options: UIBenchmarkOptions
     ) throws {
-        let recorder = UIBenchmarkRecorder()
+        let recorder = UIBenchmarkRecorder(
+            preparedEntryLimit: options.preparedEntryLimit,
+            preparedEstimatedCostLimit: options.preparedEstimatedCostLimit,
+            preparedLayoutRunRole: options.preparedLayoutRunRole
+        )
         viewController.uiBenchmarkRecorder = recorder
         defer { viewController.uiBenchmarkRecorder = nil }
 
         let scenario = UIBenchmarkScenario(argument: options.scenario)
-        viewController.renderAndSyncSurface(makeFirstResponder: false)
-        viewController.scrollView.documentView?.displayIfNeeded()
-        window.displayIfNeeded()
-        if !scenario.requiresFreshDocumentPerFrame {
-            prepare(scenario: scenario, options: options, viewController: viewController)
+        if scenario != .coldFirstLayout {
+            viewController.renderAndSyncSurface(makeFirstResponder: false)
+            viewController.scrollView.documentView?.displayIfNeeded()
+            window.displayIfNeeded()
+            if !scenario.requiresFreshDocumentPerFrame {
+                prepare(scenario: scenario, options: options, viewController: viewController)
+            }
         }
 
         let frameCount = max(1, options.frameCount)
+        var previousForwardReverseScrollY =
+            Double(viewController.scrollView.contentView.bounds.origin.y)
         for frame in 0..<frameCount {
             if scenario.requiresFreshDocumentPerFrame {
                 viewController.resetUIBenchmarkDocument(
@@ -577,16 +829,25 @@ enum UIBenchmarkRunner {
                 scenario: scenario,
                 viewController: viewController
             )
+            if scenario == .forwardReverseScroll {
+                try validateForwardReverseScrollPosition(
+                    scrollY,
+                    previousScrollY: previousForwardReverseScrollY,
+                    viewController: viewController
+                )
+                previousForwardReverseScrollY = scrollY
+            }
             setScrollY(scrollY, viewController: viewController)
 
             recorder.beginFrame(index: frame, scrollY: scrollY)
             let frameStart = DispatchTime.now().uptimeNanoseconds
 
             let operationStart = DispatchTime.now().uptimeNanoseconds
-            let operation = performOperation(
+            let operation = try performOperation(
                 scenario: scenario,
                 frame: frame,
                 options: options,
+                window: window,
                 viewController: viewController
             )
             recorder.recordOperation(
@@ -598,6 +859,23 @@ enum UIBenchmarkRunner {
             viewController.renderAndSyncSurface(makeFirstResponder: false)
             let renderDuration = DispatchTime.now().uptimeNanoseconds - renderStart
             let visibleRenderedBlockCount = viewController.snapshot?.visibleBlocks.count ?? 0
+            let viewportWidth = viewController.currentViewport().width
+            let requestAvailableWidth =
+                viewController.snapshot?.visibleBlocks.first?.textRender.measureRequest
+                .availableWidth ?? 0
+            recorder.recordWidths(
+                windowContentWidth: Double(window.contentLayoutRect.width),
+                viewportWidth: viewportWidth,
+                requestAvailableWidth: requestAvailableWidth
+            )
+            if scenario == .widthResize {
+                try validateWidthResize(
+                    frame: frame,
+                    windowContentWidth: Double(window.contentLayoutRect.width),
+                    viewportWidth: viewportWidth,
+                    requestAvailableWidth: requestAvailableWidth
+                )
+            }
             #if SLOPAD_BENCHMARK_INSTRUMENTATION
                 recorder.recordRender(
                     durationNanoseconds: renderDuration,
@@ -611,6 +889,7 @@ enum UIBenchmarkRunner {
                 )
             #endif
 
+            recorder.beginDisplay()
             let displayStart = DispatchTime.now().uptimeNanoseconds
             viewController.scrollView.documentView?.displayIfNeeded()
             window.displayIfNeeded()
@@ -618,8 +897,16 @@ enum UIBenchmarkRunner {
                 durationNanoseconds: DispatchTime.now().uptimeNanoseconds - displayStart)
 
             recorder.finishFrame(
-                totalNanoseconds: DispatchTime.now().uptimeNanoseconds - frameStart)
+                totalNanoseconds: DispatchTime.now().uptimeNanoseconds - frameStart,
+                processPhysicalFootprintBytes: processPhysicalFootprintBytes()
+            )
         }
+
+        try validateCompletedRun(
+            scenario: scenario,
+            options: options,
+            samples: recorder.samples
+        )
 
         let csv = recorder.csv(blockCount: options.blockCount, scenario: options.scenario)
         try write(csv, to: options.outputPath)
@@ -633,28 +920,40 @@ enum UIBenchmarkRunner {
         options: UIBenchmarkOptions,
         viewController: UIBenchmarkHost
     ) {
-        guard scenario != .scroll else { return }
+        switch scenario {
+        case .scroll, .repeatedViewport, .forwardReverseScroll, .widthResize,
+            .pressureRecovery, .coldFirstLayout:
+            return
+        case .nativeInsert, .composition, .heightExpansion, .blockSelection, .blockReorder,
+            .subtreeDelete, .subtreeReorder, .styleChange, .unicodeNavigation,
+            .longActiveParagraph, .textSelectionDrag, .mixed:
+            break
+        }
         let target = targetBlockID(blockCount: options.blockCount)
         centerBlock(target, viewController: viewController)
 
         switch scenario {
-        case .nativeInsert, .composition, .heightExpansion, .unicodeNavigation, .mixed:
+        case .nativeInsert, .composition, .heightExpansion, .unicodeNavigation,
+            .longActiveParagraph, .mixed:
             let targetIndex = targetBlockIndex(blockCount: options.blockCount)
             viewController.focus(
                 blockID: target,
-                offset: scenario == .unicodeNavigation
+                offset: scenario == .unicodeNavigation || scenario == .longActiveParagraph
                     ? UIBenchmarkFixture.unicodeNavigationText(
                         for: targetIndex,
                         length: options.activeTextLength
+                            ?? (scenario == .longActiveParagraph ? 16_384 : nil)
                     ).count
                     : UIBenchmarkFixture.text(for: targetIndex).count
             )
             viewController.renderAndSyncSurface(makeFirstResponder: true)
 
-        case .blockSelection, .blockReorder, .subtreeDelete, .subtreeReorder, .styleChange:
+        case .blockSelection, .blockReorder, .subtreeDelete, .subtreeReorder, .styleChange,
+            .textSelectionDrag:
             viewController.renderAndSyncSurface(makeFirstResponder: false)
 
-        case .scroll:
+        case .scroll, .repeatedViewport, .forwardReverseScroll, .widthResize,
+            .pressureRecovery, .coldFirstLayout:
             break
         }
     }
@@ -666,10 +965,12 @@ enum UIBenchmarkRunner {
         viewController: UIBenchmarkHost
     ) -> Double {
         switch scenario {
-        case .scroll, .mixed:
+        case .scroll, .mixed, .forwardReverseScroll:
             break
         case .nativeInsert, .composition, .heightExpansion, .blockSelection, .blockReorder,
-            .subtreeDelete, .subtreeReorder, .styleChange, .unicodeNavigation:
+            .subtreeDelete, .subtreeReorder, .styleChange, .unicodeNavigation,
+            .repeatedViewport, .widthResize, .pressureRecovery, .longActiveParagraph,
+            .coldFirstLayout, .textSelectionDrag:
             return Double(viewController.scrollView.contentView.bounds.origin.y)
         }
 
@@ -680,6 +981,12 @@ enum UIBenchmarkRunner {
         guard maxY > 0, frameCount > 1 else { return 0 }
 
         let progress = Double(frame) / Double(frameCount - 1)
+        if scenario == .forwardReverseScroll {
+            let targetSpan = min(maxY, visibleHeight * 4)
+            let phase = frame % 16
+            let step = phase < 8 ? phase + 1 : 15 - phase
+            return Double(targetSpan) * Double(step) / 8
+        }
         return Double(maxY) * progress
     }
 
@@ -687,11 +994,41 @@ enum UIBenchmarkRunner {
         scenario: UIBenchmarkScenario,
         frame: Int,
         options: UIBenchmarkOptions,
+        window: NSWindow,
         viewController: UIBenchmarkHost
-    ) -> String {
+    ) throws -> String {
         switch scenario {
         case .scroll:
             return "scroll"
+
+        case .repeatedViewport:
+            return "repeatedViewport"
+
+        case .forwardReverseScroll:
+            return frame % 16 < 8 ? "forwardScroll" : "reverseScroll"
+
+        case .widthResize:
+            let width: CGFloat = frame.isMultiple(of: 2) ? 920 : 680
+            window.setContentSize(NSSize(width: width, height: 680))
+            SlopadUIBenchmarkApp.layoutBenchmarkWindow(window, host: viewController)
+            return "widthResize"
+
+        case .pressureRecovery:
+            viewController.handlePreparedLayoutMemoryPressure(
+                frame.isMultiple(of: 2) ? .warning : .critical
+            )
+            return frame.isMultiple(of: 2) ? "warningPressure" : "criticalPressure"
+
+        case .longActiveParagraph:
+            insertText(frame: frame, options: options, viewController: viewController)
+            return "longActiveInsertText"
+
+        case .coldFirstLayout:
+            return "coldFirstLayout"
+
+        case .textSelectionDrag:
+            try dragTextSelection(frame: frame, options: options, viewController: viewController)
+            return "textSelectionDrag"
 
         case .nativeInsert:
             insertText(frame: frame, options: options, viewController: viewController)
@@ -729,12 +1066,12 @@ enum UIBenchmarkRunner {
             let viewport = viewController.currentViewport()
             if frame.isMultiple(of: 2) {
                 _ = viewController.handleNativeInputEvent(
-                    .command(.moveWordLeft(viewport: viewport))
+                    .command(.navigate(.moveWordLeft(viewport: viewport)))
                 )
                 return "moveWordLeft"
             }
             _ = viewController.handleNativeInputEvent(
-                .command(.moveWordRight(viewport: viewport))
+                .command(.navigate(.moveWordRight(viewport: viewport)))
             )
             return "moveWordRight"
 
@@ -775,6 +1112,132 @@ enum UIBenchmarkRunner {
                 blockIndentWidth: usesAlternateStyle ? 22 : 20
             )
         )
+    }
+
+    private static func dragTextSelection(
+        frame: Int,
+        options: UIBenchmarkOptions,
+        viewController: UIBenchmarkHost
+    ) throws {
+        let blockID = targetBlockID(blockCount: options.blockCount)
+        let textOriginX =
+            viewController.editorStyle.gutterWidth
+            + viewController.editorStyle.contentHorizontalPadding
+        let startsForward = frame.isMultiple(of: 2)
+        guard
+            let leadingPoint = blockPoint(
+                blockID: blockID,
+                x: textOriginX + 8,
+                yFraction: 0.5,
+                viewController: viewController
+            ),
+            let trailingPoint = blockPoint(
+                blockID: blockID,
+                x: textOriginX + 220,
+                yFraction: 0.5,
+                viewController: viewController
+            )
+        else {
+            throw UIBenchmarkValidationError.textSelectionDragGeometryUnavailable(blockID)
+        }
+
+        let start = startsForward ? leadingPoint : trailingPoint
+        let end = startsForward ? trailingPoint : leadingPoint
+        viewController.handleMouseDown(documentPoint: start)
+        for step in 1...4 {
+            let progress = Double(step) / 4
+            viewController.handleMouseDragged(
+                documentPoint: EditorPoint(
+                    x: start.x + (end.x - start.x) * progress,
+                    y: start.y + (end.y - start.y) * progress
+                )
+            )
+        }
+        viewController.handleMouseUp(documentPoint: end)
+        guard case .text = viewController.snapshot?.selection else {
+            throw UIBenchmarkValidationError.textSelectionDragDidNotProduceTextSelection
+        }
+    }
+
+    private static func validateForwardReverseScrollPosition(
+        _ scrollY: Double,
+        previousScrollY: Double,
+        viewController: UIBenchmarkHost
+    ) throws {
+        let viewportHeight = Double(viewController.scrollView.contentView.bounds.height)
+        let documentHeight = Double(
+            viewController.scrollView.documentView?.frame.height
+                ?? viewController.scrollView.contentView.bounds.height
+        )
+        let maxY = max(0, documentHeight - viewportHeight)
+        let localSpan = min(maxY, viewportHeight * 4)
+        let epsilon = 0.5
+        guard scrollY >= -epsilon, scrollY <= localSpan + epsilon else {
+            throw UIBenchmarkValidationError.forwardReverseScrollExceededLocalSpan(
+                actual: scrollY,
+                limit: localSpan
+            )
+        }
+        let delta = abs(scrollY - previousScrollY)
+        let maximumDelta = viewportHeight * 0.5
+        guard delta <= maximumDelta + epsilon else {
+            throw UIBenchmarkValidationError.forwardReverseScrollStepTooLarge(
+                actual: delta,
+                limit: maximumDelta
+            )
+        }
+    }
+
+    private static func validateCompletedRun(
+        scenario: UIBenchmarkScenario,
+        options: UIBenchmarkOptions,
+        samples: [UIBenchmarkFrameSample]
+    ) throws {
+        #if SLOPAD_BENCHMARK_INSTRUMENTATION
+            if scenario == .forwardReverseScroll {
+                let reverseHitCount = samples
+                    .filter { $0.operation == "reverseScroll" }
+                    .reduce(0) { $0 + $1.preparedLayoutHitCount }
+                guard reverseHitCount > 0 else {
+                    throw UIBenchmarkValidationError.forwardReverseScrollHadNoReversePathHits
+                }
+            }
+            if scenario == .coldFirstLayout, options.preparedEntryLimit == 1 {
+                guard samples.contains(where: {
+                    $0.displayPrepareLayoutCount > 0
+                        && $0.prepareLayoutCount >= $0.displayPrepareLayoutCount
+                }) else {
+                    throw UIBenchmarkValidationError.sameHeadControlDidNotCaptureDisplayPrepare
+                }
+            }
+        #endif
+    }
+
+    private static func validateWidthResize(
+        frame: Int,
+        windowContentWidth: Double,
+        viewportWidth: Double,
+        requestAvailableWidth: Double
+    ) throws {
+        let expectedWindowWidth = frame.isMultiple(of: 2) ? 920.0 : 680.0
+        guard abs(windowContentWidth - expectedWindowWidth) < 1 else {
+            throw UIBenchmarkValidationError.widthResizeDidNotReachWindowWidth(
+                expected: expectedWindowWidth,
+                actual: windowContentWidth
+            )
+        }
+        guard abs(viewportWidth - requestAvailableWidth) < 1 else {
+            throw UIBenchmarkValidationError.requestWidthDoesNotMatchViewport(
+                viewport: viewportWidth,
+                request: requestAvailableWidth
+            )
+        }
+        let isExpectedViewportBand = frame.isMultiple(of: 2)
+            ? viewportWidth > 800
+            : viewportWidth < 800
+        guard isExpectedViewportBand else {
+            throw UIBenchmarkValidationError.viewportWidthDidNotResize(viewportWidth)
+        }
     }
 
     private static func insertText(

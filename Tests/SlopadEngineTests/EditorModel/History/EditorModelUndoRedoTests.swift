@@ -21,7 +21,7 @@ struct EditorModelUndoRedoTests {
 
         // When
         let result = editor.apply(.insertText("Hello"))
-        let change = try #require(result?.change)
+        let change = try #require(result.outcome?.change)
         _ = editor.undo()
         let textAfterUndo = editor.document.blocks[blockID]?.content.text
         _ = editor.redo()
@@ -54,7 +54,7 @@ struct EditorModelUndoRedoTests {
         let didRedo = editor.redo()
 
         // Then
-        #expect(result != nil)
+        #expect(result.isApplied)
         #expect(didUndo != nil)
         #expect(textAfterUndo == "")
         #expect(selectionAfterUndo == .caret(blockID: blockID, offset: 0))
@@ -80,7 +80,7 @@ struct EditorModelUndoRedoTests {
         ])
 
         // Then
-        #expect(result == nil)
+        #expect(result.isApplied == false)
         #expect(editor.document.block(blockID)?.content.text == "")
         #expect(editor.selection == .caret(blockID: blockID, offset: 0))
         #expect(editor.undoStack.isEmpty)

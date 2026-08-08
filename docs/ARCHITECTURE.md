@@ -36,6 +36,12 @@ flowchart TB
         DataStructure["SlopadDataStructure<br/>pure storage"]
     end
 
+    subgraph Format["Markdown Syntax and Opt-in Format Adapter"]
+        MarkdownInputRules["SlopadMarkdownInputRules<br/>bounded typed-input pattern data"]
+        MarkdownAdapter["SlopadMarkdown<br/>stateless decode"]
+        SwiftMarkdown["swift-markdown 0.8.0<br/>parser AST"]
+    end
+
     AppKit --> AppKitUI
     AppKit --> Engine
     AppKitUI --> Engine
@@ -46,13 +52,16 @@ flowchart TB
     Engine --> CoreModel
 
     EditorModel --> CoreModel
+    EditorModel --> MarkdownInputRules
     BlockLayout --> CoreModel
     BlockLayout --> DataStructure
     AppKitTextKit --> CoreModel
+    MarkdownAdapter --> CoreModel
+    MarkdownAdapter --> SwiftMarkdown
 ```
 
 Arrows show direct SwiftPM target dependencies. Debug apps, benchmarks, tests, and the
-downstream fixture are outer-edge consumers and are intentionally omitted from the
+downstream fixtures are outer-edge consumers and are intentionally omitted from the
 production graph.
 
 The graph is also a design constraint:
@@ -64,6 +73,11 @@ The graph is also a design constraint:
 - `SlopadAppKitUI` is the runtime integration point for the default macOS path.
 - `SlopadAppKit` is the recommended ordinary host product/import. It curates the default
   AppKit stack without becoming another runtime or semantic owner.
+- `SlopadMarkdownInputRules` is an internal, non-product target. It holds only immutable
+  Markdown prefix/inline pattern data and emits package-only canonical rule effects;
+  `SlopadEditorModel` owns the bounded trigger runner and atomic transaction application.
+- `SlopadMarkdown` depends on `SlopadCoreModel` and the external parser only. It does not
+  depend on `SlopadEngine`; hosts decide when decoded values enter a Session transaction.
 
 ## Outer-Edge Consumers
 
@@ -74,9 +88,70 @@ The graph is also a design constraint:
 | `SlopadHeightBenchmark` | Height-index and layout benchmark | Development target without a product |
 | `SlopadSessionBenchmark` | Engine/session benchmark | Development target without a product |
 | `Fixtures/DownstreamAppKitHost` | Compile-time proof of the one-product, one-import ordinary host contract | Separate fixture package; depends on and imports only `SlopadAppKit`, without `@testable` or package access |
+| `Fixtures/DownstreamSwiftUIHost` | Compile-time proof of the SwiftUI host lifecycle contract | Separate fixture package; depends on and imports the curated `SlopadSwiftUI` surface without package access |
+| `Fixtures/DownstreamMarkdownHost` | Public Markdown-to-Session integration proof | Separate fixture package; imports `SlopadMarkdown` and `SlopadEngine`, then applies decoded blocks unchanged through `EditorDocumentPatch` with `.inactive` selection |
 
 Tests also consume the target that owns the behavior under test. Their folder structure
 mirrors responsibility rather than production file symmetry.
+
+## Markdown Format Boundary
+
+Markdown has two deliberately different integration points. `SlopadMarkdownInputRules` is
+linked into the ordinary editor path because typed shortcuts need no parser and evaluate only
+a bounded candidate after a closing-character gate. It is not a product, registry, or codec:
+it cannot parse a whole document and imports no `Markdown` AST. `SlopadMarkdown` remains the
+separate opt-in product for explicit whole-document import/export below.
+
+`SlopadMarkdown` is an opt-in format product, not an engine owner and not a plugin
+registry. Its call site is deliberately small and synchronous:
+
+```swift
+let blocks = try SlopadMarkdown.decode(markdown)
+let markdown = try SlopadMarkdown.encode(blocks)
+```
+
+The decoder is stateless. A success contains only fresh depth-first
+`[EditorBlockInput]` values; parser nodes are not retained. A failure is
+`MarkdownDecodingError` with a nonempty, source-ordered diagnostic collection and no
+partial blocks. Public source ranges are half-open and use 1-based lines plus 1-based
+UTF-8 byte columns. A source containing only invisible parser definitions still succeeds
+as one empty paragraph, so successful block input is never empty.
+
+The encoder consumes that same public `[EditorBlockInput]` vocabulary rather than the
+package-internal `Document`. It validates a canonical parent-before-child depth-first tree
+before producing text, and returns `MarkdownEncodingError` with block-identity diagnostics
+and no partial Markdown for a shape that cannot be represented losslessly. Semantic
+round-trip is the contract: encode/decode preserves the canonical tree, text, and inline
+marks but creates fresh block IDs on decode. Strong uses `**`; emphasis prefers `_` and
+uses a deterministic `*` fallback only when CommonMark's delimiter rules would otherwise
+lose meaning at a nested seam or Unicode-adjacent boundary.
+
+Inline assembly records parser-fragment boundaries as UTF-8 offsets, then maps them only
+after the complete canonical string has its final Swift `Character` segmentation. When an
+AST mark boundary splits one extended grapheme cluster, the mark expands outward to that
+whole atomic Character before canonical mark merging; `BlockContent` normalization is not
+used to conceal an invalid intermediate range.
+
+Only files under `Sources/SlopadMarkdown` may import the external `Markdown` module, and
+every such import is spelled `internal import Markdown`. That access modifier makes a
+parser type in a public or package signature a compiler error. A source-scanning
+architecture test separately rejects an ordinary/public import or an import from any
+other production target.
+
+Conversion walks block and inline nodes with explicit work stacks, preserving exact
+parent-before-child depth-first order without recursive adapter traversal. A raw-source
+preflight also rejects block-quote or list-container nesting deeper than 64 before entering
+`swift-markdown` 0.8.0, which can otherwise trap in its AST path on adversarial depth; the
+typed `.excessiveNesting(maximumDepth: 64)` diagnostic covers the whole input. This is a
+fail-closed resource boundary, not a flattening fallback. The preflight recognizes
+CommonMark backtick and tilde fence opening/closing rules and excludes fenced and indented
+code contents, so literal quote/list markers in supported code blocks do not consume the
+nesting budget.
+
+The exact `swift-markdown` 0.8.0 pin also raises package resolution to a Swift
+6.2-or-later toolchain even though Slopad's own manifest remains tools version 6.0. Only a
+host selecting `SlopadMarkdown` builds and links the Markdown and C parser targets, but
+every host resolution root must be able to parse the dependency manifest.
 
 ## Runtime Collaboration
 
@@ -179,10 +254,10 @@ time the user clicks elsewhere. `onUnhandledAction` is a result notification: it
 what the engine already decided and cannot change that decision.
 
 **`[EditorBlockInput]` is the only document representation crossing this boundary.** No
-`String`, storage format, or codec type appears in the host-facing API. Turning a stored
-format into blocks, and blocks back into a stored format, is the host's codec on the
-host's side. This is what stops a convenience format from becoming a second canonical
-model.
+`String`, storage format, or codec type appears in the engine host-facing API. Turning a
+stored format into blocks remains an operation the host invokes outside Session;
+`SlopadMarkdown` supplies one opt-in codec for that edge. This is what stops a convenience
+format from becoming a second canonical model.
 
 The narrower default facade does not remove the engine extension boundary.
 `EditorSession.handleInput(_:)`, `EditorInputEvent`, `EditorViewport`, and
@@ -574,7 +649,9 @@ different states.
 `SlopadDebugApp`, benchmark targets, tests, and fixtures consume production layers. They
 may inspect, measure, and prove a contract, but debug or benchmark convenience is not a
 reason to widen production API. `Fixtures/DownstreamAppKitHost` is the compile-time proof
-of the intended one-product `SlopadAppKit` surface.
+of the intended one-product `SlopadAppKit` surface,
+`Fixtures/DownstreamSwiftUIHost` proves the SwiftUI lifecycle surface, and
+`Fixtures/DownstreamMarkdownHost` proves the separate format-to-Session public path.
 
 ## Change Decision Checklist
 

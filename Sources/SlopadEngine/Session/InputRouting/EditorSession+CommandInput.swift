@@ -33,10 +33,6 @@ extension EditorSession {
             guard canRouteTextCommand() else { return nil }
             return deleteBackwardToTextStart()
 
-        case .deleteWordBackward(let viewport):
-            guard canRouteTextCommand() else { return nil }
-            return deleteBackwardToPreviousWordBoundary(viewport: viewport)
-
         case .enter:
             return handleEnterInputCommand()
 
@@ -50,19 +46,35 @@ extension EditorSession {
         case .clearSelection:
             return handleClearSelectionInputCommand()
 
+        case .navigate(let navigation):
+            return handleNavigationCommand(navigation)
+
         case .indent:
             return handleIndentInputCommand()
 
         case .outdent:
             return handleOutdentInputCommand()
 
-        case .moveLeft(let viewport):
-            guard canRouteTextCommand() else { return nil }
-            return moveHorizontally(direction: .left, viewport: viewport)
+        case .toggleInlineStyle(let style):
+            switch inlineStyleTarget() {
+            case .range(let blockID, let range):
+                return handleCommand(
+                    .toggleTextStyle(blockID: blockID, range: range, style: style))
+            case .caret:
+                return handleCommand(.toggleStoredStyle(style))
+            case .none:
+                return nil
+            }
 
-        case .moveRight(let viewport):
-            guard canRouteTextCommand() else { return nil }
-            return moveHorizontally(direction: .right, viewport: viewport)
+        case .clearInlineStyles:
+            switch inlineStyleTarget() {
+            case .range(let blockID, let range):
+                return handleCommand(.clearTextStyles(blockID: blockID, range: range))
+            case .caret:
+                return handleCommand(.clearStoredStyles)
+            case .none:
+                return nil
+            }
 
         case .moveToTextStart:
             guard canRouteTextCommand() else { return nil }
@@ -71,6 +83,42 @@ extension EditorSession {
         case .moveToTextEnd:
             guard canRouteTextCommand() else { return nil }
             return moveToTextBoundary(.right)
+
+        case .extendToTextStart:
+            guard canRouteTextCommand() else { return nil }
+            return extendTextSelection(to: .left)
+
+        case .extendToTextEnd:
+            guard canRouteTextCommand() else { return nil }
+            return extendTextSelection(to: .right)
+
+        case .selectAll:
+            return handleSelectAllInputCommand()
+
+        case .undo:
+            return handleUndoInputCommand()
+
+        case .redo:
+            return handleRedoInputCommand()
+        }
+    }
+
+
+    private func handleNavigationCommand(
+        _ command: EditorInputEvent.Command.Navigation
+    ) -> EditorUpdate? {
+        switch command {
+        case .deleteWordBackward(let viewport):
+            guard canRouteTextCommand() else { return nil }
+            return deleteBackwardToPreviousWordBoundary(viewport: viewport)
+
+        case .moveLeft(let viewport):
+            guard canRouteTextCommand() else { return nil }
+            return moveHorizontally(direction: .left, viewport: viewport)
+
+        case .moveRight(let viewport):
+            guard canRouteTextCommand() else { return nil }
+            return moveHorizontally(direction: .right, viewport: viewport)
 
         case .moveWordLeft(let viewport):
             guard canRouteTextCommand() else { return nil }
@@ -87,14 +135,6 @@ extension EditorSession {
         case .extendCharacterRight(let viewport):
             guard canRouteTextCommand() else { return nil }
             return extendTextSelectionByCharacter(.right, viewport: viewport)
-
-        case .extendToTextStart:
-            guard canRouteTextCommand() else { return nil }
-            return extendTextSelection(to: .left)
-
-        case .extendToTextEnd:
-            guard canRouteTextCommand() else { return nil }
-            return extendTextSelection(to: .right)
 
         case .extendWordLeft(let viewport):
             guard canRouteTextCommand() else { return nil }
@@ -115,16 +155,26 @@ extension EditorSession {
 
         case .extendDown(let viewport):
             return handleVerticalMovementInputCommand(.down, extending: true, viewport: viewport)
-
-        case .selectAll:
-            return handleSelectAllInputCommand()
-
-        case .undo:
-            return handleUndoInputCommand()
-
-        case .redo:
-            return handleRedoInputCommand()
         }
+    }
+
+    /// What an inline style command should act on.
+    ///
+    /// A selected range is styled directly. A caret has nothing to style yet, so the style is
+    /// armed for whatever gets typed next instead of being dropped.
+    ///
+    /// Live composition yields `nil`: marking text that the input method may still replace
+    /// would attach marks to characters that are about to disappear.
+    private enum InlineStyleTarget {
+        case range(blockID: BlockID, range: TextRange)
+        case caret
+    }
+
+    private func inlineStyleTarget() -> InlineStyleTarget? {
+        guard composition == nil, canRouteTextCommand() else { return nil }
+        guard let selection = activeTextSelection() else { return nil }
+        guard !selection.range.isEmpty else { return .caret }
+        return .range(blockID: selection.position.blockID, range: selection.range)
     }
 
     func canRouteTextCommand() -> Bool {

@@ -9,7 +9,7 @@ extension EditorModel {
         operations: inout [EditorOperation],
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
-        guard let block = document.block(blockID) else { throw .abort }
+        guard let block = state.document.block(blockID) else { throw .abort }
         let starts = touchedLineStarts(in: block.content.text, range: range)
         guard !starts.isEmpty else { throw .abort }
         let edits = starts.map { (position: $0, deleteCount: 0, insertText: "    ") }
@@ -27,7 +27,7 @@ extension EditorModel {
         operations: inout [EditorOperation],
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
-        guard let block = document.block(blockID) else { throw .abort }
+        guard let block = state.document.block(blockID) else { throw .abort }
         let starts = touchedLineStarts(in: block.content.text, range: range)
         let edits = starts.compactMap { start -> (position: Int, deleteCount: Int, insertText: String)? in
             let count = removableIndentCount(in: block.content.text, at: start)
@@ -53,7 +53,7 @@ extension EditorModel {
         range: TextRange,
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
-        guard let block = document.block(blockID) else { throw .abort }
+        guard let block = state.document.block(blockID) else { throw .abort }
         var content = block.content
         var delta = 0
         for edit in edits {
@@ -68,8 +68,8 @@ extension EditorModel {
         }
         guard content != block.content else { throw .abort }
         try requireDocumentMutationSuccess(
-            document.replaceContent(blockID: blockID, content: content))
-        selection = selectionAfterTextIndentEdits(
+            state.document.replaceContent(blockID: blockID, content: content))
+        state.selection = selectionAfterTextIndentEdits(
             edits,
             blockID: blockID,
             originalRange: range

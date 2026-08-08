@@ -19,9 +19,9 @@ struct EditorSessionTextMovementInputEventTests {
 
         // When
         let firstUpdate = try #require(
-            session.handleInput(.command(.extendDown(viewport: viewport))))
+            session.handleInput(.command(.navigate(.extendDown(viewport: viewport)))))
         let secondUpdate = try #require(
-            session.handleInput(.command(.extendDown(viewport: viewport))))
+            session.handleInput(.command(.navigate(.extendDown(viewport: viewport)))))
 
         // Then
         #expect(firstUpdate.selection == .blocks(BlockSelection(blockIDs: [b])))
@@ -47,10 +47,10 @@ struct EditorSessionTextMovementInputEventTests {
 
         // When
         let boundaryUpdate = try #require(
-            session.handleInput(.command(.moveRight(viewport: viewport)))
+            session.handleInput(.command(.navigate(.moveRight(viewport: viewport))))
         )
         let innerUpdate = try #require(
-            session.handleInput(.command(.moveRight(viewport: viewport)))
+            session.handleInput(.command(.navigate(.moveRight(viewport: viewport))))
         )
 
         // Then
@@ -93,8 +93,8 @@ struct EditorSessionTextMovementInputEventTests {
         let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)
 
         // When
-        let downUpdate = try #require(session.handleInput(.command(.moveDown(viewport: viewport))))
-        let upUpdate = try #require(session.handleInput(.command(.moveUp(viewport: viewport))))
+        let downUpdate = try #require(session.handleInput(.command(.navigate(.moveDown(viewport: viewport)))))
+        let upUpdate = try #require(session.handleInput(.command(.navigate(.moveUp(viewport: viewport)))))
 
         // Then
         #expect(downUpdate.selection == .caret(blockID: blockID, offset: 7))

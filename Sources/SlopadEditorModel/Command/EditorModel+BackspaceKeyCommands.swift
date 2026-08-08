@@ -24,7 +24,7 @@ extension EditorModel {
 
         case .caret(let position):
             let blockID = position.blockID
-            guard let block = document.block(blockID) else {
+            guard let block = state.document.block(blockID) else {
                 throw .abort
             }
             if position.offset > 0 {
@@ -45,7 +45,7 @@ extension EditorModel {
                 return
             }
 
-            if block.parentID != nil && document.previousSiblingID(of: blockID) == nil {
+            if block.parentID != nil && state.document.previousSiblingID(of: blockID) == nil {
                 try outdent(
                     selection: BlockSelection(blockIDs: [blockID]), operations: &operations,
                     changed: &changed)
@@ -62,10 +62,10 @@ extension EditorModel {
     }
 
     private func previousVisibleBlockID(before blockID: BlockID) -> BlockID? {
-        guard document.containsBlock(blockID) else { return nil }
+        guard state.document.containsBlock(blockID) else { return nil }
 
-        let parentID = document.parentID(of: blockID)
-        let siblings = document.children(of: parentID)
+        let parentID = state.document.parentID(of: blockID)
+        let siblings = state.document.children(of: parentID)
         guard let siblingIndex = siblings.firstIndex(of: blockID) else { return nil }
         if siblingIndex > 0 {
             return lastVisibleDescendant(of: siblings[siblingIndex - 1])
@@ -75,7 +75,7 @@ extension EditorModel {
 
     private func lastVisibleDescendant(of blockID: BlockID) -> BlockID {
         var currentID = blockID
-        while let lastChildID = document.children(of: currentID).last {
+        while let lastChildID = state.document.children(of: currentID).last {
             currentID = lastChildID
         }
         return currentID

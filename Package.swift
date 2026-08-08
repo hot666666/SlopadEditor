@@ -13,6 +13,10 @@ let package = Package(
             targets: ["SlopadEngine"]
         ),
         .library(
+            name: "SlopadMarkdown",
+            targets: ["SlopadMarkdown"]
+        ),
+        .library(
             name: "SlopadAppKit",
             targets: ["SlopadAppKit"]
         ),
@@ -37,16 +41,35 @@ let package = Package(
             targets: ["SlopadUIBenchmarkApp"]
         )
     ],
+    dependencies: [
+        .package(
+            url: "https://github.com/swiftlang/swift-markdown.git",
+            exact: "0.8.0"
+        )
+    ],
     targets: [
         .target(
             name: "SlopadCoreModel"
+        ),
+        // Markdown typed-input syntax is intentionally separate from the opt-in codec. It
+        // contains only bounded pattern data and canonical rule effects — no parser target.
+        .target(
+            name: "SlopadMarkdownInputRules",
+            dependencies: ["SlopadCoreModel"]
+        ),
+        .target(
+            name: "SlopadMarkdown",
+            dependencies: [
+                "SlopadCoreModel",
+                .product(name: "Markdown", package: "swift-markdown"),
+            ]
         ),
         .target(
             name: "SlopadDataStructure"
         ),
         .target(
             name: "SlopadEditorModel",
-            dependencies: ["SlopadCoreModel"]
+            dependencies: ["SlopadCoreModel", "SlopadMarkdownInputRules"]
         ),
         .target(
             name: "SlopadBlockLayout",
@@ -126,6 +149,15 @@ let package = Package(
                 "SlopadEditorModel",
                 "SlopadBlockLayout",
                 "SlopadEngine",
+                "SlopadMarkdown",
+                "SlopadMarkdownInputRules",
+            ]
+        ),
+        .testTarget(
+            name: "SlopadMarkdownTests",
+            dependencies: [
+                "SlopadCoreModel",
+                "SlopadMarkdown",
             ]
         ),
         .testTarget(

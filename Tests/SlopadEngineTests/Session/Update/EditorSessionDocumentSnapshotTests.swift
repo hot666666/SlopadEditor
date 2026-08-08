@@ -107,7 +107,7 @@ struct EditorSessionDocumentSnapshotTests {
         let markedContent = BlockContent(
             text: "한글🙂link",
             marks: [
-                BlockContent.InlineMark(kind: .bold, range: TextRange(0, 2)),
+                BlockContent.InlineMark(kind: .strong, range: TextRange(0, 2)),
                 BlockContent.InlineMark(
                     kind: .link(destination: "https://example.com"),
                     range: TextRange(3, 7)

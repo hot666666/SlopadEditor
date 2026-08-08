@@ -436,11 +436,13 @@ final class AppKitActiveInputController {
     }
 
     @discardableResult
+    /// Every native selector that needs layout resolves through here, which is why the
+    /// wrapping into `.navigate` lives at this one point rather than at each call site.
     private func handleViewportInputCommand(
-        _ makeCommand: (EditorViewport) -> EditorInputEvent.Command
+        _ makeCommand: (EditorViewport) -> EditorInputEvent.Command.Navigation
     ) -> Bool {
         let viewport = owner?.currentViewport() ?? EditorViewport(width: 1, scrollY: 0, height: 1)
-        return handleInputCommand(makeCommand(viewport))
+        return handleInputCommand(.navigate(makeCommand(viewport)))
     }
 
     private func copySelectionToPasteboard() -> Bool {

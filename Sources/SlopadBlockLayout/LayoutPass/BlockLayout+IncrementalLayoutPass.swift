@@ -9,7 +9,7 @@ extension BlockLayout {
         availableWidth: Double,
         widthRevision: Int?,
         changeSet: BlockLayoutChangeSet,
-        textLayouter: any BlockTextLayoutProtocol
+        textLayouter: any BlockMeasuring
     ) -> EditorSnapshotRevision? {
         guard currentRevision != nil else { return nil }
 

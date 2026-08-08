@@ -12,7 +12,16 @@ Use repository documents by purpose:
 * `docs/ROADMAP.md` — roadmap and open risks
 * `docs/LESSONS_LEARNED.md` — repeated structural failure patterns
 
-Read only documents relevant to the task. Current source and tests take precedence over old plans, handoffs, or prior conversation.
+Read only documents relevant to the task.
+
+Two different questions have two different authorities:
+
+* **What the code does today** — current source and tests are authoritative. Do not trust a stale plan, handoff, or prior conversation over them.
+* **What the code should become** — `docs/ROADMAP.md`, `ADR/`, and the tracking issue are authoritative.
+
+When source and an intent document disagree about *intent*, that is a planning defect, not a signal to ignore the document. Correct the document first (or open an issue), then change code. Do not silently follow either side.
+
+`Slopad_Semantic_Editor_Architecture_Handoff.md` is a background record, not a work order.
 
 ## Architecture Rules
 
@@ -62,6 +71,13 @@ For bug fixes, add a focused regression test when practical.
 
 After three materially different failed fix attempts, stop speculative editing and report the evidence, remaining candidate causes, and next diagnostic step.
 
+## Agent Orchestration
+
+Use one writer at a time, and never review a moving diff. The operational role definitions,
+model settings, review flow, and current concurrency policy are in
+[Agent workflow](docs/AGENT_WORKFLOW.md); `.codex/config.toml` and
+`.codex/agents/*.toml` are their executable source of truth.
+
 ## UI Changes
 
 UI work must preserve both native behavior and engine semantics.
@@ -82,38 +98,12 @@ AppKit-specific behavior belongs in the adapter; semantic editing behavior belon
 
 ## Verification
 
-Always:
+The canonical baseline entrypoints for executable changes are:
 
 ```sh
 swift test --quiet
 git diff --check
 ```
 
-For AppKit or public host API changes:
-
-```sh
-swift build --product SlopadAppKit --quiet
-swift build --product SlopadAppKitTextKit --quiet
-swift build --product SlopadAppKitUI --quiet
-swift build --package-path Fixtures/DownstreamAppKitHost --product DownstreamAppKitHost --quiet
-```
-
-For UI/runtime changes:
-
-```sh
-swift build --product SlopadDebugApp --quiet
-```
-
-For performance-sensitive UI changes:
-
-```sh
-swift build --product SlopadUIBenchmarkApp --quiet
-```
-
-For package/target graph changes:
-
-```sh
-swift package dump-package
-```
-
-Do not claim verification that was not run.
+Select the additional build, fixture, runtime, benchmark, and documentation gates from
+[Testing](docs/TESTING.md). Do not claim verification that was not run.
