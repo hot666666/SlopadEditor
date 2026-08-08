@@ -70,6 +70,10 @@ public final class EditorSession {
     func replaceTextBackend(_ backend: any BlockTextLayoutProtocol) {
         textBackend = backend
     }
+    /// Last resolved caret/selection geometry, reused across surface convergence renders.
+    var cachedCaretGeometry:
+        (key: CaretGeometryKey, caretRect: EditorRect?, selectionRects: [EditorRect])?
+
     var composition: TextComposition?
     var compositionSelection: TextSelection?
     var blockDrag: (blockIDs: [BlockID], dropTarget: BlockDropTarget?, dropIndicator: EditorRect?)?

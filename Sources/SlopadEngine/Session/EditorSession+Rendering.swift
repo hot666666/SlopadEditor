@@ -68,23 +68,67 @@ extension EditorSession {
             affinity: activeSelection.position.affinity
         )
 
+        let geometry = caretGeometry(
+            key: CaretGeometryKey(
+                measureRequest: rendered.textRender.measureRequest,
+                frame: rendered.textRender.frame,
+                selectedRange: selectedRange,
+                caretPosition: caretPosition,
+                navigationContext: navigationContext
+            ),
+            renderDescriptor: rendered.textRender
+        )
+
         return EditorSessionActiveTextInputDescriptor(
             selectedRange: selectedRange,
             focusOffset: focusOffset,
             focusAffinity: activeSelection.position.affinity,
             navigationContext: navigationContext,
             renderDescriptor: rendered.textRender,
-            caretRect: textLayouter.caretRect(
-                for: caretPosition,
-                navigationContext: navigationContext,
-                in: rendered.textRender.measureRequest
-            ).map { documentRect($0, in: rendered.textRender) },
-            selectionRects: selectedRange.isEmpty
-                ? []
-                : textLayouter.selectionRects(
-                    for: selectedRange, in: rendered.textRender.measureRequest
-                ).map { documentRect($0, in: rendered.textRender) }
+            caretRect: geometry.caretRect,
+            selectionRects: geometry.selectionRects
         )
+    }
+
+    /// Everything the caret and selection rectangles depend on.
+    struct CaretGeometryKey: Hashable {
+        let measureRequest: BlockMeasureRequest
+        let frame: EditorRect
+        let selectedRange: TextRange
+        let caretPosition: TextPosition
+        let navigationContext: TextNavigationContext?
+    }
+
+    /// Resolves caret and selection geometry, reusing the previous answer when nothing it
+    /// depends on has changed.
+    ///
+    /// The adapter renders repeatedly while the surface converges — up to 32 passes as the
+    /// canvas resizes and a scrollbar appears — and only paints once at the end. Without this,
+    /// selecting across a long block would walk every line fragment on each of those passes
+    /// and throw away all but the last result. Before this change the walk happened once per
+    /// paint, so recomputing per render would have been a regression.
+    private func caretGeometry(
+        key: CaretGeometryKey,
+        renderDescriptor: EditorTextRenderDescriptor
+    ) -> (caretRect: EditorRect?, selectionRects: [EditorRect]) {
+        if let cached = cachedCaretGeometry, cached.key == key {
+            return (cached.caretRect, cached.selectionRects)
+        }
+
+        let caretRect = textLayouter.caretRect(
+            for: key.caretPosition,
+            navigationContext: key.navigationContext,
+            in: key.measureRequest
+        ).map { documentRect($0, in: renderDescriptor) }
+
+        let selectionRects =
+            key.selectedRange.isEmpty
+            ? []
+            : textLayouter.selectionRects(for: key.selectedRange, in: key.measureRequest)
+                .map { documentRect($0, in: renderDescriptor) }
+
+        cachedCaretGeometry = (key, caretRect, selectionRects)
+        return (caretRect, selectionRects)
     }
 
     /// Line fragment rectangles for a laid-out block, in document coordinates.

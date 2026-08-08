@@ -78,12 +78,57 @@ struct EditorSessionCaretGeometryTests {
         #expect((caret?.y ?? 0) >= (firstFrame?.y ?? 0) + (firstFrame?.height ?? 0) - 1)
     }
 
+    @Test("수렴 렌더가 반복돼도 기하를 다시 계산하지 않는다")
+    func reusesGeometryAcrossConvergenceRenders() {
+        // Given: 어댑터는 표면이 수렴할 때까지 최대 32회 렌더하고 마지막에 한 번만 그린다.
+        // 렌더마다 다시 계산하면 긴 블록을 드래그 선택할 때 줄 조각을 매번 훑게 된다.
+        let counting = CountingGeometryLayouter()
+        let blockID: BlockID = "block"
+        let session = EditorSession(
+            blocks: [EditorBlockInput(id: blockID, content: BlockContent(text: "Body text"))],
+            selection: .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: blockID, offset: 0),
+                    focus: TextPosition(blockID: blockID, offset: 9)
+                )),
+            textLayouter: counting
+        )
+
+        // When: 같은 뷰포트로 여러 번 렌더한다.
+        for _ in 0..<5 { _ = session.render(in: viewport) }
+
+        // Then
+        #expect(counting.selectionRectCalls == 1)
+        #expect(counting.caretRectCalls == 1)
+    }
+
+    @Test("선택이 바뀌면 기하를 다시 계산한다")
+    func recomputesWhenTheSelectionChanges() {
+        // Given
+        let counting = CountingGeometryLayouter()
+        let blockID: BlockID = "block"
+        let session = EditorSession(
+            blocks: [EditorBlockInput(id: blockID, content: BlockContent(text: "Body text"))],
+            selection: .caret(blockID: blockID, offset: 0),
+            textLayouter: counting
+        )
+        _ = session.render(in: viewport)
+        let before = counting.caretRectCalls
+
+        // When
+        _ = session.handleInput(.command(.moveToTextEnd))
+        _ = session.render(in: viewport)
+
+        // Then
+        #expect(counting.caretRectCalls > before)
+    }
+
     @Test("줄 조각 사각형을 문서 좌표로 질의할 수 있다")
     func exposesLineFragmentRects() {
         // Given: 어댑터가 "이 점이 텍스트에 닿는가"를 백엔드 없이 물을 수 있어야 한다.
         let session = makeSession(text: "Body", caretAt: 0)
         let snapshot = session.render(in: viewport)
-        let rendered = try? #require(snapshot.visibleBlocks.first)
+        let rendered = snapshot.visibleBlocks.first
 
         // When
         let rects = rendered.map { session.textLineFragmentRects(in: $0.textRender) } ?? []
@@ -96,6 +141,32 @@ struct EditorSessionCaretGeometryTests {
     // MARK: - Support
 
     private let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)
+
+    /// Counts the geometry queries the memoization is supposed to avoid repeating.
+    private final class CountingGeometryLayouter: BlockTextLayoutProtocol, @unchecked Sendable {
+        private let base = DeterministicBlockTextLayouter()
+        private(set) var caretRectCalls = 0
+        private(set) var selectionRectCalls = 0
+
+        func measure(_ request: BlockMeasureRequest) -> BlockMeasurement { base.measure(request) }
+        func textFrame(for request: BlockMeasureRequest, measuredHeight: Double?) -> EditorRect {
+            base.textFrame(for: request, measuredHeight: measuredHeight)
+        }
+        func lineFragments(for request: BlockMeasureRequest) -> [LineFragmentSnapshot] {
+            base.lineFragments(for: request)
+        }
+        func caretRect(for position: TextPosition, in request: BlockMeasureRequest) -> EditorRect? {
+            caretRectCalls += 1
+            return base.caretRect(for: position, in: request)
+        }
+        func selectionRects(for range: TextRange, in request: BlockMeasureRequest) -> [EditorRect] {
+            selectionRectCalls += 1
+            return base.selectionRects(for: range, in: request)
+        }
+        func textPosition(at point: EditorPoint, in request: BlockMeasureRequest) -> TextPosition {
+            base.textPosition(at: point, in: request)
+        }
+    }
 
     private func makeSession(text: String, caretAt offset: Int) -> EditorSession {
         EditorSession(
