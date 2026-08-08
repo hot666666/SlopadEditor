@@ -168,7 +168,7 @@ private func measure(
         textLayoutRevision: Int
     ),
     cache: inout TextLayoutCache,
-    textLayouter: any BlockTextLayoutProtocol
+    textLayouter: any BlockMeasuring
 ) -> BlockMeasurement {
     cache.measurement(
         for: input.block,

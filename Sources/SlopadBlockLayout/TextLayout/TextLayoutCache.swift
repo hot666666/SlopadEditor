@@ -40,7 +40,7 @@ struct TextLayoutCache {
         contentSnapshot: EffectiveDocumentSnapshot,
         availableWidth: Double,
         textLayoutRevision: Int,
-        textLayouter: any BlockTextLayoutProtocol
+        textLayouter: any BlockMeasuring
     ) -> BlockMeasurement {
         measured(
             block,
@@ -59,7 +59,7 @@ struct TextLayoutCache {
             contentSnapshot: EffectiveDocumentSnapshot,
             availableWidth: Double,
             textLayoutRevision: Int,
-            textLayouter: any BlockTextLayoutProtocol
+            textLayouter: any BlockMeasuring
         ) -> (measurement: BlockMeasurement, usedCache: Bool) {
             measured(
                 block,
@@ -78,7 +78,7 @@ struct TextLayoutCache {
         contentSnapshot: EffectiveDocumentSnapshot,
         availableWidth: Double,
         textLayoutRevision: Int,
-        textLayouter: any BlockTextLayoutProtocol
+        textLayouter: any BlockMeasuring
     ) -> (measurement: BlockMeasurement, usedCache: Bool) {
         let key = MeasurementKey(
             block: block,

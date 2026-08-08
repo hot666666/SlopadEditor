@@ -62,7 +62,7 @@ struct EditorSessionTextPointerFocusInputEventTests {
             ]),
             selection: .blocks(BlockSelection(blockIDs: [a]))
         )
-        session.textLayouter = layouter
+        session.replaceTextBackend(layouter)
         let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)
 
         // When

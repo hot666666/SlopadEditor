@@ -7,7 +7,7 @@ extension BlockLayout {
         contentSnapshot: EffectiveDocumentSnapshot,
         visibleIndex: VisibleBlockIndex,
         viewport: EditorViewport,
-        textLayouter: any BlockTextLayoutProtocol
+        textLayouter: any BlockMeasuring
     ) -> EditorSnapshotRevision {
         guard shouldUseLazyLayout(visibleIndex: visibleIndex) else {
             return layout(
@@ -31,7 +31,7 @@ extension BlockLayout {
         visibleIndex: VisibleBlockIndex,
         availableWidth: Double,
         widthRevision: Int?,
-        textLayouter: any BlockTextLayoutProtocol
+        textLayouter: any BlockMeasuring
     ) -> EditorSnapshotRevision {
         var measurements: [BlockID: BlockMeasurement] = [:]
         var heightEntries: [BlockHeightIndexStorage.Entry] = []
@@ -89,7 +89,7 @@ extension BlockLayout {
         contentSnapshot: EffectiveDocumentSnapshot,
         visibleIndex: VisibleBlockIndex,
         viewport: EditorViewport,
-        textLayouter: any BlockTextLayoutProtocol
+        textLayouter: any BlockMeasuring
     ) -> EditorSnapshotRevision {
         let visibleEntries = visibleIndex.entriesSnapshot()
         let previousMeasurementsByBlockID = measurementsByBlockID
@@ -148,7 +148,7 @@ extension BlockLayout {
         blockID: BlockID,
         contentSnapshot: EffectiveDocumentSnapshot,
         availableWidth: Double,
-        textLayouter: any BlockTextLayoutProtocol
+        textLayouter: any BlockMeasuring
     ) -> Bool {
         guard let visibleBlock = visibleIndex?.entry(for: blockID) else { return false }
         return measureBlockIfNeeded(
@@ -164,7 +164,7 @@ extension BlockLayout {
         contentSnapshot: EffectiveDocumentSnapshot,
         visibleIndex: VisibleBlockIndex,
         viewport: EditorViewport,
-        textLayouter: any BlockTextLayoutProtocol
+        textLayouter: any BlockMeasuring
     ) -> Int {
         var measuredCount = 0
         for _ in 0..<blockLayoutLazyMeasurementMaxViewportPasses {
@@ -197,7 +197,7 @@ extension BlockLayout {
         visibleBlock: VisibleBlock,
         contentSnapshot: EffectiveDocumentSnapshot,
         availableWidth: Double,
-        textLayouter: any BlockTextLayoutProtocol
+        textLayouter: any BlockMeasuring
     ) -> Bool {
         guard measurementsByBlockID[visibleBlock.blockID] == nil,
             heightIndex.index(of: visibleBlock.blockID) != nil,

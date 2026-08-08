@@ -8,7 +8,7 @@ extension BlockLayout {
         visibleBlock: VisibleBlock,
         contentSnapshot: EffectiveDocumentSnapshot,
         availableWidth: Double,
-        textLayouter: any BlockTextLayoutProtocol
+        textLayouter: any BlockMeasuring
     ) -> BlockMeasurement {
         #if SLOPAD_BENCHMARK_INSTRUMENTATION
             let result = cache.measurementWithCacheStatus(

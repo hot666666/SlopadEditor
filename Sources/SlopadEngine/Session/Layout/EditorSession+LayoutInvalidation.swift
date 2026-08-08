@@ -11,7 +11,7 @@ extension EditorSession {
     public func replaceTextLayoutBackend(
         with textLayouter: any BlockTextLayoutProtocol
     ) -> EditorUpdate {
-        self.textLayouter = textLayouter
+        replaceTextBackend(textLayouter)
         textNavigationRuntimeContext = nil
         if let blockDrag {
             self.blockDrag = (
