@@ -19,17 +19,21 @@ struct SlopadUIBenchmarkApp {
     }
 
     @MainActor
-    fileprivate static func layoutBenchmarkWindow(
+    static func layoutBenchmarkWindow(
         _ window: NSWindow,
         host: UIBenchmarkHost
     ) {
         let contentSize = window.contentLayoutRect.size
         let fallbackSize = window.frame.size
+        let resolvedWidth =
+            contentSize.width > 0 ? contentSize.width : max(fallbackSize.width, 1)
+        let resolvedHeight =
+            contentSize.height > 0 ? contentSize.height : max(fallbackSize.height, 1)
         let bounds = NSRect(
             x: 0,
             y: 0,
-            width: max(contentSize.width, fallbackSize.width, 920),
-            height: max(contentSize.height, fallbackSize.height, 680)
+            width: resolvedWidth,
+            height: resolvedHeight
         )
         if let contentView = window.contentView {
             host.editorViewController.view.frame = bounds
@@ -55,6 +59,16 @@ private final class UIBenchmarkAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        setenv(
+            "SLOPAD_TEXTKIT_PREPARED_ENTRY_LIMIT",
+            String(options.preparedEntryLimit),
+            1
+        )
+        setenv(
+            "SLOPAD_TEXTKIT_PREPARED_COST_LIMIT",
+            String(options.preparedEstimatedCostLimit),
+            1
+        )
         let host = UIBenchmarkHost(
             blockCount: options.blockCount,
             scenario: options.scenario,
@@ -86,7 +100,9 @@ private final class UIBenchmarkAppDelegate: NSObject, NSApplicationDelegate {
                     activeTextLength: options.activeTextLength,
                     frameCount: options.frameCount,
                     outputPath: options.outputPath,
-                    subtreeNodeCount: options.subtreeNodeCount
+                    subtreeNodeCount: options.subtreeNodeCount,
+                    preparedEntryLimit: options.preparedEntryLimit,
+                    preparedEstimatedCostLimit: options.preparedEstimatedCostLimit
                 )
             )
         } catch {
@@ -104,6 +120,8 @@ private struct UIBenchmarkCommandLineOptions {
     var frameCount = 120
     var outputPath = "/tmp/slopad-ui-benchmark.csv"
     var subtreeNodeCount: Int?
+    var preparedEntryLimit = 32
+    var preparedEstimatedCostLimit = 8 * 1_024 * 1_024
 
     init(arguments: [String]) {
         var iterator = arguments.dropFirst().makeIterator()
@@ -128,6 +146,14 @@ private struct UIBenchmarkCommandLineOptions {
             case "--subtree-node-count", "--ui-benchmark-subtree-node-count":
                 if let value = iterator.next(), let count = Int(value) {
                     subtreeNodeCount = max(1, count)
+                }
+            case "--prepared-entry-limit", "--ui-benchmark-prepared-entry-limit":
+                if let value = iterator.next(), let count = Int(value) {
+                    preparedEntryLimit = max(1, count)
+                }
+            case "--prepared-cost-limit", "--ui-benchmark-prepared-cost-limit":
+                if let value = iterator.next(), let count = Int(value) {
+                    preparedEstimatedCostLimit = max(1, count)
                 }
             default:
                 continue

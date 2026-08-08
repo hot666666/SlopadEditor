@@ -1,85 +1,65 @@
 import AppKit
+import Dispatch
 import Foundation
 import SlopadCoreModel
 
 // MARK: - TextKitLayoutContext
 
+/// `@unchecked Sendable` is safe because the one context-wide lock guards every access to
+/// the mutable store and every retained AppKit/TextKit object graph, including pressure events.
 final class TextKitLayoutContext: @unchecked Sendable {
     private let lock = NSLock()
-    private let textStorage = NSTextStorage()
-    private let textContentStorage = NSTextContentStorage()
-    private let textLayoutManager = NSTextLayoutManager()
-    private let textContainer = NSTextContainer(
-        size: CGSize(width: 1, height: CGFloat.greatestFiniteMagnitude)
-    )
-    private var preparedLayoutState: PreparedLayoutState?
+    private var preparedLayouts: TextKitPreparedLayoutStore
+    private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
 
     #if SLOPAD_BENCHMARK_INSTRUMENTATION
         private static let instrumentationLock = NSLock()
-        private nonisolated(unsafe) static var aggregatePreparedLayoutCount = 0
-        private nonisolated(unsafe) static var aggregateAttributedStringBuildCount = 0
+        private nonisolated(unsafe) static var aggregateInstrumentation =
+            TextKitPreparedLayoutInstrumentationSnapshot.zero
 
-        // Instance values let regression tests observe one production-composed text system
-        // without racing the process-wide counters used by the benchmark app.
-        private var preparedLayoutCount = 0
-        private var attributedStringBuildCount = 0
-
-        static var aggregateInstrumentationSnapshot: (
-            prepares: Int,
-            attributedStringBuilds: Int
-        ) {
-            instrumentationLock.lock()
-            defer { instrumentationLock.unlock() }
-            return (aggregatePreparedLayoutCount, aggregateAttributedStringBuildCount)
-        }
-
-        static func resetInstrumentation() {
-            instrumentationLock.lock()
-            defer { instrumentationLock.unlock() }
-            aggregatePreparedLayoutCount = 0
-            aggregateAttributedStringBuildCount = 0
+        static var aggregateInstrumentationSnapshot:
+            TextKitPreparedLayoutInstrumentationSnapshot
+        {
+            Self.instrumentationLock.lock()
+            defer { Self.instrumentationLock.unlock() }
+            return aggregateInstrumentation
         }
     #endif
 
     private static let trailingLineBreakSentinel = "\u{200B}"
 
-    private struct PreparedLayoutKey: Equatable {
-        let request: BlockMeasureRequest
-        let style: TextKitEditorStyle
+    convenience init() {
+        #if SLOPAD_BENCHMARK_INSTRUMENTATION
+            self.init(policy: .benchmarkConfigured())
+        #else
+            self.init(policy: .provisional)
+        #endif
     }
 
-    private final class PreparedLayoutState {
-        let key: PreparedLayoutKey
-        let canonicalText: String
-        let layoutText: String
-        let layoutUTF16Count: Int
+    init(policy: TextKitPreparedLayoutStorePolicy) {
+        preparedLayouts = TextKitPreparedLayoutStore(policy: policy)
 
-        // Measurement and drawing do not need index conversion. Build these arrays only
-        // when geometry/navigation first crosses the grapheme↔UTF-16 boundary.
-        lazy var canonicalIndexMap = TextKitTextIndexMap(text: canonicalText)
-        lazy var layoutIndexMap = layoutText == canonicalText
-            ? canonicalIndexMap
-            : TextKitTextIndexMap(text: layoutText)
-
-        init(
-            key: PreparedLayoutKey,
-            canonicalText: String,
-            layoutText: String,
-            layoutUTF16Count: Int
-        ) {
-            self.key = key
-            self.canonicalText = canonicalText
-            self.layoutText = layoutText
-            self.layoutUTF16Count = layoutUTF16Count
+        let source = DispatchSource.makeMemoryPressureSource(
+            eventMask: [.warning, .critical],
+            queue: DispatchQueue.global(qos: .utility)
+        )
+        memoryPressureSource = source
+        source.setEventHandler { [weak self, weak source] in
+            guard let self, let source else { return }
+            let pressure: TextKitPreparedLayoutMemoryPressure =
+                source.data.contains(.critical) ? .critical : .warning
+            self.handleMemoryPressure(pressure)
         }
+        source.activate()
     }
 
-    init() {
-        textContainer.lineFragmentPadding = 0
-        textContentStorage.textStorage = textStorage
-        textContentStorage.addTextLayoutManager(textLayoutManager)
-        textLayoutManager.textContainer = textContainer
-        textLayoutManager.textSelectionNavigation.allowsNonContiguousRanges = false
+    deinit {
+        memoryPressureSource?.cancel()
+        lock.lock()
+        let before = preparedLayouts.snapshot
+        preparedLayouts.removeAllForInvalidation()
+        recordInstrumentationChange(from: before)
+        lock.unlock()
     }
 
     func measure(
@@ -90,11 +70,11 @@ final class TextKitLayoutContext: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
 
-        _ = prepareLayout(for: request, style: style)
+        let prepared = prepareLayout(for: request, style: style)
 
         var measuredHeight: CGFloat = 0
-        textLayoutManager.enumerateTextLayoutFragments(
-            from: textLayoutManager.documentRange.location,
+        prepared.textLayoutManager.enumerateTextLayoutFragments(
+            from: prepared.textLayoutManager.documentRange.location,
             options: [.ensuresLayout]
         ) { fragment in
             measuredHeight = max(measuredHeight, fragment.layoutFragmentFrame.maxY)
@@ -113,12 +93,12 @@ final class TextKitLayoutContext: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
 
-        _ = prepareLayout(for: request, style: style)
+        let prepared = prepareLayout(for: request, style: style)
 
         context.saveGState()
         context.translateBy(x: frame.minX, y: frame.minY)
-        textLayoutManager.enumerateTextLayoutFragments(
-            from: textLayoutManager.documentRange.location,
+        prepared.textLayoutManager.enumerateTextLayoutFragments(
+            from: prepared.textLayoutManager.documentRange.location,
             options: [.ensuresLayout]
         ) { fragment in
             fragment.draw(at: fragment.layoutFragmentFrame.origin, in: context)
@@ -140,8 +120,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
         let textOrigin = style.textOrigin(depth: request.depth, kind: request.kind)
         var fragments: [LineFragmentSnapshot] = []
 
-        textLayoutManager.enumerateTextLayoutFragments(
-            from: textLayoutManager.documentRange.location,
+        prepared.textLayoutManager.enumerateTextLayoutFragments(
+            from: prepared.textLayoutManager.documentRange.location,
             options: [.ensuresLayout]
         ) { fragment in
             for line in fragment.textLineFragments {
@@ -186,7 +166,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
             position: position,
             request: request,
             style: style,
-            indexMap: indexMap
+            indexMap: indexMap,
+            prepared: prepared
         ) else { return nil }
         if let caretInlineOffset = navigationContext?.caretInlineOffset,
             caretInlineOffset.isFinite
@@ -211,13 +192,14 @@ final class TextKitLayoutContext: @unchecked Sendable {
         guard
             let textRange = nsTextRange(
                 for: clamped,
-                indexMap: indexMap
+                indexMap: indexMap,
+                prepared: prepared
             )
         else { return [] }
 
         let textOrigin = style.textOrigin(depth: request.depth, kind: request.kind)
         var rects: [CGRect] = []
-        textLayoutManager.enumerateTextSegments(
+        prepared.textLayoutManager.enumerateTextSegments(
             in: textRange,
             type: .selection,
             options: []
@@ -241,9 +223,9 @@ final class TextKitLayoutContext: @unchecked Sendable {
         let textOrigin = style.textOrigin(depth: request.depth, kind: request.kind)
         let containerPoint = CGPoint(x: point.x - textOrigin.x, y: point.y - textOrigin.y)
         guard
-            let nativeSelection = nativeTextSelection(at: containerPoint),
+            let nativeSelection = nativeTextSelection(at: containerPoint, prepared: prepared),
             let nativeRange = nativeSelection.textRanges.only,
-            let rawRange = nativeNSRange(for: nativeRange),
+            let rawRange = nativeNSRange(for: nativeRange, prepared: prepared),
             let boundedRange = indexMap.clampedUTF16Range(rawRange),
             let selection = slopadSelection(
                 from: nativeSelection,
@@ -259,7 +241,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
                 resolvedSelection: selection,
                 request: request,
                 style: style,
-                indexMap: indexMap
+                indexMap: indexMap,
+                prepared: prepared
             )
         )
     }
@@ -283,7 +266,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
                 for: selection,
                 context: context,
                 in: request,
-                indexMap: indexMap
+                indexMap: indexMap,
+                prepared: prepared
             )
         else {
             return .unchanged
@@ -295,7 +279,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
             destination: destination,
             extending: extending,
             canonicalIndexMap: indexMap,
-            layoutUTF16Count: prepared.layoutUTF16Count
+            layoutUTF16Count: prepared.layoutUTF16Count,
+            prepared: prepared
         )
         let result: NativeNavigationResult
         switch outcome {
@@ -336,7 +321,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
             extending: extending,
             request: request,
             style: style,
-            indexMap: indexMap
+            indexMap: indexMap,
+            prepared: prepared
         )
 
         if !selection.hasSameLogicalEndpoints(as: converted) {
@@ -383,16 +369,17 @@ final class TextKitLayoutContext: @unchecked Sendable {
             let nativeSelection = nativeSelection(
                 for: position,
                 in: request,
-                indexMap: indexMap
+                indexMap: indexMap,
+                prepared: prepared
             )
         else { return nil }
-        let enclosingSelection = textLayoutManager.textSelectionNavigation.textSelection(
+        let enclosingSelection = prepared.textLayoutManager.textSelectionNavigation.textSelection(
             for: .word,
             enclosing: nativeSelection
         )
         guard
             let nativeRange = enclosingSelection.textRanges.only,
-            let rawRange = nativeNSRange(for: nativeRange),
+            let rawRange = nativeNSRange(for: nativeRange, prepared: prepared),
             let boundedRange = indexMap.clampedUTF16Range(rawRange),
             let range = indexMap.textRange(for: boundedRange)
         else {
@@ -417,12 +404,13 @@ final class TextKitLayoutContext: @unchecked Sendable {
             let nativeSelection = nativeSelection(
                 for: selection,
                 in: request,
-                indexMap: indexMap
+                indexMap: indexMap,
+                prepared: prepared
             )
         else {
             return nil
         }
-        let deletionRanges = textLayoutManager.textSelectionNavigation.deletionRanges(
+        let deletionRanges = prepared.textLayoutManager.textSelectionNavigation.deletionRanges(
             for: nativeSelection,
             direction: direction.native,
             destination: destination.native,
@@ -430,7 +418,7 @@ final class TextKitLayoutContext: @unchecked Sendable {
         )
         guard
             let nativeRange = deletionRanges.only,
-            let rawRange = nativeNSRange(for: nativeRange),
+            let rawRange = nativeNSRange(for: nativeRange, prepared: prepared),
             let boundedRange = indexMap.clampedUTF16Range(rawRange),
             boundedRange.length > 0,
             let range = indexMap.textRange(for: boundedRange),
@@ -443,77 +431,108 @@ final class TextKitLayoutContext: @unchecked Sendable {
     private func prepareLayout(
         for request: BlockMeasureRequest,
         style: TextKitEditorStyle
-    ) -> PreparedLayoutState {
-        let key = PreparedLayoutKey(request: request, style: style)
-        if let preparedLayoutState, preparedLayoutState.key == key {
-            return preparedLayoutState
-        }
-
-        #if SLOPAD_BENCHMARK_INSTRUMENTATION
-            preparedLayoutCount += 1
-            Self.recordPreparedLayout()
-        #endif
-        let attributed = TextKitAttributedStringBuilder.attributedString(
-            for: request,
-            style: style
-        )
-        #if SLOPAD_BENCHMARK_INSTRUMENTATION
-            attributedStringBuildCount += 1
-            Self.recordAttributedStringBuild()
-        #endif
-        let layoutText = Self.normalizedTrailingLineBreak(in: attributed)
-
-        let textWidth = style.textWidth(
-            availableWidth: request.availableWidth,
-            depth: request.depth
-        )
-        let textContainerSizeChanged = textContainer.size.width != textWidth
-        if textContainerSizeChanged {
-            textContainer.size = CGSize(
-                width: textWidth,
-                height: CGFloat.greatestFiniteMagnitude
+    ) -> TextKitPreparedLayoutState {
+        let key = TextKitPreparedLayoutKey(request: request, style: style)
+        let before = preparedLayouts.snapshot
+        let prepared = preparedLayouts.preparedLayout(for: key) {
+            let attributed = TextKitAttributedStringBuilder.attributedString(
+                for: request,
+                style: style
+            )
+            let layoutText = Self.normalizedTrailingLineBreak(in: attributed)
+            let textWidth = style.textWidth(
+                availableWidth: request.availableWidth,
+                depth: request.depth
+            )
+            return TextKitPreparedLayoutState(
+                key: key,
+                attributedString: layoutText,
+                textWidth: textWidth
             )
         }
-        textStorage.setAttributedString(layoutText)
-        textLayoutManager.textSelectionNavigation.flushLayoutCache()
-        textLayoutManager.ensureLayout(for: textLayoutManager.documentRange)
-        if textContainerSizeChanged {
-            // TextKit's navigation cache retains stale visual caret order across container
-            // width changes even after flushLayoutCache(). Recreate only on width changes.
-            textLayoutManager.textSelectionNavigation = NSTextSelectionNavigation(
-                dataSource: textLayoutManager
-            )
-        }
-        let prepared = PreparedLayoutState(
-            key: key,
-            canonicalText: request.text,
-            layoutText: layoutText.string,
-            layoutUTF16Count: layoutText.length
-        )
-        preparedLayoutState = prepared
+        recordInstrumentationChange(from: before)
         return prepared
     }
 
+    func setActiveBlockID(_ blockID: BlockID?) {
+        lock.lock()
+        defer { lock.unlock() }
+        let before = preparedLayouts.snapshot
+        preparedLayouts.setPinnedBlockID(blockID)
+        recordInstrumentationChange(from: before)
+    }
+
+    func removeAllPreparedLayouts() {
+        lock.lock()
+        defer { lock.unlock() }
+        let before = preparedLayouts.snapshot
+        preparedLayouts.removeAllForInvalidation()
+        recordInstrumentationChange(from: before)
+    }
+
+    func handleMemoryPressure(_ pressure: TextKitPreparedLayoutMemoryPressure) {
+        lock.lock()
+        defer { lock.unlock() }
+        let before = preparedLayouts.snapshot
+        preparedLayouts.handleMemoryPressure(pressure)
+        recordInstrumentationChange(from: before)
+    }
+
     #if SLOPAD_BENCHMARK_INSTRUMENTATION
-        func instrumentationSnapshot() -> (
-            prepares: Int,
-            attributedStringBuilds: Int
-        ) {
+        func instrumentationSnapshot() -> TextKitPreparedLayoutInstrumentationSnapshot {
             lock.lock()
             defer { lock.unlock() }
-            return (preparedLayoutCount, attributedStringBuildCount)
+            return TextKitPreparedLayoutInstrumentationSnapshot(preparedLayouts.snapshot)
         }
 
-        private static func recordPreparedLayout() {
-            instrumentationLock.lock()
-            defer { instrumentationLock.unlock() }
-            aggregatePreparedLayoutCount += 1
+        private func recordInstrumentationChange(
+            from before: TextKitPreparedLayoutStoreSnapshot
+        ) {
+            let after = preparedLayouts.snapshot
+            Self.instrumentationLock.lock()
+            defer { Self.instrumentationLock.unlock() }
+            Self.aggregateInstrumentation.lookups += after.lookups - before.lookups
+            Self.aggregateInstrumentation.hits += after.hits - before.hits
+            Self.aggregateInstrumentation.prepares += after.prepares - before.prepares
+            Self.aggregateInstrumentation.attributedStringBuilds +=
+                after.attributedStringBuilds - before.attributedStringBuilds
+            Self.aggregateInstrumentation.capacityEvictions +=
+                after.capacityEvictions - before.capacityEvictions
+            Self.aggregateInstrumentation.capacityRejections +=
+                after.capacityRejections - before.capacityRejections
+            Self.aggregateInstrumentation.pressureEvictions +=
+                after.pressureEvictions - before.pressureEvictions
+            Self.aggregateInstrumentation.invalidationRemovals +=
+                after.invalidationRemovals - before.invalidationRemovals
+            Self.aggregateInstrumentation.oversizedPinnedInsertions +=
+                after.oversizedPinnedInsertions - before.oversizedPinnedInsertions
+            Self.aggregateInstrumentation.residentEntryCount +=
+                after.residentEntryCount - before.residentEntryCount
+            Self.aggregateInstrumentation.residentEstimatedCost +=
+                after.residentEstimatedCost - before.residentEstimatedCost
+            Self.aggregateInstrumentation.pinnedEntryCount +=
+                after.pinnedEntryCount - before.pinnedEntryCount
+            Self.aggregateInstrumentation.overEstimatedCostLimitContextCount +=
+                (after.isOverEstimatedCostLimit ? 1 : 0)
+                - (before.isOverEstimatedCostLimit ? 1 : 0)
+            if after.prepares > before.prepares {
+                Self.aggregateInstrumentation.pinnedBlockIDAtLastPrepare =
+                    after.pinnedBlockIDAtLastPrepare
+            }
+            Self.aggregateInstrumentation.residentEntryHighWater = max(
+                Self.aggregateInstrumentation.residentEntryHighWater,
+                Self.aggregateInstrumentation.residentEntryCount
+            )
+            Self.aggregateInstrumentation.residentEstimatedCostHighWater = max(
+                Self.aggregateInstrumentation.residentEstimatedCostHighWater,
+                Self.aggregateInstrumentation.residentEstimatedCost
+            )
         }
-
-        private static func recordAttributedStringBuild() {
-            instrumentationLock.lock()
-            defer { instrumentationLock.unlock() }
-            aggregateAttributedStringBuildCount += 1
+    #else
+        private func recordInstrumentationChange(
+            from before: TextKitPreparedLayoutStoreSnapshot
+        ) {
+            _ = before
         }
     #endif
 
@@ -521,14 +540,15 @@ final class TextKitLayoutContext: @unchecked Sendable {
         position: TextPosition,
         request: BlockMeasureRequest,
         style: TextKitEditorStyle,
-        indexMap: TextKitTextIndexMap
+        indexMap: TextKitTextIndexMap,
+        prepared: TextKitPreparedLayoutState
     ) -> CGRect? {
         let nsOffset = indexMap.nsRange(
             clamping: SlopadCoreModel.TextRange.point(position.offset)
         ).location
         guard
-            let location = textContentStorage.location(
-                textLayoutManager.documentRange.location,
+            let location = prepared.textContentStorage.location(
+                prepared.textLayoutManager.documentRange.location,
                 offsetBy: nsOffset
             )
         else { return nil }
@@ -540,7 +560,7 @@ final class TextKitLayoutContext: @unchecked Sendable {
             options.insert(.upstreamAffinity)
         }
         var caretRect: CGRect?
-        textLayoutManager.enumerateTextSegments(
+        prepared.textLayoutManager.enumerateTextSegments(
             in: textRange,
             type: .standard,
             options: options
@@ -557,15 +577,16 @@ final class TextKitLayoutContext: @unchecked Sendable {
 
     private func nsTextRange(
         for range: SlopadCoreModel.TextRange,
-        indexMap: TextKitTextIndexMap
+        indexMap: TextKitTextIndexMap,
+        prepared: TextKitPreparedLayoutState
     ) -> NSTextRange? {
         let nsRange = indexMap.nsRange(clamping: range)
         guard
-            let start = textContentStorage.location(
-                textLayoutManager.documentRange.location,
+            let start = prepared.textContentStorage.location(
+                prepared.textLayoutManager.documentRange.location,
                 offsetBy: nsRange.location
             ),
-            let end = textContentStorage.location(start, offsetBy: nsRange.length)
+            let end = prepared.textContentStorage.location(start, offsetBy: nsRange.length)
         else { return nil }
         return NSTextRange(location: start, end: end)
     }
@@ -574,7 +595,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
         for selection: TextSelection,
         context: TextNavigationContext? = nil,
         in request: BlockMeasureRequest,
-        indexMap: TextKitTextIndexMap
+        indexMap: TextKitTextIndexMap,
+        prepared: TextKitPreparedLayoutState
     ) -> NSTextSelection? {
         guard
             selection.isSingleBlock,
@@ -591,14 +613,21 @@ final class TextKitLayoutContext: @unchecked Sendable {
                 let collapsed = nativeSelection(
                     for: selection.focus,
                     in: request,
-                    indexMap: indexMap
+                    indexMap: indexMap,
+                    prepared: prepared
                 )
             else {
                 return nil
             }
             result = collapsed
         } else {
-            guard let nativeRange = nsTextRange(for: range, indexMap: indexMap) else { return nil }
+            guard
+                let nativeRange = nsTextRange(
+                    for: range,
+                    indexMap: indexMap,
+                    prepared: prepared
+                )
+            else { return nil }
             let affinity: NSTextSelection.Affinity =
                 selection.focus.offset < selection.anchor.offset ? .upstream : .downstream
             result = NSTextSelection(
@@ -616,7 +645,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
     private func nativeSelection(
         for position: TextPosition,
         in request: BlockMeasureRequest,
-        indexMap: TextKitTextIndexMap
+        indexMap: TextKitTextIndexMap,
+        prepared: TextKitPreparedLayoutState
     ) -> NSTextSelection? {
         guard
             position.blockID == request.blockID,
@@ -624,8 +654,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
             let utf16Offset = indexMap.utf16Offset(forGraphemeOffset: position.offset)
         else { return nil }
         guard
-            let location = textContentStorage.location(
-                textLayoutManager.documentRange.location,
+            let location = prepared.textContentStorage.location(
+                prepared.textLayoutManager.documentRange.location,
                 offsetBy: utf16Offset
             )
         else { return nil }
@@ -633,12 +663,13 @@ final class TextKitLayoutContext: @unchecked Sendable {
     }
 
     private func nativeTextSelection(
-        at containerPoint: CGPoint
+        at containerPoint: CGPoint,
+        prepared: TextKitPreparedLayoutState
     ) -> NSTextSelection? {
-        let usageBounds = textLayoutManager.usageBoundsForTextContainer
+        let usageBounds = prepared.textLayoutManager.usageBoundsForTextContainer
         let minimumX = min(0, containerPoint.x)
         let minimumY = min(0, containerPoint.y)
-        let maximumX = max(textContainer.size.width, containerPoint.x, 1)
+        let maximumX = max(prepared.textContainer.size.width, containerPoint.x, 1)
         let maximumY = max(usageBounds.maxY, containerPoint.y, 1)
         let interactionBounds = CGRect(
             x: minimumX,
@@ -646,9 +677,9 @@ final class TextKitLayoutContext: @unchecked Sendable {
             width: maximumX - minimumX,
             height: maximumY - minimumY
         ).insetBy(dx: -1, dy: -1)
-        return textLayoutManager.textSelectionNavigation.textSelections(
+        return prepared.textLayoutManager.textSelectionNavigation.textSelections(
             interactingAt: containerPoint,
-            inContainerAt: textLayoutManager.documentRange.location,
+            inContainerAt: prepared.textLayoutManager.documentRange.location,
             anchors: [],
             modifiers: [],
             selecting: false,
@@ -673,7 +704,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
         destination: TextNavigationDestination,
         extending: Bool,
         canonicalIndexMap: TextKitTextIndexMap,
-        layoutUTF16Count: Int
+        layoutUTF16Count: Int,
+        prepared: TextKitPreparedLayoutState
     ) -> NativeNavigationOutcome {
         var current = selection
         var receivedCandidate = false
@@ -681,7 +713,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
 
         for _ in 0..<attemptLimit {
             guard
-                let candidate = textLayoutManager.textSelectionNavigation.destinationSelection(
+                let candidate = prepared.textLayoutManager.textSelectionNavigation
+                    .destinationSelection(
                     for: current,
                     direction: direction.native,
                     destination: destination.native,
@@ -694,7 +727,7 @@ final class TextKitLayoutContext: @unchecked Sendable {
             receivedCandidate = true
             guard
                 let nativeRange = candidate.textRanges.only,
-                let rawRange = nativeNSRange(for: nativeRange),
+                let rawRange = nativeNSRange(for: nativeRange, prepared: prepared),
                 let boundedRange = canonicalIndexMap.clampedUTF16Range(rawRange)
             else { return .failure(.invalidCandidate) }
 
@@ -712,7 +745,7 @@ final class TextKitLayoutContext: @unchecked Sendable {
                 return .failure(.invalidCandidate)
             }
             if let currentRange = current.textRanges.only,
-                let currentRawRange = nativeNSRange(for: currentRange),
+                let currentRawRange = nativeNSRange(for: currentRange, prepared: prepared),
                 currentRawRange == rawRange,
                 current.affinity == candidate.affinity
             {
@@ -723,10 +756,13 @@ final class TextKitLayoutContext: @unchecked Sendable {
         return .failure(.invalidCandidate)
     }
 
-    private func nativeNSRange(for range: NSTextRange) -> NSRange? {
-        let documentStart = textLayoutManager.documentRange.location
-        let start = textContentStorage.offset(from: documentStart, to: range.location)
-        let end = textContentStorage.offset(from: documentStart, to: range.endLocation)
+    private func nativeNSRange(
+        for range: NSTextRange,
+        prepared: TextKitPreparedLayoutState
+    ) -> NSRange? {
+        let documentStart = prepared.textLayoutManager.documentRange.location
+        let start = prepared.textContentStorage.offset(from: documentStart, to: range.location)
+        let end = prepared.textContentStorage.offset(from: documentStart, to: range.endLocation)
         guard
             start != NSNotFound,
             end != NSNotFound,
@@ -766,7 +802,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
         extending: Bool,
         request: BlockMeasureRequest,
         style: TextKitEditorStyle,
-        indexMap: TextKitTextIndexMap
+        indexMap: TextKitTextIndexMap,
+        prepared: TextKitPreparedLayoutState
     ) -> TextNavigationContext? {
         let preferredInlineOffset = Double(nativeSelection.anchorPositionOffset)
         guard preferredInlineOffset.isFinite else { return nil }
@@ -784,7 +821,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
                 resolvedSelection: resolvedSelection,
                 request: request,
                 style: style,
-                indexMap: indexMap
+                indexMap: indexMap,
+                prepared: prepared
             )
         )
     }
@@ -794,7 +832,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
         resolvedSelection: TextSelection,
         request: BlockMeasureRequest,
         style: TextKitEditorStyle,
-        indexMap: TextKitTextIndexMap
+        indexMap: TextKitTextIndexMap,
+        prepared: TextKitPreparedLayoutState
     ) -> TextNavigationContext? {
         let preferredInlineOffset = Double(nativeSelection.anchorPositionOffset)
         guard preferredInlineOffset.isFinite else { return nil }
@@ -805,7 +844,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
                 resolvedSelection: resolvedSelection,
                 request: request,
                 style: style,
-                indexMap: indexMap
+                indexMap: indexMap,
+                prepared: prepared
             )
         )
     }
@@ -815,7 +855,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
         resolvedSelection: TextSelection,
         request: BlockMeasureRequest,
         style: TextKitEditorStyle,
-        indexMap: TextKitTextIndexMap
+        indexMap: TextKitTextIndexMap,
+        prepared: TextKitPreparedLayoutState
     ) -> Double? {
         guard
             resolvedSelection.rangeInSingleBlock?.isEmpty == true,
@@ -823,7 +864,8 @@ final class TextKitLayoutContext: @unchecked Sendable {
                 position: resolvedSelection.focus,
                 request: request,
                 style: style,
-                indexMap: indexMap
+                indexMap: indexMap,
+                prepared: prepared
             )
         else { return nil }
 
@@ -837,9 +879,9 @@ final class TextKitLayoutContext: @unchecked Sendable {
             y: ordinaryCaretRect.midY - textOrigin.y
         )
         guard
-            let hitSelection = nativeTextSelection(at: probePoint),
+            let hitSelection = nativeTextSelection(at: probePoint, prepared: prepared),
             let hitNativeRange = hitSelection.textRanges.only,
-            let hitRawRange = nativeNSRange(for: hitNativeRange),
+            let hitRawRange = nativeNSRange(for: hitNativeRange, prepared: prepared),
             let hitBoundedRange = indexMap.clampedUTF16Range(hitRawRange),
             let hitResult = slopadSelection(
                 from: hitSelection,

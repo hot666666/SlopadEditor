@@ -199,6 +199,14 @@ public final class AppKitEditorViewController: NSViewController {
     package var onDrawOverlay: ((NSRect, EditorSessionSnapshot) -> Void)?
     package var onDrawCompleted: ((NSRect, UInt64) -> Void)?
 
+    #if SLOPAD_BENCHMARK_INSTRUMENTATION
+        package var preparedLayoutInstrumentation:
+            TextKitPreparedLayoutInstrumentationSnapshot
+        {
+            textLayouter.contextPreparedLayoutInstrumentation
+        }
+    #endif
+
     var canvasView: AppKitEditorCanvasView {
         editorCanvasView
     }
@@ -258,6 +266,7 @@ public final class AppKitEditorViewController: NSViewController {
         self.blockChromeRenderer = blockChromeRenderer
         self.focusOnAppear = focusOnAppear
         super.init(nibName: nil, bundle: nil)
+        textSystem.setActivePreparedLayoutBlockID(session.activeTextBlockID)
     }
 
     @available(*, unavailable)
@@ -402,6 +411,7 @@ public final class AppKitEditorViewController: NSViewController {
         guard style != editorStyle else { return }
 
         let replacementTextSystem = AppKitTextSystem(style: style)
+        replacementTextSystem.setActivePreparedLayoutBlockID(session.activeTextBlockID)
         _ = session.replaceTextLayoutBackend(with: replacementTextSystem.textLayouter)
         textSystem = replacementTextSystem
         renderCanvasPreservingNativeSurface(
@@ -426,11 +436,15 @@ public final class AppKitEditorViewController: NSViewController {
         selection: EditorSelection? = nil
     ) {
         dragAutoscrollController.stop()
-        session = EditorSession(
+        textSystem.setActivePreparedLayoutBlockID(nil)
+        textSystem.removeAllPreparedLayouts()
+        let replacementSession = EditorSession(
             blocks: blocks,
             selection: selection,
             textLayouter: textLayouter
         )
+        textSystem.setActivePreparedLayoutBlockID(replacementSession.activeTextBlockID)
+        session = replacementSession
         snapshot = nil
         activeInputController.hide()
     }
@@ -740,6 +754,7 @@ public final class AppKitEditorViewController: NSViewController {
     private func performSurfaceSync(
         _ request: SurfaceSyncRequest
     ) -> (viewport: EditorViewport, snapshot: EditorSessionSnapshot) {
+        textSystem.setActivePreparedLayoutBlockID(session.activeTextBlockID)
         var renderedSurface = renderAndResizeCanvas()
 
         switch request.viewportAction {
@@ -787,6 +802,12 @@ public final class AppKitEditorViewController: NSViewController {
 
         invalidateVisibleCanvas()
         return renderedSurface
+    }
+
+    package func handlePreparedLayoutMemoryPressure(
+        _ pressure: TextKitPreparedLayoutMemoryPressure
+    ) {
+        textSystem.handlePreparedLayoutMemoryPressure(pressure)
     }
 
     private func isActiveSnapshotPublication(
@@ -1178,6 +1199,9 @@ extension AppKitEditorViewController: AppKitActiveInputOwner {
     @discardableResult
     func handleNativeInputEvent(_ inputEvent: EditorInputEvent) -> EditorUpdate? {
         guard let update = session.handleInput(inputEvent) else { return nil }
+        textSystem.setActivePreparedLayoutBlockID(
+            preparedLayoutPinnedBlockID(in: update.selection)
+        )
         onUpdate?(update)
         return update
     }
@@ -1379,6 +1403,17 @@ extension AppKitEditorViewController {
 
     private func currentActiveTextBlockID() -> BlockID? {
         activeTextPosition()?.blockID
+    }
+
+    private func preparedLayoutPinnedBlockID(in selection: EditorSelection) -> BlockID? {
+        switch selection {
+        case .caret(let position):
+            return position.blockID
+        case .text(let selection) where selection.isSingleBlock:
+            return selection.focus.blockID
+        case .inactive, .blocks, .text:
+            return nil
+        }
     }
 
     private func snapshotRenderedBlock(for blockID: BlockID) -> EditorRenderedBlock? {
