@@ -1,3 +1,4 @@
+import CoreGraphics
 import SlopadCoreModel
 import Testing
 
@@ -7,38 +8,25 @@ import Testing
 
 @Suite("prepared layout 재사용")
 struct TextKitPreparedLayoutTests {
-    @Test("layouter와 renderer가 하나의 컨텍스트를 공유한다")
-    func sharesOneContext() {
-        // Given: 분리돼 있으면 한 블록을 그린 직후 그 블록의 caret 을 물어도 다시 준비한다.
-        let system = TextKitTextSystem()
-        let request = makeRequest(text: "Body text")
-
-        // When
-        _ = system.layouter.measure(request)
-        let caret = system.layouter.caretRect(
-            for: TextPosition(blockID: request.blockID, offset: 2), in: request)
-
-        // Then: 같은 컨텍스트를 쓰는지는 결과로 확인할 수 없으므로, 최소한 두 역할이 서로의
-        // 준비 상태를 깨지 않고 동작하는지를 고정한다.
-        #expect(caret != nil)
-        #expect(system.layouter.measure(request).height > 0)
-    }
-
-    @Test("같은 요청을 반복해도 attributed string을 다시 만들지 않는다")
-    func reusesBuiltAttributedString() {
+    @Test("renderer가 그린 요청을 layouter가 같은 geometry로 이어받는다")
+    func rendererThenLayouterUsesCoherentGeometry() throws {
         // Given
         let system = TextKitTextSystem()
         let request = makeRequest(text: "Body text")
+        let context = try #require(makeBitmapContext())
 
-        // When: 같은 블록을 여러 번 오간다.
-        for _ in 0..<5 {
-            _ = system.layouter.measure(request)
-            _ = system.layouter.lineFragments(for: request)
-        }
+        // When
+        system.renderer.draw(
+            request,
+            in: CGRect(x: 0, y: 0, width: 320, height: 120),
+            context: context
+        )
+        let caret = system.layouter.caretRect(
+            for: TextPosition(blockID: request.blockID, offset: 2), in: request)
 
-        // Then: 결과가 흔들리지 않아야 한다. 캐시는 최적화이지 authority 가 아니다.
-        let heights = (0..<3).map { _ in system.layouter.measure(request).height }
-        #expect(Set(heights).count == 1)
+        // Then
+        #expect(caret != nil)
+        #expect(system.layouter.measure(request).height > 0)
     }
 
     @Test("여러 블록을 오가도 각 블록의 측정값이 일관된다")
@@ -60,24 +48,54 @@ struct TextKitPreparedLayoutTests {
         #expect(firstB > firstA)
     }
 
-    @Test("캐시를 비워도 같은 요청이 같은 결과를 낸다")
-    func cacheIsAnOptimizationNotAuthority() {
-        // Given
-        let system = TextKitTextSystem()
-        let request = makeRequest(text: "Body text")
-        let before = system.layouter.measure(request)
+    #if SLOPAD_BENCHMARK_INSTRUMENTATION
+        @Test("renderer 다음의 같은 layouter 요청은 TextKit을 다시 준비하지 않는다")
+        func rendererThenLayouterReusesOnePreparedState() throws {
+            // Given
+            let system = TextKitTextSystem()
+            let request = makeRequest(text: "Body text")
+            let context = try #require(makeBitmapContext())
 
-        // When
-        system.invalidateCaches()
+            // When
+            system.renderer.draw(
+                request,
+                in: CGRect(x: 0, y: 0, width: 320, height: 120),
+                context: context
+            )
+            _ = system.layouter.caretRect(
+                for: TextPosition(blockID: request.blockID, offset: 2),
+                in: request
+            )
 
-        // Then
-        #expect(system.layouter.measure(request) == before)
-    }
+            // Then: identity는 조립을, counter는 same-key 재사용을 각각 고정한다.
+            #expect(
+                system.layouter.layoutContextIdentifierForInstrumentation
+                    == system.renderer.layoutContextIdentifierForInstrumentation
+            )
+            let counts = system.layouter.contextPreparedLayoutCounts
+            #expect(counts.prepares == 1)
+            #expect(counts.attributedStringBuilds == 1)
+        }
+    #endif
 
     // MARK: - Support
 
     private func makeRequest(blockID: BlockID = "block", text: String) -> BlockMeasureRequest {
         BlockMeasureRequest(
             blockID: blockID, text: text, kind: .paragraph, availableWidth: 320, depth: 0)
+    }
+
+    private func makeBitmapContext() -> CGContext? {
+        let width = 640
+        let height = 240
+        return CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )
     }
 }

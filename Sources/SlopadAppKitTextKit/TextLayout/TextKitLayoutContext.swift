@@ -14,31 +14,30 @@ final class TextKitLayoutContext: @unchecked Sendable {
     )
     private var preparedLayoutState: PreparedLayoutState?
 
-    /// Attributed strings already built for a key, most-recently-used last.
-    ///
-    /// One set of TextKit objects is reused for every block, so a re-prepare always has to
-    /// re-run `setAttributedString` and `ensureLayout` — those are what the objects are. What
-    /// it does not have to redo is building the attributed string from the request, which is
-    /// pure and depends only on the key. Caching N of *those* costs a string each rather than
-    /// a whole layout manager each, which is why this is bounded at a viewport's worth of
-    /// blocks instead of a document's.
-    private var attributedStringCache: [(key: PreparedLayoutKey, value: NSAttributedString)] = []
-
-    /// Sized for the blocks a viewport can show at once plus room for the active block to
-    /// survive a scroll. Larger buys nothing: entries beyond what a frame touches are never
-    /// looked up before they age out.
-    private static let attributedStringCacheLimit = 64
-
     #if SLOPAD_BENCHMARK_INSTRUMENTATION
-        /// How often a layout had to be prepared, and how often that meant rebuilding the
-        /// attributed string. The gap between the two is what a shared prepared store would
-        /// close, so #37 cannot be judged without these.
-        private(set) nonisolated(unsafe) static var prepareLayoutCallCount = 0
-        private(set) nonisolated(unsafe) static var attributedStringBuildCount = 0
+        private static let instrumentationLock = NSLock()
+        private nonisolated(unsafe) static var aggregatePreparedLayoutCount = 0
+        private nonisolated(unsafe) static var aggregateAttributedStringBuildCount = 0
+
+        // Instance values let regression tests observe one production-composed text system
+        // without racing the process-wide counters used by the benchmark app.
+        private var preparedLayoutCount = 0
+        private var attributedStringBuildCount = 0
+
+        static var aggregateInstrumentationSnapshot: (
+            prepares: Int,
+            attributedStringBuilds: Int
+        ) {
+            instrumentationLock.lock()
+            defer { instrumentationLock.unlock() }
+            return (aggregatePreparedLayoutCount, aggregateAttributedStringBuildCount)
+        }
 
         static func resetInstrumentation() {
-            prepareLayoutCallCount = 0
-            attributedStringBuildCount = 0
+            instrumentationLock.lock()
+            defer { instrumentationLock.unlock() }
+            aggregatePreparedLayoutCount = 0
+            aggregateAttributedStringBuildCount = 0
         }
     #endif
 
@@ -445,15 +444,23 @@ final class TextKitLayoutContext: @unchecked Sendable {
         for request: BlockMeasureRequest,
         style: TextKitEditorStyle
     ) -> PreparedLayoutState {
-        #if SLOPAD_BENCHMARK_INSTRUMENTATION
-            Self.prepareLayoutCallCount += 1
-        #endif
         let key = PreparedLayoutKey(request: request, style: style)
         if let preparedLayoutState, preparedLayoutState.key == key {
             return preparedLayoutState
         }
 
-        let attributed = cachedAttributedString(for: key, request: request, style: style)
+        #if SLOPAD_BENCHMARK_INSTRUMENTATION
+            preparedLayoutCount += 1
+            Self.recordPreparedLayout()
+        #endif
+        let attributed = TextKitAttributedStringBuilder.attributedString(
+            for: request,
+            style: style
+        )
+        #if SLOPAD_BENCHMARK_INSTRUMENTATION
+            attributedStringBuildCount += 1
+            Self.recordAttributedStringBuild()
+        #endif
         let layoutText = Self.normalizedTrailingLineBreak(in: attributed)
 
         let textWidth = style.textWidth(
@@ -487,36 +494,28 @@ final class TextKitLayoutContext: @unchecked Sendable {
         return prepared
     }
 
-    private func cachedAttributedString(
-        for key: PreparedLayoutKey,
-        request: BlockMeasureRequest,
-        style: TextKitEditorStyle
-    ) -> NSAttributedString {
-        if let index = attributedStringCache.firstIndex(where: { $0.key == key }) {
-            let entry = attributedStringCache.remove(at: index)
-            attributedStringCache.append(entry)
-            return entry.value
+    #if SLOPAD_BENCHMARK_INSTRUMENTATION
+        func instrumentationSnapshot() -> (
+            prepares: Int,
+            attributedStringBuilds: Int
+        ) {
+            lock.lock()
+            defer { lock.unlock() }
+            return (preparedLayoutCount, attributedStringBuildCount)
         }
 
-        #if SLOPAD_BENCHMARK_INSTRUMENTATION
-            Self.attributedStringBuildCount += 1
-        #endif
-        let built = TextKitAttributedStringBuilder.attributedString(for: request, style: style)
-        attributedStringCache.append((key, built))
-        if attributedStringCache.count > Self.attributedStringCacheLimit {
-            attributedStringCache.removeFirst(
-                attributedStringCache.count - Self.attributedStringCacheLimit)
+        private static func recordPreparedLayout() {
+            instrumentationLock.lock()
+            defer { instrumentationLock.unlock() }
+            aggregatePreparedLayoutCount += 1
         }
-        return built
-    }
 
-    /// Drops derived state that a new backend or style would invalidate.
-    func invalidateCaches() {
-        lock.lock()
-        defer { lock.unlock() }
-        attributedStringCache.removeAll(keepingCapacity: true)
-        preparedLayoutState = nil
-    }
+        private static func recordAttributedStringBuild() {
+            instrumentationLock.lock()
+            defer { instrumentationLock.unlock() }
+            aggregateAttributedStringBuildCount += 1
+        }
+    #endif
 
     private func caretRectWithoutLock(
         position: TextPosition,
