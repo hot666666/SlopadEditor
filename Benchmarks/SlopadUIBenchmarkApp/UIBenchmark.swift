@@ -333,6 +333,13 @@ final class UIBenchmarkRecorder {
 
     func beginFrame(index: Int, scrollY: Double) {
         currentSample = UIBenchmarkFrameSample(frame: index, scrollY: scrollY)
+        // Zeroed per frame so these read like every other column in the row. The backend's
+        // counters are process-global, unlike BlockLayout's metrics which are rebuilt each
+        // layout pass, so without this they would report totals since launch and the
+        // prepare-to-build ratio #37 needs would be wrong.
+        #if SLOPAD_BENCHMARK_INSTRUMENTATION
+            TextKitBlockTextLayouter.resetPreparedLayoutCounts()
+        #endif
     }
 
     func recordRender(durationNanoseconds: UInt64, visibleRenderedBlockCount: Int) {
