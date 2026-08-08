@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slopad Epic #23 status</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f4f6f8; --panel:#fff; --ink:#17202a; --muted:#64717d; --line:#cbd3da; --done:#13795b; --ready:#1769aa; --blocked:#59636e; --partial:#9a5b00; --soft:#edf1f4; --focus:#7c3aed; }
+  @media (prefers-color-scheme:dark) { :root { --bg:#101419; --panel:#181e24; --ink:#edf2f6; --muted:#9eabb7; --line:#39444f; --done:#50c99a; --ready:#70b7ef; --blocked:#9ba5ae; --partial:#f0b45a; --soft:#222a32; --focus:#c4a5ff; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+  a { color:var(--ready); }
+  button, summary { font:inherit; }
+  button:focus-visible, a:focus-visible, summary:focus-visible { outline:3px solid var(--focus); outline-offset:3px; }
+  main { width:min(1180px,calc(100% - 28px)); margin:22px auto 48px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px; }
+  .snapshot { display:grid; grid-template-columns:minmax(240px,1.5fr) repeat(4,minmax(105px,.65fr)); gap:1px; overflow:hidden; }
+  .snapshot > * { padding:15px 17px; background:var(--panel); }
+  h1 { margin:0 0 3px; font-size:clamp(20px,3vw,30px); letter-spacing:-.03em; }
+  h2 { margin:0 0 10px; font-size:17px; }
+  h3 { margin:0; font-size:14px; }
+  p { margin:5px 0; }
+  .eyebrow,.label { color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .metric strong { display:block; font-size:22px; line-height:1.2; }
+  .metric span { color:var(--muted); font-size:12px; }
+  .workbench { display:grid; grid-template-columns:minmax(0,1.9fr) minmax(280px,.9fr); gap:14px; margin-top:14px; align-items:start; }
+  .map { padding:18px; }
+  .map-head { display:flex; justify-content:space-between; gap:16px; align-items:end; margin-bottom:14px; }
+  .legend { display:flex; flex-wrap:wrap; gap:7px 12px; color:var(--muted); font-size:12px; }
+  .legend i { width:8px; height:8px; display:inline-block; border-radius:50%; margin-right:5px; background:currentColor; }
+  .lane { display:grid; grid-template-columns:92px repeat(10,minmax(48px,1fr)); align-items:center; gap:8px; margin:11px 0; }
+  .lane.b { grid-template-columns:92px repeat(4,minmax(80px,1fr)); max-width:58%; }
+  .lane-title strong { display:block; }
+  .lane-title small { color:var(--muted); }
+  .node { position:relative; min-height:92px; padding:7px 5px; border:1px solid currentColor; border-radius:9px; color:var(--blocked); background:var(--panel); cursor:pointer; text-align:center; }
+  .node strong { display:block; font-size:15px; }
+  .node small { display:block; font-size:10px; color:var(--muted); line-height:1.2; margin-top:4px; }
+  .node .node-state { display:inline-block; margin-top:5px; padding:1px 4px; border:1px solid currentColor; border-radius:999px; color:inherit; font-size:8px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+  .node .depends { margin-top:5px; padding-top:4px; border-top:1px solid color-mix(in srgb,currentColor 25%,transparent); font-size:9px; }
+  .node[data-state="done"] { color:var(--done); background:color-mix(in srgb,var(--done) 8%,var(--panel)); }
+  .node[data-state="ready"] { color:var(--ready); background:color-mix(in srgb,var(--ready) 9%,var(--panel)); }
+  .node[data-state="partial"] { color:var(--partial); background:color-mix(in srgb,var(--partial) 10%,var(--panel)); }
+  .node[aria-pressed="true"] { box-shadow:0 0 0 3px color-mix(in srgb,currentColor 30%,transparent); }
+  .detail { padding:18px; position:sticky; top:12px; min-height:315px; }
+  .detail .state { display:inline-block; margin:5px 0 10px; color:var(--state); font-weight:700; }
+  .detail ul { padding-left:18px; margin:9px 0; }
+  .detail footer { border-top:1px solid var(--line); margin-top:13px; padding-top:11px; display:flex; gap:12px; flex-wrap:wrap; }
+  .runtime { margin-top:14px; padding:16px 18px; }
+  .flow { display:grid; grid-template-columns:minmax(145px,1fr) auto minmax(145px,1fr) auto minmax(145px,1fr); align-items:stretch; gap:9px; padding:4px 2px 8px; }
+  .flow > div,.owners > div { padding:9px 11px; background:var(--soft); border-radius:8px; }
+  .flow > span { align-self:center; color:var(--muted); }
+  .flow small,.owners small { display:block; color:var(--muted); }
+  .owners-label { color:var(--muted); font-size:12px; margin:2px 0 7px; text-align:right; }
+  .owners { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-left:17%; }
+  .owners > div { border-top:2px solid var(--line); }
+  .lower { display:grid; grid-template-columns:1.15fr .85fr; gap:14px; margin-top:14px; }
+  .ledger,.evidence { padding:16px 18px; }
+  details { border-top:1px solid var(--line); }
+  details:first-of-type { border-top:0; }
+  summary { padding:10px 2px; cursor:pointer; font-weight:700; }
+  .pr { padding:0 2px 12px 22px; color:var(--muted); }
+  .pr b { color:var(--ink); }
+  .fact-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .fact { background:var(--soft); padding:10px; border-radius:8px; }
+  .fact strong { display:block; font-size:17px; }
+  .notes { margin:13px 0 0; padding-left:18px; }
+  .decisions { display:flex; gap:7px; flex-wrap:wrap; margin-top:13px; }
+  .decisions a { padding:3px 8px; border:1px solid var(--line); border-radius:6px; text-decoration:none; }
+  .authority { margin-top:12px; padding-top:11px; border-top:1px solid var(--line); color:var(--muted); }
+  code { font:12px ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--ink); }
+  @media (max-width:850px) {
+    .snapshot { grid-template-columns:1fr 1fr; } .snapshot header { grid-column:1/-1; }
+    .workbench,.lower { grid-template-columns:1fr; } .detail { position:static; min-height:0; }
+    .lane,.lane.b { grid-template-columns:76px repeat(5,minmax(58px,1fr)); max-width:none; }
+    .lane-title { grid-row:span 2; }
+    .lane.b .lane-title { grid-row:span 1; }
+    .owners { margin-left:0; grid-template-columns:1fr 1fr; }
+  }
+  @media (max-width:560px) {
+    main { width:min(100% - 16px,1180px); margin-top:8px; } .snapshot { grid-template-columns:1fr 1fr; }
+    .snapshot > * { padding:12px; } .map { padding:13px; } .map-head { display:block; }
+    .legend { margin-top:10px; } .lane,.lane.b { grid-template-columns:58px repeat(2,1fr); }
+    .lane-title { grid-row:span 5; }
+    .lane.b .lane-title { grid-row:span 2; }
+    .flow { grid-template-columns:1fr; }
+    .flow > span { justify-self:center; transform:rotate(90deg); }
+    .owners-label { text-align:left; }
+    .owners { grid-template-columns:1fr; }
+    .fact-grid { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <section class="snapshot panel" aria-labelledby="page-title">
+    <header><div class="eyebrow">Status checked 2026-08-08 · verified code baseline 371c79d</div><h1 id="page-title">Epic #23 status</h1><p>Markdown-semantic editing layers · open, 9 of 14 issues closed</p></header>
+    <div class="metric"><span>Overall</span><strong>9 / 14</strong><span>64% closed</span></div>
+    <div class="metric"><span>Track A</span><strong>6 / 10</strong><span>#24–29 closed</span></div>
+    <div class="metric"><span>Track B</span><strong>3 / 4</strong><span>#34–36 closed</span></div>
+    <div class="metric"><span>Integrated PRs</span><strong>10</strong><span>#39–48 merged</span></div>
+  </section>
+
+  <section class="workbench" aria-label="Epic issue map and selected issue">
+    <div class="map panel">
+      <div class="map-head"><div><div class="label">Dependency map</div><h2>Two workstreams, fourteen gates</h2></div>
+        <div class="legend" aria-label="Status legend"><span style="color:var(--done)"><i></i>Completed</span><span style="color:var(--ready)"><i></i>Ready</span><span style="color:var(--partial)"><i></i>Open · partial</span><span style="color:var(--blocked)"><i></i>Blocked</span></div>
+      </div>
+      <div class="lane" aria-label="Track A semantics">
+        <div class="lane-title"><strong>A · semantics</strong><small>6 / 10</small></div>
+        <button type="button" class="node" data-issue="24" data-state="done"><strong>#24</strong><small>authority</small><small class="node-state">done</small><small class="depends">root</small></button>
+        <button type="button" class="node" data-issue="25" data-state="done"><strong>#25</strong><small>mark reach</small><small class="node-state">done</small><small class="depends">needs #24</small></button>
+        <button type="button" class="node" data-issue="26" data-state="done"><strong>#26</strong><small>stored marks</small><small class="node-state">done</small><small class="depends">needs #25</small></button>
+        <button type="button" class="node" data-issue="27" data-state="done"><strong>#27</strong><small>commands</small><small class="node-state">done</small><small class="depends">needs #26</small></button>
+        <button type="button" class="node" data-issue="28" data-state="done"><strong>#28</strong><small>input rules</small><small class="node-state">done</small><small class="depends">needs #27</small></button>
+        <button type="button" class="node" data-issue="29" data-state="done"><strong>#29</strong><small>format ADR</small><small class="node-state">done</small><small class="depends">needs #24</small></button>
+        <button type="button" class="node" data-issue="30" data-state="ready"><strong>#30</strong><small>Markdown decode</small><small class="node-state">ready</small><small class="depends">needs #25 + #29</small></button>
+        <button type="button" class="node" data-issue="31" data-state="blocked"><strong>#31</strong><small>inline rules</small><small class="node-state">blocked</small><small class="depends">needs #28 + #30</small></button>
+        <button type="button" class="node" data-issue="32" data-state="blocked"><strong>#32</strong><small>encode</small><small class="node-state">blocked</small><small class="depends">needs #30</small></button>
+        <button type="button" class="node" data-issue="33" data-state="ready"><strong>#33</strong><small>slash menu</small><small class="node-state">ready</small><small class="depends">needs #27 + #28 + B:#35</small></button>
+      </div>
+      <div class="lane b" aria-label="Track B layout">
+        <div class="lane-title"><strong>B · layout</strong><small>3 / 4</small></div>
+        <button type="button" class="node" data-issue="34" data-state="done"><strong>#34</strong><small>capabilities</small><small class="node-state">done</small><small class="depends">root</small></button>
+        <button type="button" class="node" data-issue="35" data-state="done"><strong>#35</strong><small>caret path</small><small class="node-state">done</small><small class="depends">needs #34</small></button>
+        <button type="button" class="node" data-issue="36" data-state="done"><strong>#36</strong><small>cache key</small><small class="node-state">done</small><small class="depends">needs #34</small></button>
+        <button type="button" class="node" data-issue="37" data-state="partial" aria-pressed="true"><strong>#37</strong><small>prepared store</small><small class="node-state">partial</small><small class="depends">needs #36</small></button>
+      </div>
+    </div>
+
+    <aside class="detail panel" aria-live="polite" aria-labelledby="detail-title">
+      <div class="label">Selected issue</div><h2 id="detail-title">#37 · Prepared layout store</h2>
+      <div class="state" id="detail-state">Open · foundation integrated</div>
+      <p id="detail-summary">PR #48 establishes one coherent shared TextKit context and same-key reuse without claiming the bounded store complete.</p>
+      <ul id="detail-points"><li>Layouter and renderer share one context.</li><li>Speculative attributed-string cache was removed.</li><li>A one-slot prepared state still reloads when work crosses multiple blocks.</li></ul>
+      <footer><a id="detail-issue" href="https://github.com/hot666666/Slopad/issues/37">Issue #37</a><a id="detail-pr" href="https://github.com/hot666666/Slopad/pull/48">Merged PR #48</a></footer>
+    </aside>
+  </section>
+
+  <section class="runtime panel" aria-labelledby="runtime-title">
+    <div class="label">Runtime ownership</div><h2 id="runtime-title">Native intent crosses owners; state does not</h2>
+    <div class="flow"><div><b>AppKit callbacks</b><small>key · pointer · IME</small></div><span aria-hidden="true">→</span><div><b>SlopadAppKitUI</b><small>translate native intent</small></div><span aria-hidden="true">→</span><div><b>EditorSession</b><small>coordinate owners + publish snapshots</small></div></div>
+    <div class="owners-label">EditorSession coordinates these boundaries ↓</div>
+    <div class="owners" aria-label="EditorSession ownership boundaries"><div><b>EditorModel</b><small>canonical mutation · selection · history</small></div><div><b>BlockLayout</b><small>derived block geometry</small></div><div><b>Text protocol → TextKit</b><small>text measure + geometry backend</small></div><div><b>Snapshots → AppKit UI</b><small>draw · focus · scroll synchronization</small></div></div>
+  </section>
+
+  <section class="lower">
+    <div class="ledger panel">
+      <div class="label">Integration ledger</div><h2>PR #39–48 · behavior and review repair</h2>
+      <details><summary>#39 · Authority baseline</summary><div class="pr"><b>Behavior:</b> replaced a stale phase list with the active epic and verified current code facts. <b>Repair:</b> corrected the command count and pinned tree equality to the merge point.</div></details>
+      <details><summary>#40 · Inline mark reachability</summary><div class="pr"><b>Behavior:</b> exposed toggle/clear intent through Session and AppKit, with format-neutral marks. <b>Repair:</b> restored legacy bold/italic decoding and narrowed helper visibility.</div></details>
+      <details><summary>#41 · Caret stored marks</summary><div class="pr"><b>Behavior:</b> made stored marks model-owned, transactional editing state. <b>Repair:</b> applied them on real <code>replaceText</code>/IME paths and cleared them on replacement/conversion.</div></details>
+      <details><summary>#42 · Command vocabulary</summary><div class="pr"><b>Behavior:</b> separated viewport navigation and typed command results. <b>Repair:</b> fixed a test whose old optional unwrap had become a non-checking pass-through.</div></details>
+      <details><summary>#43 · Text capability split</summary><div class="pr"><b>Behavior:</b> split measurement, geometry, navigation, and deletion contracts. <b>Repair:</b> moved fallbacks to their declaring protocols and narrowed Session without duplicating backend ownership.</div></details>
+      <details><summary>#44 · Input rule engine</summary><div class="pr"><b>Behavior:</b> separated pure rule matching from transactional application with bounded trigger scans. <b>Repair:</b> removed speculative inline effects and dead accessors before #31 defines real semantics.</div></details>
+      <details><summary>#45 · Measurement cache key</summary><div class="pr"><b>Behavior:</b> keyed measurements on actual input values. <b>Repair:</b> covered all invalidation axes, added/reset per-frame counters, and replaced a false speed claim with benchmark resolution.</div></details>
+      <details><summary>#46 · Caret geometry publication</summary><div class="pr"><b>Behavior:</b> published caret/selection geometry through Session snapshots. <b>Repair:</b> memoized convergence renders and cleared that memo on backend and measurement invalidation.</div></details>
+      <details><summary>#47 · Markdown boundary ADR</summary><div class="pr"><b>Behavior:</b> fixed toolchain, isolation, and semantic round-trip boundaries. <b>Repair:</b> corrected Sendable, patch-CAS, identity, and undo consequences after source-backed review.</div></details>
+      <details open><summary>#48 · Shared TextKit context</summary><div class="pr"><b>Behavior:</b> integrated coherent context identity and immediate same-key reuse. <b>Repair:</b> removed the unproven attributed-string cache, made counters race-safe and instance-observable, and left #37 open for bounded multi-block storage.</div></details>
+    </div>
+
+    <div class="evidence panel">
+      <div class="label">Evidence and authority</div><h2>What is confirmed, and by whom</h2>
+      <div class="fact-grid">
+        <div class="fact"><span>Epic-head rerun · standard</span><strong>509 tests</strong><small>118 suites</small></div>
+        <div class="fact"><span>Epic-head rerun · instrumented</span><strong>511 tests</strong><small>119 suites</small></div>
+        <div class="fact"><span>Benchmark resolution</span><strong>2.0% median</strong><small>7.3% worst run-to-run variance</small></div>
+        <div class="fact"><span>Verified code baseline</span><strong><code>371c79d</code></strong><small>PR #48 merge; before this page</small></div>
+      </div>
+      <ul class="notes"><li>The two test totals are fresh epic-head reruns, not sums of PR reports.</li><li>PR ledger claims describe their reviewed merge reports; they are not relabeled as rerun evidence.</li><li>Performance changes inside the 2.0% / 7.3% envelope are unresolved by this benchmark method.</li><li>Primary remaining risk: #37 still has one prepared slot, so multi-block revisit work remains.</li><li>Sequence risk: #30 is next even though #33 is dependency-ready; #31 and #32 wait on format work.</li></ul>
+      <div class="decisions" aria-label="Epic decision links"><a href="ROADMAP.md#decisions-fixed-for-this-epic">D1</a><a href="ROADMAP.md#decisions-fixed-for-this-epic">D2</a><a href="ROADMAP.md#decisions-fixed-for-this-epic">D3</a><a href="ROADMAP.md#decisions-fixed-for-this-epic">D4</a><a href="ROADMAP.md#decisions-fixed-for-this-epic">D5</a><a href="ROADMAP.md#decisions-fixed-for-this-epic">D6</a><a href="ROADMAP.md#decisions-fixed-for-this-epic">D7</a></div>
+      <p class="authority"><b>Authority:</b> source and tests define current behavior; <a href="ROADMAP.md">ROADMAP</a>, ADRs, and <a href="https://github.com/hot666666/Slopad/issues/23">epic #23</a> define intent. This page is a status projection, not a new decision source.</p>
+    </div>
+  </section>
+</main>
+<script>
+  const issues = {
+    24:["Authority baseline","Completed","The roadmap and epic replace the stale handoff phase list.",["Current source/tests own behavior facts.","ROADMAP, ADRs, and the epic own intended direction."],39],
+    25:["Inline mark reachability","Completed","Users and hosts can toggle or clear inline styles through Session-owned intent.",["Selection coverage defines toggle behavior.","Core owns the closed mark vocabulary."],40],
+    26:["Caret stored marks","Completed","Caret-only style intent lives in EditorModel state and participates in transactions.",["Real keyboard and IME replacement paths apply stored marks.","Deliberate relocation clears them."],41],
+    27:["Command vocabulary","Completed","Layout-free commands and viewport navigation are distinct, with typed outcomes.",["Hosts can distinguish document mutation from selection-only change.","Viewport stays with navigation that requires geometry."],42],
+    28:["Input rule engine","Completed","Pure rules decide effects; a transaction runner applies them atomically.",["Trigger gates reject ordinary typing before scanning.","Inline-rule shape is deferred to #31."],44],
+    29:["Markdown boundary ADR","Completed","ADR 0013 fixes dependency isolation and semantic round-trip policy.",["swift-markdown raises the minimum toolchain to Swift 6.2.","Markdown remains import/export, not canonical storage."],47],
+    30:["Markdown decode","Ready · next","Implement fail-closed Markdown decoding behind the isolated format target.",["Consumes the boundary fixed by #29.","Must preserve canonical structure and supported marks."],null],
+    31:["Inline input rules","Blocked","Inline syntax rules wait for the format and rule contracts they consume.",["Whitespace, escape, code-span, and empty-content rejection need explicit semantics.","No speculative effect remains in the runner."],null],
+    32:["Markdown encode","Blocked","Encoding follows the canonical decode vocabulary and semantic round-trip contract.",["Unsupported output must diagnose instead of silently dropping meaning.","Byte-exact source spelling is not promised."],null],
+    33:["Slash command menu","Ready · queued","The slash-only command catalog is dependency-ready but scheduled after #30.",["UI selects commands; EditorSession owns semantic application.","Toolbar and generalized suggestions remain outside this issue."],null],
+    34:["Text capability split","Completed","Backend capability seams are narrowed by consumer without splitting the implementation.",["BlockLayout receives measurement only.","Session coordinates geometry, navigation, and deletion."],43],
+    35:["Caret geometry path","Completed","Session snapshots publish document-space caret and selection geometry.",["AppKit UI no longer reaches the text backend.","Ad hoc pointer line-fragment queries remain live Session calls."],46],
+    36:["Measurement cache key","Completed","Cache identity follows measurement inputs instead of revision conventions.",["Composition, width, depth, text, and marks are covered.","Benchmark differences below resolution are not claimed."],45],
+    37:["Prepared layout store","Open · foundation integrated","PR #48 establishes one coherent shared TextKit context and same-key reuse without claiming the bounded store complete.",["Layouter and renderer share one context.","Speculative attributed-string cache was removed.","A one-slot prepared state still reloads when work crosses multiple blocks."],48]
+  };
+  const buttons = [...document.querySelectorAll('.node')];
+  const title = document.getElementById('detail-title'), state = document.getElementById('detail-state');
+  const summary = document.getElementById('detail-summary'), points = document.getElementById('detail-points');
+  const issueLink = document.getElementById('detail-issue'), prLink = document.getElementById('detail-pr');
+  function selectIssue(button) {
+    buttons.forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+    const number = button.dataset.issue, item = issues[number], status = button.dataset.state;
+    title.textContent = `#${number} · ${item[0]}`; state.textContent = item[1]; state.style.setProperty('--state', `var(--${status})`);
+    summary.textContent = item[2]; points.replaceChildren(...item[3].map(text => Object.assign(document.createElement('li'), {textContent:text})));
+    issueLink.href = `https://github.com/hot666666/Slopad/issues/${number}`; issueLink.textContent = `Issue #${number}`;
+    prLink.hidden = !item[4]; if (item[4]) { prLink.href = `https://github.com/hot666666/Slopad/pull/${item[4]}`; prLink.textContent = `Merged PR #${item[4]}`; }
+  }
+  buttons.forEach(button => button.addEventListener('click', () => selectIssue(button)));
+  selectIssue(document.querySelector('[data-issue="37"]'));
+</script>
+</body>
+</html>
