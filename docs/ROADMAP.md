@@ -48,8 +48,10 @@ These are settled. Sub-issues implement them rather than re-opening them.
 - `DocumentStep` / `PositionMap` — blocked by D2; snapshot history stays.
 - `DocumentSchema` / `BlockSpec` / `MarkSpec` — `Document+Invariants.swift` already
   enforces the listed checks, and extension blocks have no first consumer.
-- Persistence source-of-truth choice — depends on the round-trip criterion fixed in
-  [#29](https://github.com/hot666666/Slopad/issues/29); a separate ADR follows.
+- Persistence source-of-truth choice — the round-trip criterion is now fixed by
+  [ADR 0013](../ADR/0013-markdown-format-boundary.md), which rules out Markdown alone
+  because `BlockID`s do not survive it. The remaining choice between a native archive and a
+  hybrid needs its own ADR.
 - HTML artifact blocks, image/table blocks — consuming-product requirements that cannot be
   expressed as engine-verifiable completion criteria.
 
@@ -220,6 +222,11 @@ Priority order:
     commands only through `EditorSession` input values.
 
 - P3 - Structured paste and Markdown import/export
+  - The dependency boundary and the round-trip guarantee are settled in
+    [ADR 0013](../ADR/0013-markdown-format-boundary.md): `swift-markdown` lives behind
+    `SlopadMarkdown` alone, building requires a Swift 6.2 or later toolchain, and round-trip
+    is semantic rather than byte-exact. `BlockID`s do not survive it, so Markdown is an
+    import/export format and cannot be the storage format on its own.
   - Keep markdown as import/export format and input shortcut syntax, not canonical state.
   - Add structured block paste before broad markdown import/export if product editing
     needs copy/paste workflows first.
