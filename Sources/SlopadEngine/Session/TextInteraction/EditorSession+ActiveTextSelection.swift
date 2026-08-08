@@ -3,6 +3,10 @@ import SlopadCoreModel
 // MARK: - EditorSession ActiveTextSelection
 
 extension EditorSession {
+    package var activeTextBlockID: BlockID? {
+        activeTextSelection()?.position.blockID
+    }
+
     var activeEditorSelection: EditorSelection {
         guard composition != nil, let compositionSelection else {
             return editorModel.selection

@@ -337,3 +337,94 @@ At 10000 blocks, subtree work shows storage pressure clearly in the UI path too.
 - The AppKit UI sweep should be read together with `HEIGHT_INDEX_STORAGE_EXPERIMENT.md`,
   but it does not own the storage default decision. This document records only what was
   visible in the reference host frame path.
+
+## Prepared Layout Store Policy (#37)
+
+Date: 2026-08-08
+
+Measured source: `a8c05f7fd75e3bcec326505129b042a86291fe3c` on
+`codex/b4-bounded-prepared-store` (`e3541be` contains the prepared-store production
+implementation; the measured HEAD also includes the Epic #23 integration). Environment:
+macOS 26.5.2, Xcode 26.5 (17F42), arm64, 920x680 window, release build with
+`SLOPAD_BENCHMARK_INSTRUMENTATION`.
+
+The control is the same measured source with `entryLimit=1`. It isolates store capacity
+while keeping the harness, draw-inclusive counter boundary, and production code otherwise
+identical. It is a **same-head control**, not the historical exact `6811793` baseline and
+must not be described as one. Raw frame CSVs remain local; the compact checked-in aggregate
+is `Benchmarks/Baselines/appkit-prepared-layout-store-summary-20260808.csv`.
+
+Representative command shape:
+
+```sh
+swift run -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION \
+  SlopadUIBenchmarkApp \
+  --scenario forward-reverse-scroll \
+  --block-count 10000 \
+  --frames 128 \
+  --prepared-entry-limit 96 \
+  --prepared-cost-limit 6291456 \
+  --output /tmp/slopad-prepared-forward-96-6m.csv
+```
+
+The count sweep used an 8 MiB cost cap. Its initial grid was
+`1, 8, 16, 24, 32, 48, 64`; the knee search then extended it with
+`80, 96, 112, 128`. Values below are medians of three 10,000-block
+`forward-reverse-scroll` repetitions.
+
+| Entry limit | Hit ratio | Prepares | Resident estimate | P95 frame |
+| ----------: | --------: | -------: | ----------------: | --------: |
+|          64 |     0.759 |      647 |          4.03 MiB |   5.395ms |
+|          80 |     0.870 |      348 |          5.03 MiB |   5.466ms |
+|          96 |     0.965 |       93 |          6.04 MiB |   5.119ms |
+|         112 |     0.971 |       77 |          6.54 MiB |   4.821ms |
+|         128 |     0.971 |       77 |          6.54 MiB |   4.859ms |
+
+`96` is the smallest count knee. Moving to `112` improves hit ratio by only 0.6
+percentage points and removes 16 prepares; its p95 difference is below the precommitted
+8% resolution threshold. `128` adds no reuse.
+
+The cost sweep fixed the entry limit at 96:
+
+| Cost limit | Hit ratio | Prepares | Resident estimate | P95 frame |
+| ---------: | --------: | -------: | ----------------: | --------: |
+|      4 MiB |     0.759 |      647 |                 - |   5.451ms |
+|      5 MiB |     0.844 |      418 |                 - |   4.957ms |
+|      6 MiB |     0.924 |      205 |         5.978 MiB |   4.748ms |
+|      7 MiB |     0.965 |       93 |          6.04 MiB |   4.763ms |
+|      8 MiB |     0.965 |       93 |          6.04 MiB |   4.763ms |
+
+The checked-in aggregate's 6-to-7 MiB gain is 4.1 percentage points, below the 5-point knee rule, while p95 is
+tied. A five-repetition repeated-viewport follow-up differed by more than 8%, but 7 MiB
+was faster in only three of five runs and therefore failed the precommitted four-of-five
+direction rule. The selected production default is **96 entries / 6 MiB estimated cost**.
+
+### Same-head control versus selected policy at 10,000 blocks
+
+Medians use three repetitions except `repeated-viewport`, which uses five.
+
+| Scenario | P95 frame control -> selected | Hit ratio control -> selected | Prepares control -> selected | Notes |
+| --- | ---: | ---: | ---: | --- |
+| `repeated-viewport` | 5.140 -> 4.353ms | 0.056 -> 1.000 | 1020 -> 0 | same viewport reuse |
+| `forward-reverse-scroll` | 5.981 -> 4.748ms | 0.003 -> 0.924 | 2677 -> 205 | bounded overlapping locality |
+| `native-insert` | 8.384 -> 6.540ms | 0.091 -> 0.955 | 1200 -> 60 | operation p95 2.331 -> 1.820ms |
+| `composition` | 5.410 -> 4.237ms | 0.055 -> 0.953 | 1200 -> 60 | live composition path |
+| `text-selection-drag` | 7.056 -> 5.493ms | 0.456 -> 1.000 | 1143 -> 0 | real mouse down/drag/up path |
+| `pressure-recovery` | 6.333 -> 5.341ms | - | 1050 -> 1050 | footprint 47.64 -> 48.58 MiB; over-budget contexts 0 |
+| `long-active-paragraph` | 169.879 -> 172.730ms | - | 540 -> 60 | footprint 390.78 -> 385.97 MiB; over-budget contexts 0 |
+
+One-run correctness sweeps passed at 100, 1,000, and 10,000 blocks for cold first
+layout, repeated viewport, local forward/reverse scroll, native insertion, composition,
+real text-selection drag, width resize, style replacement, and whole-document scroll.
+The apparent 100-block width result was repeated five times: control p95 was about
+9.468ms and selected p95 about 9.499ms, a tie. At 10,000 blocks, key scenarios stayed
+under 16.67ms except cold layout, width/style replacement, and the extreme 16K active
+paragraph; those paths were already slow in the same-head control and the selected policy
+did not materially regress them.
+
+The cost metric is an estimate for retained TextKit graphs, not an allocator-reported byte
+count. Process footprint is noisy at sub-MiB scale, three-repetition medians do not resolve
+small differences, and changes below the stated 8% or direction thresholds are treated as
+ties. Pressure recovery intentionally re-prepares after eviction, so equal prepare counts
+there are expected; the important checks are bounded residency and zero over-budget
+contexts.
