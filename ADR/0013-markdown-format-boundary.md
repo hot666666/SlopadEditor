@@ -126,9 +126,11 @@ What it forbids:
 `anchor`, and `focus` as `BlockID`s. A selection captured before a save refers to nothing
 after a reload.
 
-**Undo history.** `EditorTransaction` carries whole `EditorState` values, so every entry in
-the stack holds documents keyed by the pre-reload identities. History does not survive a
-round-trip and must be discarded across one rather than silently misapplied.
+**Undo history — not affected, which is worth stating so nobody defends against it.**
+`EditorTransaction` carries whole `EditorState` values, and `replaceDocument` appends one
+rather than clearing the stack. Undoing an import therefore restores the previous document
+*with its original identities*, which is correct. Identity only breaks across a process
+boundary, where there is no history to misapply.
 
 **Agent references.** An agent that named a block in one turn cannot name it in the next.
 
@@ -152,8 +154,8 @@ that it cannot be avoided by claiming Markdown alone is sufficient.
   requirements are stated.
 - Round-trip fixtures assert semantic equality with `BlockID`s excluded. A fixture asserting
   byte equality is testing something this ADR does not promise and should be rejected.
-- A Markdown import discards undo history and any selection anchored to the previous
-  document. Reusing either across an import is a bug, not a nicety.
+- A selection captured before an import must not be reapplied after it. Undo needs no
+  special handling: it restores whole states, identities included.
 - The adapter converts to core types before returning. It may not expose a parser value for a
   caller to walk, and may not retain one — the `Sendable` boundary above makes that a
   compile-time matter and not only a design preference.
