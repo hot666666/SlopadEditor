@@ -129,8 +129,8 @@ struct AppKitBlockRenderingBoundaryTests {
         #expect(differenceCount > 10)
     }
 
-    @Test("host chrome hook과 무관하게 focus 위치에 caret feedback을 그린다")
-    func drawsCaret() throws {
+    @Test("host chrome hook과 무관하게 focus 위치에 native insertion indicator를 둔다")
+    func placesNativeInsertionIndicator() throws {
         // Given
         let text = "Caret positions"
         let leadingController = makeTextController(
@@ -143,22 +143,19 @@ struct AppKitBlockRenderingBoundaryTests {
             selection: .caret(blockID: "text", offset: text.count),
             chromeRenderer: PoisoningBlockChromeRenderer()
         )
+        prepare(leadingController)
+        prepare(trailingController)
 
         // When
-        let leadingBitmap = try renderBitmap(for: leadingController)
-        let trailingBitmap = try renderBitmap(for: trailingController)
-        let textFrame = try #require(
-            leadingController.snapshot?.visibleBlocks.first?.textRender.frame
-        )
-        let differenceCount = try countPixelDifferences(
-            leadingBitmap,
-            trailingBitmap,
-            in: textFrame,
-            canvasBounds: leadingController.canvasView.bounds
-        )
+        let leadingFrame = leadingController.canvasView.insertionIndicatorFrame
+        let trailingFrame = trailingController.canvasView.insertionIndicatorFrame
+        let leadingCaret = try #require(leadingController.snapshot?.activeTextInput?.caretRect)
+        let trailingCaret = try #require(trailingController.snapshot?.activeTextInput?.caretRect)
 
         // Then
-        #expect(differenceCount > 5)
+        #expect(leadingFrame == CGRect(editorRect: leadingCaret))
+        #expect(trailingFrame == CGRect(editorRect: trailingCaret))
+        #expect(leadingFrame.minX < trailingFrame.minX)
     }
 
     @Test("host chrome hook과 무관하게 text selection feedback을 그린다")

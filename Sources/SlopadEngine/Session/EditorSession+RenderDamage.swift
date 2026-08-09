@@ -20,7 +20,17 @@ extension EditorSession {
             return [visibleRect]
         }
 
-        let affectedBlockIDs = renderDamageBlockIDs(for: update)
+        let selectionChanged = update.previousSelection != update.selection
+        let oldVisibleBlockIDs = visibleBlockIDs(in: viewport)
+        var affectedBlockIDs = update.invalidation.blockIDs
+        if selectionChanged {
+            affectedBlockIDs.formUnion(
+                visibleSelectionBlockIDs(update.previousSelection, among: oldVisibleBlockIDs)
+            )
+            affectedBlockIDs.formUnion(
+                visibleSelectionBlockIDs(update.selection, among: oldVisibleBlockIDs)
+            )
+        }
         guard !affectedBlockIDs.isEmpty else {
             _ = preparedLayout(for: viewport)
             return []
@@ -32,6 +42,15 @@ extension EditorSession {
             viewportWidth: viewport.width
         )
         _ = preparedLayout(for: viewport)
+        if selectionChanged {
+            let newVisibleBlockIDs = visibleBlockIDs(in: viewport)
+            affectedBlockIDs.formUnion(
+                visibleSelectionBlockIDs(update.previousSelection, among: newVisibleBlockIDs)
+            )
+            affectedBlockIDs.formUnion(
+                visibleSelectionBlockIDs(update.selection, among: newVisibleBlockIDs)
+            )
+        }
         let newFrames = layoutFrames(
             for: affectedBlockIDs,
             blockLayout: blockLayout,
@@ -65,29 +84,63 @@ extension EditorSession {
     }
 }
 
-// MARK: - Affected Blocks
+extension EditorSession {
+    fileprivate func visibleBlockIDs(in viewport: EditorViewport) -> Set<BlockID> {
+        Set(
+            blockLayout.visibleGeometries(
+                yOffset: viewport.scrollY,
+                viewportHeight: viewport.height
+            ).map(\.blockID)
+        )
+    }
 
-private func renderDamageBlockIDs(for update: EditorUpdate) -> Set<BlockID> {
-    var blockIDs = update.invalidation.blockIDs
-    blockIDs.formUnion(selectionBlockIDs(update.previousSelection))
-    blockIDs.formUnion(selectionBlockIDs(update.selection))
+    fileprivate func visibleSelectionBlockIDs(
+        _ selection: EditorSelection?,
+        among visibleBlockIDs: Set<BlockID>
+    ) -> Set<BlockID> {
+        guard let selection else { return [] }
+        switch selection {
+        case .inactive:
+            return []
+        case .caret(let position):
+            return visibleBlockIDs.contains(position.blockID) ? [position.blockID] : []
+        case .text(let textSelection):
+            return visibleIDs(
+                between: textSelection.anchor.blockID,
+                and: textSelection.focus.blockID,
+                among: visibleBlockIDs
+            )
+        case .blocks(let blockSelection):
+            return visibleIDs(
+                between: blockSelection.anchor,
+                and: blockSelection.focus,
+                among: visibleBlockIDs
+            )
+        }
+    }
 
-    return blockIDs
-}
-
-private func selectionBlockIDs(_ selection: EditorSelection?) -> Set<BlockID> {
-    guard let selection else { return [] }
-    switch selection {
-    case .inactive:
-        return []
-    case .caret(let position):
-        return [position.blockID]
-    case .text(let textSelection):
-        return [textSelection.anchor.blockID, textSelection.focus.blockID]
-    case .blocks(let blockSelection):
-        return Set(blockSelection.blockIDs)
+    fileprivate func visibleIDs(
+        between firstID: BlockID,
+        and secondID: BlockID,
+        among visibleBlockIDs: Set<BlockID>
+    ) -> Set<BlockID> {
+        guard
+            let firstIndex = blockLayout.visibleOrderIndex(of: firstID),
+            let secondIndex = blockLayout.visibleOrderIndex(of: secondID)
+        else {
+            return []
+        }
+        let lowerBound = min(firstIndex, secondIndex)
+        let upperBound = max(firstIndex, secondIndex)
+        return Set(
+            visibleBlockIDs.filter { blockID in
+                guard let index = blockLayout.visibleOrderIndex(of: blockID) else { return false }
+                return index >= lowerBound && index <= upperBound
+            })
     }
 }
+
+// MARK: - Affected Blocks
 
 // MARK: - Redraw Scope
 

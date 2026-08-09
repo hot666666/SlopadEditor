@@ -12,9 +12,31 @@ extension EditorSession {
         case .text(let textSelection) where textSelection.isSingleBlock:
             return selectActiveBlockTextOrEscalate(blockID: textSelection.focus.blockID)
 
-        case .inactive, .blocks, .text:
+        case .text(let textSelection):
+            return selectTouchedTextSpanOrEscalate(textSelection)
+
+        case .inactive, .blocks:
             return selectAllVisibleBlocks()
         }
+    }
+
+    private func selectTouchedTextSpanOrEscalate(_ selection: TextSelection) -> EditorUpdate? {
+        guard
+            let span = editorModel.resolveTextSpan(selection),
+            let startBlock = editorModel.document.block(span.start.blockID),
+            let endBlock = editorModel.document.block(span.end.blockID)
+        else { return nil }
+        let fullStart = TextPosition(blockID: span.start.blockID, offset: 0)
+        let fullEnd = TextPosition(blockID: span.end.blockID, offset: endBlock.content.length)
+        let isAlreadyFull = span.start.offset == 0
+            && span.end.offset == endBlock.content.length
+            && startBlock.id != endBlock.id
+        guard !isAlreadyFull else { return selectAllVisibleBlocks() }
+
+        let expanded = selection.anchor == span.start
+            ? TextSelection(anchor: fullStart, focus: fullEnd)
+            : TextSelection(anchor: fullEnd, focus: fullStart)
+        return handleSelectionChange(.text(expanded))
     }
 
     private func selectActiveBlockTextOrEscalate(blockID: BlockID) -> EditorUpdate? {

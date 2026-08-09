@@ -13,22 +13,23 @@ extension EditorModel {
             position = caret
 
         case .text(let textSelection):
-            guard
-                textSelection.isSingleBlock,
-                let range = textSelection.rangeInSingleBlock
-            else {
-                throw .abort
+            if textSelection.isSingleBlock {
+                guard let range = textSelection.rangeInSingleBlock else { throw .abort }
+                try deleteText(
+                    blockID: textSelection.anchor.blockID,
+                    range: range,
+                    operations: &operations,
+                    changed: &changed
+                )
+                position = TextPosition(
+                    blockID: textSelection.anchor.blockID,
+                    offset: range.lowerBound
+                )
+            } else {
+                try insertText("", operations: &operations, changed: &changed)
+                guard case .caret(let collapsed) = state.selection else { throw .abort }
+                position = collapsed
             }
-            try deleteText(
-                blockID: textSelection.anchor.blockID,
-                range: range,
-                operations: &operations,
-                changed: &changed
-            )
-            position = TextPosition(
-                blockID: textSelection.anchor.blockID,
-                offset: range.lowerBound
-            )
 
         case .inactive, .blocks:
             throw .abort

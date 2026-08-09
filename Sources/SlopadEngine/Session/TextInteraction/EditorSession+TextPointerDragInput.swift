@@ -20,7 +20,13 @@ extension EditorSession {
         if !shouldPreserveDoubleClickSelection {
             textDoubleClickSelection = nil
         }
-        textSelectionDragAnchor = position
+        if editorModel.document.block(position.blockID)?.content.length == 0 {
+            textSelectionDragAnchor = nil
+            textSelectionPendingOrigin = (position.blockID, documentPoint)
+        } else {
+            textSelectionDragAnchor = position
+            textSelectionPendingOrigin = nil
+        }
         let selection = TextSelection(anchor: position, focus: position)
         let update = handleSelectionChange(.caret(position))
         recordTextNavigationContext(
@@ -33,21 +39,28 @@ extension EditorSession {
 
     func updateTextPointerSelection(
         at documentPoint: EditorPoint,
-        viewport: EditorViewport,
-        blockSelectionThreshold: Double?
+        viewport: EditorViewport
     ) -> EditorUpdate? {
-        guard let anchor = textSelectionDragAnchor else { return nil }
-        if let update = blockSelectionFromTextDragIfNeeded(
-            anchor: anchor,
-            documentPoint: documentPoint,
-            viewport: viewport,
-            threshold: blockSelectionThreshold
-        ) {
-            return update
+        let anchor: TextPosition
+        if let resolvedAnchor = textSelectionDragAnchor {
+            anchor = resolvedAnchor
+        } else if let pending = textSelectionPendingOrigin,
+            let resolvedAnchor = pendingTextSelectionAnchor(
+                from: pending,
+                toward: documentPoint
+            )
+        {
+            anchor = resolvedAnchor
+            textSelectionDragAnchor = resolvedAnchor
+            textSelectionPendingOrigin = nil
+        } else {
+            return nil
         }
+        _ = preparedLayout(for: viewport)
         guard
+            let focusBlockID = blockLayout.blockID(atY: documentPoint.y),
             let focusHit = textHitTest(
-                in: anchor.blockID,
+                in: focusBlockID,
                 at: documentPoint,
                 viewport: viewport
             )
@@ -75,8 +88,11 @@ extension EditorSession {
     }
 
     func endTextPointerSelection() -> EditorUpdate? {
-        guard textSelectionDragAnchor != nil else { return nil }
+        guard textSelectionDragAnchor != nil || textSelectionPendingOrigin != nil else {
+            return nil
+        }
         textSelectionDragAnchor = nil
+        textSelectionPendingOrigin = nil
         return makeEditorUpdate(invalidation: EditorUpdateInvalidation())
     }
 
@@ -92,74 +108,30 @@ extension EditorSession {
         return range.contains(position.offset)
     }
 
-    private func blockSelectionFromTextDragIfNeeded(
-        anchor: TextPosition,
-        documentPoint: EditorPoint,
-        viewport: EditorViewport,
-        threshold: Double?
-    ) -> EditorUpdate? {
-        guard let threshold, threshold > 0,
-            let anchorBlock = renderedBlock(blockID: anchor.blockID, viewportWidth: viewport.width)
-        else {
-            return nil
+    private func pendingTextSelectionAnchor(
+        from origin: (blockID: BlockID, documentPoint: EditorPoint),
+        toward documentPoint: EditorPoint
+    ) -> TextPosition? {
+        if documentPoint.y < origin.documentPoint.y {
+            var candidate = editorModel.document.previousDepthFirstBlockID(before: origin.blockID)
+            while let blockID = candidate {
+                guard let block = editorModel.document.block(blockID) else { return nil }
+                if block.content.length > 0 {
+                    return TextPosition(blockID: blockID, offset: block.content.length)
+                }
+                candidate = editorModel.document.previousDepthFirstBlockID(before: blockID)
+            }
+        } else if documentPoint.y > origin.documentPoint.y {
+            var candidate = editorModel.document.nextDepthFirstBlockID(after: origin.blockID)
+            while let blockID = candidate {
+                guard let block = editorModel.document.block(blockID) else { return nil }
+                if block.content.length > 0 {
+                    return TextPosition(blockID: blockID, offset: 0)
+                }
+                candidate = editorModel.document.nextDepthFirstBlockID(after: blockID)
+            }
         }
-
-        let focusID: BlockID?
-        if documentPoint.y <= anchorBlock.frame.minY - threshold {
-            focusID = blockSelectionFocusID(
-                in: documentPoint.y..<anchorBlock.frame.midY,
-                direction: .up
-            )
-        } else if documentPoint.y >= anchorBlock.frame.maxY + threshold {
-            focusID = blockSelectionFocusID(
-                in: anchorBlock.frame.midY..<documentPoint.y,
-                direction: .down
-            )
-        } else {
-            return nil
-        }
-
-        guard let focusID,
-            let selection = blockLayout.blockSelection(
-                from: anchor.blockID,
-                to: focusID,
-                document: editorModel.document
-            )
-        else {
-            return nil
-        }
-
-        textSelectionDragAnchor = nil
-        blockSelectionDragAnchor = BlockHitTestResult(
-            blockID: anchor.blockID,
-            region: .body,
-            textPosition: anchor
-        )
-        return handleSelectionChange(.blocks(selection))
+        return nil
     }
 
-    private enum TextDragBlockSelectionDirection {
-        case up
-        case down
-    }
-
-    private func blockSelectionFocusID(
-        in yRange: Range<Double>,
-        direction: TextDragBlockSelectionDirection
-    ) -> BlockID? {
-        guard
-            let selection = blockLayout.blockSelection(
-                intersectingYRange: yRange,
-                document: editorModel.document
-            )
-        else {
-            return nil
-        }
-        switch direction {
-        case .up:
-            return selection.anchor
-        case .down:
-            return selection.focus
-        }
-    }
 }

@@ -162,6 +162,37 @@ struct EditorSessionInlineStyleInputTests {
         #expect(block?.content.text == "한글🙂Z")
     }
 
+    @Test("cross-block style은 모든 fragment를 한 transaction으로 토글한다")
+    func togglesStyleAcrossTextFragmentsAsOneTransaction() throws {
+        // Given
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let selection = TextSelection(
+            anchor: TextPosition(blockID: a, offset: 1),
+            focus: TextPosition(blockID: b, offset: 2)
+        )
+        let session = EditorSession(
+            blocks: [
+                EditorBlockInput(id: a, content: BlockContent(text: "abcd")),
+                EditorBlockInput(id: b, content: BlockContent(text: "efgh")),
+            ],
+            selection: .text(selection),
+            textLayouter: DeterministicBlockTextLayouter()
+        )
+
+        // When
+        _ = try #require(session.handleInput(.command(.toggleInlineStyle(.strong))))
+
+        // Then
+        #expect(marks(session, a) == [.init(kind: .strong, range: TextRange(1, 4))])
+        #expect(marks(session, b) == [.init(kind: .strong, range: TextRange(0, 2))])
+        #expect(session.activeEditorSelection == .text(selection))
+
+        _ = try #require(session.handleInput(.command(.undo)))
+        #expect(marks(session, a).isEmpty)
+        #expect(marks(session, b).isEmpty)
+    }
+
     // MARK: - Support
 
     private func makeSession(

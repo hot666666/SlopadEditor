@@ -1,7 +1,7 @@
 import AppKit
+import SlopadEngine
 import Testing
 
-import SlopadEngine
 @testable import SlopadAppKitUI
 
 @MainActor
@@ -19,14 +19,17 @@ struct AppKitActiveInputControllerCompositionTests {
         let inputController = try owner.makeInputController()
 
         // When: NSTextInputClient의 production replacement 경로를 탄다.
-        inputController.insertText("**bold**", replacementRange: NSRange(location: NSNotFound, length: 0))
+        inputController.insertText(
+            "**bold**", replacementRange: NSRange(location: NSNotFound, length: 0))
         owner.controller.renderAndSyncSurface(makeFirstResponder: false)
 
         // Then
-        #expect(owner.controller.documentSnapshot.blocks.first?.content == BlockContent(
-            text: "bold",
-            marks: [BlockContent.InlineMark(kind: .strong, range: TextRange(0, 4))]
-        ))
+        #expect(
+            owner.controller.documentSnapshot.blocks.first?.content
+                == BlockContent(
+                    text: "bold",
+                    marks: [BlockContent.InlineMark(kind: .strong, range: TextRange(0, 4))]
+                ))
         #expect(owner.controller.snapshot?.selection == .caret(blockID: blockID, offset: 4))
     }
 
@@ -169,6 +172,40 @@ struct AppKitActiveInputControllerCompositionTests {
         #expect(snapshot.composition == nil)
         #expect(snapshot.visibleBlocks.first?.textRender.measureRequest.text == "AXB")
     }
+
+    @Test("TN 위 AppKit marked text 확정은 전체 범위를 병합하고 한 caret을 남긴다")
+    func commitsMarkedTextAcrossBlocks() throws {
+        // Given
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let owner = CompositionRecordingOwner(
+            blocks: [
+                EditorBlockInput(id: a, content: BlockContent(text: "abcDEF")),
+                EditorBlockInput(id: b, content: BlockContent(text: "GHIjkl")),
+            ],
+            activeBlockID: a,
+            selection: .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: b, offset: 3, affinity: .upstream),
+                    focus: TextPosition(blockID: a, offset: 3, affinity: .downstream)
+                )
+            )
+        )
+        let inputController = try owner.makeInputController()
+
+        // When
+        inputController.setMarkedText(
+            "한",
+            selectedRange: NSRange(location: 1, length: 0),
+            replacementRange: NSRange(location: NSNotFound, length: 0)
+        )
+        inputController.unmarkText()
+        owner.controller.renderAndSyncSurface(makeFirstResponder: false)
+
+        // Then
+        #expect(owner.controller.documentSnapshot.blocks.map(\.content.text) == ["abc한jkl"])
+        #expect(owner.controller.snapshot?.selection == .caret(blockID: a, offset: 4))
+    }
 }
 
 @MainActor
@@ -177,15 +214,22 @@ private final class CompositionRecordingOwner: AppKitActiveInputOwner {
     private let blockID: BlockID
     private(set) var receivedEvents: [EditorInputEvent] = []
 
-    init(blockID: BlockID, text: String, selection: EditorSelection) {
-        self.blockID = blockID
+    convenience init(blockID: BlockID, text: String, selection: EditorSelection) {
+        self.init(
+            blocks: [EditorBlockInput(id: blockID, content: BlockContent(text: text))],
+            activeBlockID: blockID,
+            selection: selection
+        )
+    }
+
+    init(
+        blocks: [EditorBlockInput],
+        activeBlockID: BlockID,
+        selection: EditorSelection
+    ) {
+        self.blockID = activeBlockID
         self.controller = AppKitEditorViewController(
-            blocks: [
-                EditorBlockInput(
-                    id: blockID,
-                    content: BlockContent(text: text)
-                )
-            ],
+            blocks: blocks,
             selection: selection
         )
     }

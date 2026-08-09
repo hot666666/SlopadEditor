@@ -10,24 +10,24 @@ extension EditorSession {
     ) -> EditorUpdate? {
         guard movement.verticalStep != nil else { return nil }
         switch activeEditorSelection {
-        case .caret(let position):
-            if extending {
-                return handleSelectionChange(.blocks(BlockSelection(blockIDs: [position.blockID])))
-            }
-            return moveAcrossVisualLineBoundaryIfNeeded(direction: movement, viewport: viewport)
+        case .caret:
+            return moveAcrossVisualLineBoundaryIfNeeded(
+                direction: movement,
+                extending: extending,
+                viewport: viewport
+            )
 
-        case .text(let textSelection) where textSelection.isSingleBlock:
-            if extending {
-                return handleSelectionChange(
-                    .blocks(BlockSelection(blockIDs: [textSelection.focus.blockID]))
-                )
-            }
-            return moveAcrossVisualLineBoundaryIfNeeded(direction: movement, viewport: viewport)
+        case .text:
+            return moveAcrossVisualLineBoundaryIfNeeded(
+                direction: movement,
+                extending: extending,
+                viewport: viewport
+            )
 
         case .blocks:
             return extending ? extendBlockSelection(movement) : moveBlockSelection(movement)
 
-        case .inactive, .text:
+        case .inactive:
             return nil
         }
     }

@@ -200,9 +200,7 @@ public final class AppKitEditorViewController: NSViewController {
     package var onDrawCompleted: ((NSRect, UInt64) -> Void)?
 
     #if SLOPAD_BENCHMARK_INSTRUMENTATION
-        package var preparedLayoutInstrumentation:
-            TextKitPreparedLayoutInstrumentationSnapshot
-        {
+        package var preparedLayoutInstrumentation: TextKitPreparedLayoutInstrumentationSnapshot {
             textLayouter.contextPreparedLayoutInstrumentation
         }
     #endif
@@ -235,7 +233,7 @@ public final class AppKitEditorViewController: NSViewController {
         }
         return overlay
     }()
-    private lazy var dragAutoscrollController = AppKitDragAutoscrollController(
+    lazy var dragAutoscrollController = AppKitDragAutoscrollController(
         visibleBounds: { [weak self] in
             self?.currentViewportBounds() ?? .zero
         },
@@ -811,6 +809,7 @@ public final class AppKitEditorViewController: NSViewController {
             )
         }
 
+        synchronizeInsertionPoint(with: renderedSurface.snapshot)
         invalidateVisibleCanvas()
         synchronizeSlashCommandOverlay(with: renderedSurface.snapshot)
         return renderedSurface
@@ -826,7 +825,8 @@ public final class AppKitEditorViewController: NSViewController {
         _ renderedSurface: (viewport: EditorViewport, snapshot: EditorSessionSnapshot)
     ) -> Bool {
         guard let activeSnapshotPublicationKey else { return false }
-        let isSameSnapshot = activeSnapshotPublicationKey
+        let isSameSnapshot =
+            activeSnapshotPublicationKey
             == SnapshotPublicationKey(
                 viewport: renderedSurface.viewport,
                 snapshot: renderedSurface.snapshot
@@ -968,6 +968,17 @@ public final class AppKitEditorViewController: NSViewController {
         view.window?.makeFirstResponder(editorCanvasView)
     }
 
+    private func synchronizeInsertionPoint(with snapshot: EditorSessionSnapshot) {
+        guard
+            case .caret = snapshot.selection,
+            let caretRect = snapshot.activeTextInput?.caretRect
+        else {
+            editorCanvasView.updateInsertionPoint(nil)
+            return
+        }
+        editorCanvasView.updateInsertionPoint(CGRect(editorRect: caretRect))
+    }
+
     private func scrollActiveSelectionIntoView(viewport: EditorViewport) {
         guard
             let activePosition = activeTextPosition(),
@@ -1056,12 +1067,10 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
         for rendered in snapshot.visibleBlocks {
             textRenderer.draw(rendered.textRender, context: cgContext)
         }
-        if let activeTextInput = snapshot.activeTextInput {
-            textInputDecorationRenderer.draw(
-                activeTextInput,
-                graphicsContext: cgContext
-            )
-        }
+        textInputDecorationRenderer.draw(
+            snapshot.selectionPresentation,
+            graphicsContext: cgContext
+        )
         drawBlockSelectionRectangle(snapshot.blockSelectionRectangleState?.rect)
         drawDropIndicator(snapshot.blockDragState?.dropIndicator)
         onDrawOverlay?(dirtyRect, snapshot)
@@ -1095,24 +1104,11 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
             return
         }
 
-        let viewport = currentViewport()
-        let point = EditorPoint(x: Double(documentPoint.x), y: Double(documentPoint.y))
-        if let update = session.handleInput(
-            .pointer(
-                .updateTextSelection(
-                    documentPoint: point,
-                    viewport: viewport,
-                    blockSelectionThreshold: textDragBlockSelectionThreshold
-                )
+        if applyDragUpdate(kind: .textSelection, documentPoint: documentPoint) {
+            dragAutoscrollController.update(
+                kind: .textSelection,
+                documentPoint: documentPoint
             )
-        ) {
-            onUpdate?(update)
-            if case .blocks = update.selection {
-                activeInputController.hide()
-                renderAndSyncSurface(makeFirstResponder: false)
-            } else {
-                renderAndSyncSurface(makeFirstResponder: true)
-            }
             return
         }
 
@@ -1130,7 +1126,8 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
         let viewport = currentViewport()
         let point = EditorPoint(x: Double(documentPoint.x), y: Double(documentPoint.y))
         if snapshot?.blockDragState != nil {
-            handleNativeInputEvent(.pointer(.endBlockDrag(documentPoint: point, viewport: viewport)))
+            handleNativeInputEvent(
+                .pointer(.endBlockDrag(documentPoint: point, viewport: viewport)))
             renderAndSyncSurface(makeFirstResponder: false)
         } else if snapshot?.blockSelectionRectangleState != nil {
             handleNativeInputEvent(.pointer(.endBlockSelectionRectangle))
@@ -1252,6 +1249,10 @@ extension AppKitEditorViewController: AppKitActiveInputOwner {
         session.selectedPlainText()
     }
 
+    func clipboardWritePlan() -> EditorClipboardWritePlan? {
+        session.clipboardWritePlan()
+    }
+
     @discardableResult
     func handleNativeInputEvent(_ inputEvent: EditorInputEvent) -> EditorUpdate? {
         guard let update = session.handleInput(inputEvent) else { return nil }
@@ -1291,6 +1292,16 @@ extension AppKitEditorViewController {
         let update: EditorUpdate?
 
         switch kind {
+        case .textSelection:
+            update = handleNativeInputEvent(
+                .pointer(
+                    .updateTextSelection(
+                        documentPoint: point,
+                        viewport: viewport
+                    )
+                )
+            )
+
         case .blockDrag:
             guard snapshot?.blockDragState != nil else { return false }
             update = handleNativeInputEvent(
@@ -1321,17 +1332,25 @@ extension AppKitEditorViewController {
             )
         }
 
-        if update != nil {
+        guard update != nil else { return false }
+        let isTextSelection: Bool
+        switch kind {
+        case .textSelection: isTextSelection = true
+        case .blockDrag, .blockSelectionRectangle, .blockSelectionExtension:
+            isTextSelection = false
+        }
+        if !isTextSelection {
             activeInputController.hide()
         }
-        renderAndSyncSurface(makeFirstResponder: false)
+        renderAndSyncSurface(makeFirstResponder: isTextSelection)
         return true
     }
 
     private func handleMouseDown(documentPoint: CGPoint) {
         let viewport = currentViewport()
         let point = EditorPoint(x: Double(documentPoint.x), y: Double(documentPoint.y))
-        let hitRegion: BlockHitRegion = documentPoint.x < CGFloat(editorStyle.gutterWidth)
+        let hitRegion: BlockHitRegion =
+            documentPoint.x < CGFloat(editorStyle.gutterWidth)
             ? .gutter
             : .body
 
@@ -1429,10 +1448,6 @@ extension AppKitEditorViewController {
 
     private var hasActiveTextInput: Bool {
         activeTextPosition() != nil
-    }
-
-    private var textDragBlockSelectionThreshold: Double {
-        editorStyle.fontSize * editorStyle.lineHeightMultiple
     }
 
     private func shouldBeginBlockSelectionRectangle(at point: EditorPoint) -> Bool {

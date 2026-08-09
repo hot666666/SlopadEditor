@@ -23,8 +23,12 @@ extension EditorSession {
             let navigationDirection = direction.textNavigationDirection
         else { return nil }
 
+        let backendSelection = selection.isSingleBlock
+            ? selection
+            : TextSelection(anchor: selection.focus, focus: selection.focus)
+
         switch textLayouter.navigate(
-            selection: selection,
+            selection: backendSelection,
             context: textNavigationContext(for: selection, request: request),
             direction: navigationDirection,
             destination: .character,
@@ -39,7 +43,9 @@ extension EditorSession {
                 preservingAnchor: selection.anchor,
                 request: request
             )
-        case .boundary, .unchanged:
+        case .boundary:
+            return extendAcrossCharacterBoundary(selection: selection, direction: direction)
+        case .unchanged:
             return nil
         }
     }
@@ -55,8 +61,12 @@ extension EditorSession {
             let navigationDirection = direction.textNavigationDirection
         else { return nil }
 
+        let backendSelection = selection.isSingleBlock
+            ? selection
+            : TextSelection(anchor: selection.focus, focus: selection.focus)
+
         switch textLayouter.navigate(
-            selection: selection,
+            selection: backendSelection,
             context: textNavigationContext(for: selection, request: request),
             direction: navigationDirection,
             destination: .word,
@@ -71,7 +81,9 @@ extension EditorSession {
                 preservingAnchor: selection.anchor,
                 request: request
             )
-        case .boundary, .unchanged:
+        case .boundary:
+            return extendAcrossCharacterBoundary(selection: selection, direction: direction)
+        case .unchanged:
             return nil
         }
     }
@@ -84,5 +96,33 @@ extension EditorSession {
             return handleSelectionChange(.caret(focus))
         }
         return handleSelectionChange(.text(TextSelection(anchor: anchor, focus: focus)))
+    }
+
+    private func extendAcrossCharacterBoundary(
+        selection: TextSelection,
+        direction: EditorNavigationDirection
+    ) -> EditorUpdate? {
+        let destination: TextPosition?
+        switch direction {
+        case .right:
+            destination = editorModel.document.nextDepthFirstBlockID(
+                after: selection.focus.blockID
+            ).map { TextPosition(blockID: $0, offset: 0) }
+
+        case .left:
+            destination = editorModel.document.previousDepthFirstBlockID(
+                before: selection.focus.blockID
+            ).flatMap { blockID in
+                editorModel.document.block(blockID).map {
+                    TextPosition(blockID: blockID, offset: $0.content.length)
+                }
+            }
+
+        case .up, .down:
+            destination = nil
+        }
+        guard let destination else { return nil }
+        let next = TextSelection(anchor: selection.anchor, focus: destination)
+        return handleSelectionChange(editorSelection(for: next))
     }
 }

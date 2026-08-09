@@ -137,4 +137,43 @@ extension Document {
         }
         return false
     }
+
+    package func depthFirstBlockIDs(from startID: BlockID, through endID: BlockID)
+        -> [BlockID]?
+    {
+        guard containsBlock(startID), containsBlock(endID) else { return nil }
+        var result: [BlockID] = []
+        var currentID: BlockID? = startID
+        while let blockID = currentID {
+            result.append(blockID)
+            if blockID == endID { return result }
+            currentID = nextDepthFirstBlockID(after: blockID)
+        }
+        return nil
+    }
+
+    package func nextDepthFirstBlockID(after blockID: BlockID) -> BlockID? {
+        if let firstChild = children(of: blockID).first { return firstChild }
+        var currentID = blockID
+        while true {
+            let parentID = parentID(of: currentID)
+            let siblings = children(of: parentID)
+            guard let index = siblings.firstIndex(of: currentID) else { return nil }
+            if index + 1 < siblings.count { return siblings[index + 1] }
+            guard let parentID else { return nil }
+            currentID = parentID
+        }
+    }
+
+    package func previousDepthFirstBlockID(before blockID: BlockID) -> BlockID? {
+        guard let block = block(blockID) else { return nil }
+        let siblings = children(of: block.parentID)
+        guard let index = siblings.firstIndex(of: blockID) else { return nil }
+        if index == 0 { return block.parentID }
+        var previousID = siblings[index - 1]
+        while let lastChild = children(of: previousID).last {
+            previousID = lastChild
+        }
+        return previousID
+    }
 }

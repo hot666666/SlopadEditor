@@ -5,6 +5,7 @@ public enum EditorInputEvent: Hashable, Sendable {
         case insertText(String)
         case replaceText(blockID: BlockID, range: TextRange, text: String)
         case pasteText(String)
+        case pasteStructured(EditorClipboardPayload)
         case cutSelection
         case deleteBackward
         case deleteForward
@@ -63,8 +64,7 @@ public enum EditorInputEvent: Hashable, Sendable {
         case beginTextSelection(documentPoint: EditorPoint, viewport: EditorViewport)
         case updateTextSelection(
             documentPoint: EditorPoint,
-            viewport: EditorViewport,
-            blockSelectionThreshold: Double?
+            viewport: EditorViewport
         )
         case endTextSelection
         case selectWordOrAllText(documentPoint: EditorPoint, viewport: EditorViewport)

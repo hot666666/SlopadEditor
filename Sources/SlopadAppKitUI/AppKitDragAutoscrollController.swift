@@ -3,6 +3,7 @@ import AppKit
 // MARK: - AppKitDragAutoscrollKind
 
 enum AppKitDragAutoscrollKind {
+    case textSelection
     case blockDrag
     case blockSelectionRectangle
     case blockSelectionExtension
@@ -102,7 +103,7 @@ final class AppKitDragAutoscrollController {
 
     // MARK: - Scrolling
 
-    private func tick() {
+    func tick() {
         guard let context else {
             stopTimer()
             return

@@ -12,12 +12,14 @@ extension EditorModel {
             throw .abort
 
         case .text(let textSelection):
-            guard textSelection.isSingleBlock, let range = textSelection.rangeInSingleBlock else {
-                throw .abort
+            if textSelection.isSingleBlock {
+                guard let range = textSelection.rangeInSingleBlock else { throw .abort }
+                try deleteText(
+                    blockID: textSelection.anchor.blockID, range: range, operations: &operations,
+                    changed: &changed)
+            } else {
+                try insertText("", operations: &operations, changed: &changed)
             }
-            try deleteText(
-                blockID: textSelection.anchor.blockID, range: range, operations: &operations,
-                changed: &changed)
 
         case .blocks:
             try deleteBlockSelection(operations: &operations, changed: &changed)

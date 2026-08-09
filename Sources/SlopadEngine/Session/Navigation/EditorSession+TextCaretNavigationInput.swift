@@ -8,6 +8,13 @@ extension EditorSession {
         viewport: EditorViewport
     ) -> EditorUpdate? {
         guard direction.horizontalStep != nil else { return nil }
+        if case .text(let selection) = activeEditorSelection,
+            let span = editorModel.resolveTextSpan(selection),
+            !selection.isSingleBlock
+        {
+            let destination = direction == .left ? span.start : span.end
+            return handleSelectionChange(.caret(destination))
+        }
         guard
             let selection = activeTextNavigationSelection(),
             let request = textNavigationRequest(for: selection, viewport: viewport),
@@ -59,6 +66,13 @@ extension EditorSession {
         viewport: EditorViewport
     ) -> EditorUpdate? {
         guard direction.horizontalStep != nil else { return nil }
+        if case .text(let selection) = activeEditorSelection,
+            let span = editorModel.resolveTextSpan(selection),
+            !selection.isSingleBlock
+        {
+            let destination = direction == .left ? span.start : span.end
+            return handleSelectionChange(.caret(destination))
+        }
         guard
             let selection = activeTextNavigationSelection(),
             let request = textNavigationRequest(for: selection, viewport: viewport),

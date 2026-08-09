@@ -72,6 +72,33 @@ struct EditorSessionSelectionModeInputEventTests {
         #expect(inactiveUpdate == nil)
     }
 
+    @Test("cross-block 텍스트 선택의 Escape는 빈 중간 블록까지 구조 선택한다")
+    func escapeSelectsEveryTouchedCrossBlock() throws {
+        // Given
+        let a: BlockID = "a"
+        let empty: BlockID = "empty"
+        let b: BlockID = "b"
+        let session = EditorSession(
+            document: makeFlatDocument([
+                Block(id: a, content: BlockContent(text: "abcd")),
+                Block(id: empty),
+                Block(id: b, content: BlockContent(text: "efgh")),
+            ]),
+            selection: .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: a, offset: 2),
+                    focus: TextPosition(blockID: b, offset: 2)
+                )
+            )
+        )
+
+        // When
+        let update = try #require(session.handleInput(.command(.escape)))
+
+        // Then
+        #expect(update.selection == .blocks(BlockSelection(blockIDs: [a, empty, b])))
+    }
+
     @Test("clearSelection은 어떤 선택 모드에서든 한 번에 inactive로 간다")
     func clearSelectionDropsAnySelectionInOneStep() throws {
         // Given: escape는 단계별로 올라가므로 호출 횟수가 현재 모드에 의존한다.
