@@ -24,11 +24,18 @@ extension EditorSession {
 
         case .text(let selection):
             guard
-                selection.isSingleBlock,
-                let range = selection.rangeInSingleBlock
-            else {
-                return nil
+                let anchorPath = editorModel.document.blockOrderPath(for: selection.anchor.blockID),
+                let focusPath = editorModel.document.blockOrderPath(for: selection.focus.blockID),
+                let focusBlock = editorModel.document.block(selection.focus.blockID)
+            else { return nil }
+            if selection.isSingleBlock {
+                guard let range = selection.rangeInSingleBlock else { return nil }
+                return (position: selection.focus, range: range)
             }
+            let focusIsEarlier = focusPath.lexicographicallyPrecedes(anchorPath)
+            let range = focusIsEarlier
+                ? TextRange(selection.focus.offset, focusBlock.content.length)
+                : TextRange(0, selection.focus.offset)
             return (position: selection.focus, range: range)
 
         case .blocks:

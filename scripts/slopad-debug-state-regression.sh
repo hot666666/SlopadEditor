@@ -19,7 +19,7 @@ fi
 SCENARIOS=(
   click-todo
   text-drag-selection
-  text-drag-clamp-to-block
+  text-drag-cross-block
   double-click-word-selection
   double-click-block-text-selection
   drag-reorder
@@ -29,6 +29,7 @@ SCENARIOS=(
   unicode-navigation
   prefix-list
   prefix-heading
+  slash-heading
   native-insert
   enter-split
   tail-enter-split

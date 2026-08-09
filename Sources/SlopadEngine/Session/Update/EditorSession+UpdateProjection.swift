@@ -13,6 +13,17 @@ extension EditorSession {
         )
     }
 
+    func handleTransaction(_ entries: [EditorTransactionEntry]) -> EditorUpdate? {
+        let result = editorModel.apply(entries)
+        guard result.isApplied else { return nil }
+        textNavigationRuntimeContext = nil
+        let invalidation = markLayoutDirty(for: result.outcome?.change)
+        return makeEditorUpdate(
+            invalidation: invalidation,
+            previousSelection: result.outcome?.selectionBefore
+        )
+    }
+
     func applyCommandForUpdate(
         _ command: EditorCommand
     ) -> (previousSelection: EditorSelection?, invalidation: EditorUpdateInvalidation) {

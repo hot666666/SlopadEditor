@@ -34,9 +34,25 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
         static let canvasIdentifier = "AppKitEditorCanvas"
     }
 
+    private enum UX {
+        static let caretMinimumWidth: CGFloat = 1
+        static let caretMinimumHeight: CGFloat = 14
+    }
+
     // MARK: - State
 
     private weak var handler: (any AppKitEditorCanvasHandler)?
+    private let textInsertionIndicator = NSTextInsertionIndicator()
+    private var hasKeyboardFocus = false
+    private var hasInsertionPoint = false
+
+    package var insertionIndicatorDisplayMode: NSTextInsertionIndicator.DisplayMode {
+        textInsertionIndicator.displayMode
+    }
+
+    package var insertionIndicatorFrame: NSRect {
+        textInsertionIndicator.frame
+    }
 
     // MARK: - Init
 
@@ -68,6 +84,14 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
         true
     }
 
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if newWindow == nil {
+            hasKeyboardFocus = false
+            textInsertionIndicator.displayMode = .hidden
+        }
+        super.viewWillMove(toWindow: newWindow)
+    }
+
     // Responder transitions are the only place a focus change is observable regardless of
     // who caused it — the host calling `setFocused`, a click landing on the canvas, or
     // another view in the window taking focus away. Reporting only host-initiated changes
@@ -76,6 +100,8 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
     override func becomeFirstResponder() -> Bool {
         let accepted = super.becomeFirstResponder()
         if accepted {
+            hasKeyboardFocus = true
+            updateInsertionIndicatorDisplayMode()
             handler?.canvasFocusDidChange(true)
         }
         return accepted
@@ -84,6 +110,8 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
     override func resignFirstResponder() -> Bool {
         let resigned = super.resignFirstResponder()
         if resigned {
+            hasKeyboardFocus = false
+            updateInsertionIndicatorDisplayMode()
             handler?.canvasFocusDidChange(false)
         }
         return resigned
@@ -212,6 +240,27 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
         wantsLayer = true
         layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
         setAccessibilityIdentifier(Accessibility.canvasIdentifier)
+        textInsertionIndicator.displayMode = .hidden
+        addSubview(textInsertionIndicator)
+    }
+
+    package func updateInsertionPoint(_ caretRect: NSRect?) {
+        hasInsertionPoint = caretRect != nil
+        if let caretRect {
+            textInsertionIndicator.frame = NSRect(
+                x: caretRect.minX,
+                y: caretRect.minY,
+                width: max(UX.caretMinimumWidth, caretRect.width),
+                height: max(UX.caretMinimumHeight, caretRect.height)
+            )
+        }
+        updateInsertionIndicatorDisplayMode()
+    }
+
+    private func updateInsertionIndicatorDisplayMode() {
+        textInsertionIndicator.displayMode = hasKeyboardFocus && hasInsertionPoint
+            ? .automatic
+            : .hidden
     }
 
     private static func plainText(from string: Any) -> String? {

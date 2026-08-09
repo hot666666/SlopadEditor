@@ -31,7 +31,7 @@ extension EditorSession {
         blockCommand: (BlockSelection) -> EditorCommand
     ) -> EditorUpdate? {
         switch editorModel.selection {
-        case .caret, .text:
+        case .caret:
             guard
                 canRouteTextCommand(),
                 let activeSelection = activeTextSelection()
@@ -39,6 +39,17 @@ extension EditorSession {
             return handleCommand(
                 textCommand(activeSelection.position.blockID, activeSelection.range)
             )
+
+        case .text(let textSelection):
+            if textSelection.isSingleBlock {
+                guard let range = textSelection.rangeInSingleBlock else { return nil }
+                return handleCommand(textCommand(textSelection.anchor.blockID, range))
+            }
+            guard let span = editorModel.resolveTextSpan(textSelection) else { return nil }
+            return handleTransaction([
+                .command(blockCommand(BlockSelection(blockIDs: span.blockIDs))),
+                .replaceSelection(.text(textSelection)),
+            ])
 
         case .blocks(let blockSelection):
             return handleCommand(blockCommand(blockSelection))

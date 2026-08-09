@@ -7,6 +7,7 @@ extension EditorSession {
     @discardableResult
     func moveAcrossVisualLineBoundaryIfNeeded(
         direction: EditorNavigationDirection,
+        extending: Bool = false,
         viewport: EditorViewport
     ) -> EditorUpdate? {
         guard let verticalStep = direction.verticalStep else { return nil }
@@ -94,8 +95,14 @@ extension EditorSession {
             )
         else { return nil }
         let destination = destinationHit.result.position
-        let selection = TextSelection(anchor: destination, focus: destination)
-        let update = handleSelectionChange(.caret(destination))
+        let selection: TextSelection
+        if extending, let anchor = activeTextNavigationSelection()?.anchor {
+            selection = TextSelection(anchor: anchor, focus: destination)
+        } else {
+            selection = TextSelection(anchor: destination, focus: destination)
+        }
+        guard editorModel.resolveTextSpan(selection) != nil else { return nil }
+        let update = handleSelectionChange(editorSelection(for: selection))
         recordTextNavigationContext(
             destinationHit.result.navigationContext,
             for: selection,

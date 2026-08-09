@@ -115,7 +115,7 @@ extension EditorSession {
             position.blockID == trigger.blockID,
             position.offset == trigger.triggerRange.upperBound,
             let block = editorModel.document.block(trigger.blockID),
-            block.content.text == "/"
+            block.content.text.first == "/"
         else {
             slashCommandRuntime = nil
             return

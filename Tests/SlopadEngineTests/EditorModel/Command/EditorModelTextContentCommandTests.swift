@@ -69,32 +69,73 @@ struct EditorModelTextContentCommandTests {
         #expect(change.operations.isEmpty)
     }
 
-    @Test("여러 블록에 걸친 텍스트 선택에 텍스트 삽입은 unsupported를 반환한다")
-    func givenMultiBlockTextSelection_whenInsertTextRuns_thenCommandIsUnsupported() {
+    @Test("여러 블록 텍스트 선택을 교체하면 앞 블록에 prefix 입력 suffix가 합쳐진다")
+    func givenMultiBlockTextSelection_whenInsertTextRuns_thenSpanIsReplaced() throws {
         // Given
         let a: BlockID = "a"
         let b: BlockID = "b"
         let document = makeFlatDocument([
-            Block(id: a, content: BlockContent(text: "A")),
-            Block(id: b, content: BlockContent(text: "B")),
+            Block(id: a, content: BlockContent(text: "abcDEF")),
+            Block(id: b, content: BlockContent(text: "GHIjkl")),
         ])
         let editor = EditorModel(
             document: document,
             selection: .text(TextSelection(
-                anchor: TextPosition(blockID: a, offset: 0),
-                focus: TextPosition(blockID: b, offset: 1)
+                anchor: TextPosition(blockID: a, offset: 3),
+                focus: TextPosition(blockID: b, offset: 3)
             ))
         )
-        let expectedRootBlockIDs = [a, b]
 
         // When
         let result = editor.apply(.insertText("X"))
 
         // Then
-        #expect(result.isApplied == false)
-        #expect(editor.document.rootBlockIDs == expectedRootBlockIDs)
-        #expect(editor.document.blocks[a]?.content.text == "A")
-        #expect(editor.document.blocks[b]?.content.text == "B")
+        #expect(result.isApplied)
+        #expect(editor.document.rootBlockIDs == [a])
+        #expect(editor.document.blocks[a]?.content.text == "abcXjkl")
+        #expect(editor.document.blocks[b] == nil)
+        #expect(editor.selection == .caret(blockID: a, offset: 4))
+
+        _ = editor.undo()
+        guard case .text(let restored) = editor.selection else {
+            Issue.record("undo가 text selection을 복원해야 한다")
+            return
+        }
+        #expect(restored.anchor == TextPosition(blockID: a, offset: 3))
+        #expect(restored.focus == TextPosition(blockID: b, offset: 3))
+    }
+
+    @Test("역방향 여러 블록 선택도 앞 블록을 살리고 뒤 endpoint 자식을 부모로 승격한다")
+    func givenReverseNestedSelection_whenDeleting_thenDirectionAndUnselectedChildrenAreHandled()
+        throws
+    {
+        // Given
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let child: BlockID = "child"
+        var document = makeFlatDocument([
+            Block(id: a, content: BlockContent(text: "abcDEF")),
+            Block(id: b, content: BlockContent(text: "GHIjkl")),
+        ])
+        document.appendChild(Block(id: child, content: BlockContent(text: "kept")), to: b)
+        let selection = TextSelection(
+            anchor: TextPosition(blockID: b, offset: 3, affinity: .upstream),
+            focus: TextPosition(blockID: a, offset: 3, affinity: .downstream)
+        )
+        let editor = EditorModel(document: document, selection: .text(selection))
+
+        // When
+        _ = editor.apply(.insertText(""))
+
+        // Then
+        #expect(editor.document.rootBlockIDs == [a, child])
+        #expect(editor.document.blocks[a]?.content.text == "abcjkl")
+        #expect(editor.document.blocks[child]?.parentID == nil)
+        #expect(editor.selection == .caret(blockID: a, offset: 3))
+
+        _ = editor.undo()
+        #expect(editor.selection == .text(selection))
+        #expect(editor.document.blocks[child]?.parentID == b)
     }
 
     @Test("deleteText 명령은 지정 범위의 텍스트를 삭제하고 캐럿을 범위 시작으로 이동한다")

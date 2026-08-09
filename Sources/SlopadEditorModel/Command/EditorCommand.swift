@@ -28,4 +28,6 @@ package enum EditorCommand {
     case handleShiftEnter
     case handleBackspace
     case deleteBlockSelection
+    case replaceBlockSelectionWithText(String)
+    case pasteStructured(EditorClipboardPayload)
 }

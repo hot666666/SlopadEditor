@@ -1,12 +1,57 @@
 import AppKit
+import SlopadEngine
 import Testing
 
-import SlopadEngine
 @testable import SlopadAppKitUI
 
 @MainActor
 @Suite("AppKit surface sync 재진입")
 struct AppKitEditorViewControllerSurfaceSyncTests {
+    @Test("focus된 caret은 native insertion indicator 자동 mode로 동기화된다")
+    func synchronizesNativeInsertionIndicator() throws {
+        // Given
+        let blockID: BlockID = "block"
+        let controller = AppKitEditorViewController(
+            blocks: [
+                EditorBlockInput(
+                    id: blockID,
+                    content: BlockContent(text: "Blink")
+                )
+            ],
+            selection: .caret(blockID: blockID, offset: 2)
+        )
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.animationBehavior = .none
+        window.contentViewController = controller
+        defer {
+            controller.setFocused(false)
+            window.orderOut(nil)
+            window.contentViewController = nil
+            window.close()
+        }
+        controller.view.layoutSubtreeIfNeeded()
+
+        // When
+        controller.renderAndSyncSurface(makeFirstResponder: true)
+
+        // Then
+        let caretRect = try #require(controller.snapshot?.activeTextInput?.caretRect)
+        #expect(window.firstResponder === controller.canvasView)
+        #expect(controller.canvasView.insertionIndicatorDisplayMode == .automatic)
+        #expect(controller.canvasView.insertionIndicatorFrame == CGRect(editorRect: caretRect))
+
+        // When
+        controller.setFocused(false)
+
+        // Then
+        #expect(controller.canvasView.insertionIndicatorDisplayMode == .hidden)
+    }
+
     @Test("snapshot callback의 동일 render 요청은 재귀 발행하지 않는다")
     func suppressesRecursivePublication() {
         // Given
@@ -428,6 +473,48 @@ struct AppKitEditorViewControllerSurfaceSyncTests {
                 == snapshot.visibleBlocks.map(\.id)
         )
         #expect(window.firstResponder === controller.canvasView)
+    }
+
+    @Test("TN의 offscreen focus는 reveal 뒤 active native input으로 재생성된다")
+    func revealsCrossBlockFocusAndRecreatesNativeInput() throws {
+        // Given
+        let blocks = (0..<100).map { index in
+            EditorBlockInput(
+                id: BlockID("tn-focus-\(index)"),
+                content: BlockContent(text: "Block \(index) long enough to measure")
+            )
+        }
+        let focusID = blocks[99].id
+        let selection = TextSelection(
+            anchor: TextPosition(blockID: blocks[0].id, offset: 1),
+            focus: TextPosition(blockID: focusID, offset: 3)
+        )
+        let controller = AppKitEditorViewController(
+            blocks: blocks,
+            selection: .text(selection)
+        )
+        controller.loadView()
+        controller.view.frame = NSRect(x: 0, y: 0, width: 320, height: 120)
+        controller.scrollView.frame = controller.view.bounds
+        controller.scrollView.contentView.frame = controller.scrollView.bounds
+        controller.view.layoutSubtreeIfNeeded()
+
+        // When
+        controller.renderAndSyncSurface(
+            makeFirstResponder: false,
+            scrollSelectionIntoView: true
+        )
+
+        // Then
+        #expect(controller.snapshot?.selection == .text(selection))
+        #expect(controller.currentViewport().scrollY > 0)
+        #expect(
+            controller.snapshot?.activeTextInput?.renderDescriptor.measureRequest.blockID
+                == focusID
+        )
+        #expect(controller.activeNativeText == blocks[99].content.text)
+        #expect(controller.activeNativeSelectedRange.location == 0)
+        #expect(controller.activeNativeSelectedRange.length == 3)
     }
 }
 

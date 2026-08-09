@@ -197,6 +197,8 @@ public struct SlopadEditor: NSViewControllerRepresentable {
     }
 }
 
+// MARK: - Preview
+
 #Preview("SlopadEditor Save/Interaction PoC") {
 	SlopadEditorPoC()
 		.frame(width: 680, height: 500)

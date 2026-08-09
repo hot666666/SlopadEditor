@@ -45,7 +45,7 @@ public struct TextRange: Hashable, Codable, Sendable {
         return TextRange(lower, upper)
     }
 
-    func shifted(by delta: Int) -> TextRange {
+    package func shifted(by delta: Int) -> TextRange {
         TextRange(lowerBound + delta, upperBound + delta)
     }
 }

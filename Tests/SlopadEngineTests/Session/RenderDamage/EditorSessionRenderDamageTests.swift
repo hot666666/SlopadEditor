@@ -1,6 +1,7 @@
-@testable import SlopadEngine
 import SlopadCoreModel
 import Testing
+
+@testable import SlopadEngine
 
 @Suite("런타임 렌더 damage")
 struct EditorSessionRenderDamageTests {
@@ -212,5 +213,37 @@ struct EditorSessionRenderDamageTests {
         // Then
         #expect(update.previousSelection == .caret(blockID: a, offset: 0))
         #expect(rects == expectedRects)
+    }
+
+    @Test("만 블록 TN의 selection damage는 현재 viewport block만 투영한다")
+    func tenThousandBlockTextSelectionDamageStaysViewportBounded() throws {
+        // Given
+        let blockCount = 10_000
+        let blocks = (0..<blockCount).map { index in
+            Block(id: BlockID("block-\(index)"), content: BlockContent(text: "x"))
+        }
+        let firstID = try #require(blocks.first?.id)
+        let lastID = try #require(blocks.last?.id)
+        let session = EditorSession(
+            document: makeFlatDocument(blocks),
+            selection: .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: firstID, offset: 0),
+                    focus: TextPosition(blockID: lastID, offset: 1)
+                )
+            ),
+            textLayouter: DeterministicBlockTextLayouter(lineHeight: 10, verticalPadding: 0)
+        )
+        let viewport = EditorViewport(width: 200, scrollY: 50_000, height: 100)
+        _ = session.render(in: viewport)
+
+        // When
+        let update = try #require(session.handleInput(.command(.escape)))
+        let rects = session.redrawRects(for: update, in: viewport)
+
+        // Then
+        #expect(!rects.isEmpty)
+        #expect(rects.count <= 12)
+        #expect(rects.allSatisfy { $0.minY >= viewport.scrollY && $0.maxY <= 50_100 })
     }
 }

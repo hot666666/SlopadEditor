@@ -1,7 +1,7 @@
+import SlopadCoreModel
 import Testing
 
 @testable import SlopadEngine
-import SlopadCoreModel
 
 @Suite("에디터 세션 텍스트 포인터 drag 입력 이벤트")
 struct EditorSessionTextPointerDragInputEventTests {
@@ -36,8 +36,7 @@ struct EditorSessionTextPointerDragInputEventTests {
                 .pointer(
                     .updateTextSelection(
                         documentPoint: EditorPoint(x: 80, y: 5),
-                        viewport: viewport,
-                        blockSelectionThreshold: nil
+                        viewport: viewport
                     )
                 )
             )
@@ -64,8 +63,8 @@ struct EditorSessionTextPointerDragInputEventTests {
         #expect(session.textSelectionDragAnchor == nil)
     }
 
-    @Test("본문 text drag가 다른 블록 좌표로 넘어가도 anchor 블록 내부 텍스트 선택으로 제한된다")
-    func keepsTextDragInsideAnchorBlock() throws {
+    @Test("본문 text drag가 다른 블록으로 넘어가면 그 블록의 정확한 글자까지 선택한다")
+    func extendsTextDragIntoFocusedBlock() throws {
         // Given
         let a: BlockID = "a"
         let b: BlockID = "b"
@@ -76,8 +75,8 @@ struct EditorSessionTextPointerDragInputEventTests {
             b: BlockMeasurement(height: 10),
             c: BlockMeasurement(height: 10),
         ]
-        layouter.textPositionResolver = { blockID, point in
-            TextPosition(blockID: blockID, offset: point.y >= 10 ? 6 : 1)
+        layouter.textPositionResolver = { blockID, _ in
+            TextPosition(blockID: blockID, offset: blockID == a ? 1 : 1)
         }
         let session = EditorSession(
             document: makeFlatDocument([
@@ -105,8 +104,7 @@ struct EditorSessionTextPointerDragInputEventTests {
                 .pointer(
                     .updateTextSelection(
                         documentPoint: EditorPoint(x: 20, y: 25),
-                        viewport: viewport,
-                        blockSelectionThreshold: nil
+                        viewport: viewport
                     )
                 )
             )
@@ -127,23 +125,19 @@ struct EditorSessionTextPointerDragInputEventTests {
                 == .text(
                     TextSelection(
                         anchor: TextPosition(blockID: a, offset: 1),
-                        focus: TextPosition(blockID: a, offset: 6)
+                        focus: TextPosition(blockID: c, offset: 1)
                     )
                 )
         )
-        #expect(session.activeTextPosition()?.blockID == a)
-        #expect(session.activeTextRange() == TextRange(1, 6))
+        #expect(session.activeTextPosition()?.blockID == c)
+        #expect(session.activeTextRange() == TextRange(0, 1))
         #expect(blockDragUpdate == nil)
         #expect(session.textSelectionDragAnchor == TextPosition(blockID: a, offset: 1))
-        #expect(layouter.textPositionRequests.map(\.blockID) == [a, a])
-        #expect(
-            layouter.textPositionRequests.map(\.point)
-                == [EditorPoint(x: 20, y: 5), EditorPoint(x: 20, y: 10)]
-        )
+        #expect(layouter.textPositionRequests.map(\.blockID) == [a, c])
     }
 
-    @Test("본문 text drag가 anchor block에서 한 줄 높이 이상 벗어나면 블록 선택으로 전환한다")
-    func convertsTextDragToBlockSelectionAfterThreshold() throws {
+    @Test("본문에서 시작한 drag는 구조 영역으로 이동해도 text mode를 유지한다")
+    func keepsTextModeAfterMovingIntoStructuralArea() throws {
         // Given
         let a: BlockID = "a"
         let b: BlockID = "b"
@@ -178,40 +172,124 @@ struct EditorSessionTextPointerDragInputEventTests {
                 )
             )
         )
-        let thresholdUpdate = try #require(
+        let dragUpdate = try #require(
             session.handleInput(
                 .pointer(
                     .updateTextSelection(
                         documentPoint: EditorPoint(x: 20, y: 0),
-                        viewport: viewport,
-                        blockSelectionThreshold: 10
+                        viewport: viewport
                     )
                 )
             )
         )
-        let continuedUpdate = try #require(
-            session.handleInput(
-                .pointer(
-                    .extendBlockSelection(
-                        documentPoint: EditorPoint(x: 0, y: 25),
-                        region: .gutter,
-                        viewport: viewport
-                    )
+        let continuedUpdate = session.handleInput(
+            .pointer(
+                .extendBlockSelection(
+                    documentPoint: EditorPoint(x: 0, y: 25),
+                    region: .gutter,
+                    viewport: viewport
                 )
             )
         )
 
         // Then
         #expect(
-            thresholdUpdate.selection
-                == .blocks(BlockSelection(blockIDs: [a, b], anchor: b, focus: a))
+            dragUpdate.selection
+                == .text(
+                    TextSelection(
+                        anchor: TextPosition(blockID: b, offset: 1),
+                        focus: TextPosition(blockID: a, offset: 1)
+                    )
+                )
         )
+        #expect(continuedUpdate == nil)
+        #expect(session.activeTextPosition()?.blockID == a)
+        #expect(session.textSelectionDragAnchor == TextPosition(blockID: b, offset: 1))
+        #expect(session.blockSelectionDragAnchor == nil)
+    }
+
+    @Test("빈 블록에서 위로 drag하면 빈 블록을 anchor로 쓰지 않고 직전 내용 끝에서 선택한다")
+    func emptyBlockUpwardDragAnchorsAtPreviousNonemptyTextEdge() throws {
+        // Given
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let empty: BlockID = "empty"
+        let layouter = SpyBlockTextLayouter()
+        layouter.measurementsByBlockID = [
+            a: BlockMeasurement(height: 10),
+            b: BlockMeasurement(height: 10),
+            empty: BlockMeasurement(height: 10),
+        ]
+        layouter.textPositionResolver = { blockID, _ in
+            TextPosition(blockID: blockID, offset: blockID == empty ? 0 : 1)
+        }
+        let session = EditorSession(
+            document: makeFlatDocument([
+                Block(id: a, content: BlockContent(text: "Alpha")),
+                Block(id: b, content: BlockContent(text: "Bravo")),
+                Block(id: empty, content: BlockContent(text: "")),
+            ]),
+            textLayouter: layouter
+        )
+        let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)
+
+        // When
+        let begin = try #require(
+            session.handleInput(
+                .pointer(
+                    .beginTextSelection(
+                        documentPoint: EditorPoint(x: 20, y: 25),
+                        viewport: viewport
+                    ))))
+        let drag = try #require(
+            session.handleInput(
+                .pointer(
+                    .updateTextSelection(
+                        documentPoint: EditorPoint(x: 20, y: 5),
+                        viewport: viewport
+                    ))))
+
+        // Then
+        #expect(begin.selection == .caret(blockID: empty, offset: 0))
         #expect(
-            continuedUpdate.selection
-                == .blocks(BlockSelection(blockIDs: [b, c], anchor: b, focus: c))
+            drag.selection
+                == .text(
+                    TextSelection(
+                        anchor: TextPosition(blockID: b, offset: 5),
+                        focus: TextPosition(blockID: a, offset: 1)
+                    )
+                )
         )
-        #expect(session.activeTextPosition() == nil)
+    }
+
+    @Test("빈 블록 click은 drag 방향이 생기지 않으면 그 블록 caret을 유지한다")
+    func emptyBlockClickKeepsEditableCaret() throws {
+        // Given
+        let empty: BlockID = "empty"
+        let layouter = SpyBlockTextLayouter()
+        layouter.measurementsByBlockID = [empty: BlockMeasurement(height: 10)]
+        layouter.textPositionResolver = { blockID, _ in
+            TextPosition(blockID: blockID, offset: 0)
+        }
+        let session = EditorSession(
+            document: .singleParagraph("", id: empty),
+            textLayouter: layouter
+        )
+        let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)
+
+        // When
+        _ = try #require(
+            session.handleInput(
+                .pointer(
+                    .beginTextSelection(
+                        documentPoint: EditorPoint(x: 20, y: 5),
+                        viewport: viewport
+                    ))))
+        _ = try #require(session.handleInput(.pointer(.endTextSelection)))
+
+        // Then
+        #expect(session.editorModel.selection == .caret(blockID: empty, offset: 0))
         #expect(session.textSelectionDragAnchor == nil)
-        #expect(session.blockSelectionDragAnchor?.blockID == b)
+        #expect(session.textSelectionPendingOrigin == nil)
     }
 }

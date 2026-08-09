@@ -15,7 +15,11 @@ enum SlashCommandInputRule {
         candidate: EditorInputRuleCandidate
     ) -> TextRange? {
         guard committedText == "/" else { return nil }
-        guard candidate.baseOffset == 0, candidate.caretOffset == 1, candidate.text == "/" else {
+        guard
+            candidate.baseOffset == 0,
+            candidate.caretOffset == 1,
+            candidate.text.first == "/"
+        else {
             return nil
         }
         return TextRange(0, 1)

@@ -148,6 +148,20 @@ extension EditorModel {
         case .handleBackspace:
             try handleBackspace(operations: &operations, changed: &changed)
 
+        case .replaceBlockSelectionWithText(let text):
+            try replaceBlockSelectionWithText(
+                text,
+                operations: &operations,
+                changed: &changed
+            )
+
+        case .pasteStructured(let payload):
+            try pasteStructured(
+                payload,
+                operations: &operations,
+                changed: &changed
+            )
+
         case .deleteBlockSelection:
             try deleteBlockSelection(operations: &operations, changed: &changed)
         }

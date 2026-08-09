@@ -1,7 +1,7 @@
+import SlopadCoreModel
 import Testing
 
 @testable import SlopadEngine
-import SlopadCoreModel
 
 @Suite("에디터 세션 조합 lifecycle 입력 이벤트")
 struct EditorSessionCompositionLifecycleInputEventTests {
@@ -12,13 +12,14 @@ struct EditorSessionCompositionLifecycleInputEventTests {
         let session = EditorSession(document: .singleParagraph("", id: blockID))
 
         // When
-        _ = try #require(session.handleInput(
-            .beginComposition(
-                blockID: blockID,
-                replacementRange: TextRange.point(0),
-                text: "**bold**"
-            )
-        ))
+        _ = try #require(
+            session.handleInput(
+                .beginComposition(
+                    blockID: blockID,
+                    replacementRange: TextRange.point(0),
+                    text: "**bold**"
+                )
+            ))
 
         // Then
         #expect(session.document.block(blockID)?.content == BlockContent())
@@ -28,10 +29,12 @@ struct EditorSessionCompositionLifecycleInputEventTests {
         let update = try #require(session.handleInput(.commitComposition))
 
         // Then
-        #expect(session.document.block(blockID)?.content == BlockContent(
-            text: "bold",
-            marks: [BlockContent.InlineMark(kind: .strong, range: TextRange(0, 4))]
-        ))
+        #expect(
+            session.document.block(blockID)?.content
+                == BlockContent(
+                    text: "bold",
+                    marks: [BlockContent.InlineMark(kind: .strong, range: TextRange(0, 4))]
+                ))
         #expect(update.selection == .caret(blockID: blockID, offset: 4))
         #expect(session.composition == nil)
     }
@@ -131,6 +134,81 @@ struct EditorSessionCompositionLifecycleInputEventTests {
         #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 2))
         #expect(session.activeTextRange() == TextRange.point(2))
         #expect(session.composition == nil)
+    }
+
+    @Test("TN 위 조합 취소는 원문과 정확한 역방향 선택을 복원한다")
+    func crossBlockCompositionCancelRestoresOriginalSelection() throws {
+        // Given
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let selection = TextSelection(
+            anchor: TextPosition(blockID: b, offset: 3, affinity: .upstream),
+            focus: TextPosition(blockID: a, offset: 3, affinity: .downstream)
+        )
+        let session = EditorSession(
+            document: makeFlatDocument([
+                Block(id: a, content: BlockContent(text: "abcDEF")),
+                Block(id: b, content: BlockContent(text: "GHIjkl")),
+            ]),
+            selection: .text(selection)
+        )
+        _ = try #require(
+            session.handleInput(
+                .beginComposition(
+                    blockID: a,
+                    replacementRange: TextRange(3, 6),
+                    text: "한"
+                )))
+
+        // When
+        let update = try #require(session.handleInput(.cancelComposition))
+
+        // Then
+        #expect(session.document.rootBlockIDs == [a, b])
+        #expect(session.document.block(a)?.content.text == "abcDEF")
+        #expect(session.document.block(b)?.content.text == "GHIjkl")
+        #expect(update.selection == .text(selection))
+        #expect(!update.history.canUndo)
+    }
+
+    @Test("TN 위 조합 확정은 범위를 한 transaction으로 병합하고 undo가 원선택을 복원한다")
+    func crossBlockCompositionCommitReplacesRangeAtomically() throws {
+        // Given
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let selection = TextSelection(
+            anchor: TextPosition(blockID: b, offset: 3, affinity: .upstream),
+            focus: TextPosition(blockID: a, offset: 3, affinity: .downstream)
+        )
+        let session = EditorSession(
+            document: makeFlatDocument([
+                Block(id: a, content: BlockContent(text: "abcDEF")),
+                Block(id: b, content: BlockContent(text: "GHIjkl")),
+            ]),
+            selection: .text(selection)
+        )
+        _ = try #require(
+            session.handleInput(
+                .beginComposition(
+                    blockID: a,
+                    replacementRange: TextRange(3, 6),
+                    text: "한"
+                )))
+
+        // When
+        let commit = try #require(session.handleInput(.commitComposition))
+
+        // Then
+        #expect(session.document.rootBlockIDs == [a])
+        #expect(session.document.block(a)?.content.text == "abc한jkl")
+        #expect(commit.selection == .caret(blockID: a, offset: 4))
+        #expect(commit.history.canUndo)
+
+        let undo = try #require(session.handleInput(.command(.undo)))
+        #expect(session.document.rootBlockIDs == [a, b])
+        #expect(session.document.block(a)?.content.text == "abcDEF")
+        #expect(session.document.block(b)?.content.text == "GHIjkl")
+        #expect(undo.selection == .text(selection))
     }
 
     @Test("조합 중 선택 변경 이벤트는 선택 범위와 조합 상태를 함께 유지한다")

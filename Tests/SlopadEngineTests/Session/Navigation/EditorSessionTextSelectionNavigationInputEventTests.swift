@@ -149,4 +149,45 @@ struct EditorSessionTextSelectionNavigationInputEventTests {
                 )
         )
     }
+
+    @Test("Shift-좌우 입력은 블록 경계에서 anchor를 유지한 다중 블록 텍스트 선택을 만든다")
+    func extendsCharacterSelectionAcrossBlockBoundary() throws {
+        // Given
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let session = EditorSession(
+            document: makeFlatDocument([
+                Block(id: a, content: BlockContent(text: "A")),
+                Block(id: b, content: BlockContent(text: "BC")),
+            ]),
+            selection: .caret(blockID: a, offset: 1)
+        )
+        let viewport = EditorViewport(width: 320, scrollY: 0, height: 240)
+
+        // When
+        let boundaryUpdate = try #require(
+            session.handleInput(.command(.navigate(.extendCharacterRight(viewport: viewport))))
+        )
+        let characterUpdate = try #require(
+            session.handleInput(.command(.navigate(.extendCharacterRight(viewport: viewport))))
+        )
+
+        // Then
+        #expect(
+            boundaryUpdate.selection == .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: a, offset: 1),
+                    focus: TextPosition(blockID: b, offset: 0)
+                )
+            )
+        )
+        #expect(
+            characterUpdate.selection == .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: a, offset: 1),
+                    focus: TextPosition(blockID: b, offset: 1)
+                )
+            )
+        )
+    }
 }

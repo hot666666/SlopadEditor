@@ -47,6 +47,50 @@ struct EditorSessionSlashCommandTests {
         #expect(session.document.block(blockID)?.kind == .paragraph)
     }
 
+    @Test("내용이 있는 블록 맨 앞의 새 slash는 query를 열고 기존 suffix를 보존한다")
+    func typedLeadingSlashBeforeExistingTextPreservesSuffix() throws {
+        // Given
+        let blockID: BlockID = "block"
+        let session = EditorSession(
+            document: .singleParagraph("Existing text", id: blockID),
+            selection: .caret(blockID: blockID, offset: 0)
+        )
+
+        // When
+        _ = try #require(
+            session.handleInput(
+                .command(.replaceText(blockID: blockID, range: .point(0), text: "/"))
+            )
+        )
+        #expect(session.slashCommandRuntime?.query == "")
+        _ = session.handleInput(
+            .command(.replaceText(blockID: blockID, range: .point(1), text: "hea"))
+        )
+        #expect(session.slashCommandRuntime?.query == "hea")
+        let suggestion = try #require(
+            session.render(in: EditorViewport(width: 400, scrollY: 0, height: 300)).slashCommand
+        )
+
+        // Then
+        #expect(suggestion.query == "hea")
+        #expect(suggestion.queryRange == TextRange(1, 4))
+        #expect(session.document.block(blockID)?.content.text == "/heaExisting text")
+
+        // When
+        _ = try #require(session.applySlashCommand(.heading1, source: suggestion.source))
+
+        // Then
+        #expect(session.document.block(blockID)?.content.text == "Existing text")
+        #expect(session.document.block(blockID)?.kind == .heading(level: .h1))
+
+        // When
+        _ = session.handleInput(.command(.undo))
+
+        // Then
+        #expect(session.document.block(blockID)?.content.text == "/heaExisting text")
+        #expect(session.document.block(blockID)?.kind == .paragraph)
+    }
+
     @Test("기존 slash text와 paste는 menu를 열지 않는다")
     func existingTextAndPasteDoNotStartQuery() {
         // Given

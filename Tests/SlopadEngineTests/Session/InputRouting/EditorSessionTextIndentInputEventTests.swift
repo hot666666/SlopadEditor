@@ -78,4 +78,35 @@ struct EditorSessionTextIndentInputEventTests {
         #expect(update.history.canUndo)
         #expect(session.document.block(blockID)?.content.text == "    a\n    b\nc")
     }
+
+    @Test("다중 블록 텍스트 선택의 Indent는 걸친 블록을 구조 이동하고 텍스트 선택을 유지한다")
+    func structurallyIndentsCrossBlockTextSelection() throws {
+        // Given
+        let parent: BlockID = "parent"
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let selection = TextSelection(
+            anchor: TextPosition(blockID: a, offset: 1),
+            focus: TextPosition(blockID: b, offset: 1)
+        )
+        let session = EditorSession(
+            document: makeFlatDocument([
+                Block(id: parent, content: BlockContent(text: "Parent")),
+                Block(id: a, content: BlockContent(text: "AA")),
+                Block(id: b, content: BlockContent(text: "BB")),
+            ]),
+            selection: .text(selection)
+        )
+
+        // When
+        let update = try #require(session.handleInput(.command(.indent)))
+
+        // Then
+        #expect(session.document.block(a)?.parentID == parent)
+        #expect(session.document.block(b)?.parentID == parent)
+        #expect(update.selection == .text(selection))
+        _ = try #require(session.handleInput(.command(.undo)))
+        #expect(session.document.rootBlockIDs == [parent, a, b])
+        #expect(session.activeEditorSelection == .text(selection))
+    }
 }

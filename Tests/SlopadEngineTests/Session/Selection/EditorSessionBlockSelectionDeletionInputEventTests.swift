@@ -41,6 +41,7 @@ struct EditorSessionBlockSelectionDeletionInputEventTests {
         // Then
         #expect(session.document.blocks.count == 1)
         let resetID = try #require(session.document.rootBlockIDs.first)
+        #expect(resetID == a)
         #expect(session.document.block(resetID)?.content.text == "")
         #expect(update.selection == .caret(blockID: resetID, offset: 0))
     }

@@ -17,6 +17,10 @@ extension EditorSession {
             viewportWidth: viewport.width
         )
         let activeTextInput = makeActiveTextInput(in: visibleBlocks)
+        let selectionPresentation = makeSelectionPresentation(
+            in: visibleBlocks,
+            activeTextInput: activeTextInput
+        )
         return EditorSessionSnapshot(
             revision: revision,
             totalHeight: blockLayout.totalHeight,
@@ -25,12 +29,14 @@ extension EditorSession {
             composition: composition,
             history: historyState,
             activeTextInput: activeTextInput,
+            selectionPresentation: selectionPresentation,
             slashCommand: slashCommandPresentation(activeTextInput: activeTextInput),
             blockDragState: blockDrag.map {
                 EditorBlockDragState(dropIndicator: $0.dropIndicator)
             },
             blockSelectionRectangleState: blockSelectionRectangle.map {
-                EditorBlockSelectionRectangleState(rect: normalizedRect(from: $0.anchor, to: $0.current))
+                EditorBlockSelectionRectangleState(
+                    rect: normalizedRect(from: $0.anchor, to: $0.current))
             }
         )
     }
@@ -47,6 +53,76 @@ extension EditorSession {
     }
 
     // MARK: - Active Text Input
+
+    private func makeSelectionPresentation(
+        in visibleBlocks: [EditorRenderedBlock],
+        activeTextInput: EditorSessionActiveTextInputDescriptor?
+    ) -> EditorSelectionPresentation {
+        guard case .text(let selection) = activeEditorSelection,
+            let anchorIndex = blockLayout.visibleOrderIndex(of: selection.anchor.blockID),
+            let focusIndex = blockLayout.visibleOrderIndex(of: selection.focus.blockID)
+        else {
+            return .empty
+        }
+
+        let anchorComesFirst =
+            anchorIndex == focusIndex
+            ? selection.anchor.offset <= selection.focus.offset
+            : anchorIndex < focusIndex
+        let start = anchorComesFirst ? selection.anchor : selection.focus
+        let end = anchorComesFirst ? selection.focus : selection.anchor
+        guard
+            let startIndex = blockLayout.visibleOrderIndex(of: start.blockID),
+            let endIndex = blockLayout.visibleOrderIndex(of: end.blockID)
+        else {
+            return .empty
+        }
+
+        let fragments = visibleBlocks.compactMap { rendered -> EditorVisibleTextSelection? in
+            guard let index = blockLayout.visibleOrderIndex(of: rendered.id) else {
+                return nil
+            }
+            guard index >= startIndex, index <= endIndex else { return nil }
+
+            let contentLength = rendered.textRender.measureRequest.text.count
+            let range: TextRange
+            if start.blockID == end.blockID {
+                range = TextRange(start.offset, end.offset).clamped(to: contentLength)
+            } else if rendered.id == start.blockID {
+                range = TextRange(start.offset, contentLength).clamped(to: contentLength)
+            } else if rendered.id == end.blockID {
+                range = TextRange(0, end.offset).clamped(to: contentLength)
+            } else {
+                range = TextRange(0, contentLength)
+            }
+
+            let rects: [EditorRect]
+            if range.isEmpty {
+                rects = []
+            } else if start.blockID == end.blockID,
+                activeTextInput?.renderDescriptor.measureRequest.blockID == rendered.id,
+                activeTextInput?.selectedRange == range
+            {
+                rects = activeTextInput?.selectionRects ?? []
+            } else {
+                rects = textLayouter.selectionRects(
+                    for: range,
+                    in: rendered.textRender.measureRequest
+                ).map { documentRect($0, in: rendered.textRender) }
+            }
+            let blockTintRect =
+                rendered.kind.usesAtomicSelectionTint
+                ? rendered.frame
+                : nil
+            return EditorVisibleTextSelection(
+                blockID: rendered.id,
+                range: range,
+                rects: rects,
+                blockTintRect: blockTintRect
+            )
+        }
+        return EditorSelectionPresentation(visibleTextSelections: fragments)
+    }
 
     private func makeActiveTextInput(
         in visibleBlocks: [EditorRenderedBlock]
@@ -162,5 +238,16 @@ extension EditorSession {
             width: localRect.width,
             height: localRect.height
         )
+    }
+}
+
+extension BlockKind {
+    fileprivate var usesAtomicSelectionTint: Bool {
+        switch self {
+        case .divider:
+            return true
+        default:
+            return false
+        }
     }
 }

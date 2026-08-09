@@ -7,12 +7,35 @@ import SlopadEngine
 protocol AppKitActiveInputOwner: AnyObject {
     func documentTextForNativeInput(blockID: BlockID) -> String?
     func selectedPlainTextForClipboard() -> String?
+    func clipboardWritePlan() -> EditorClipboardWritePlan?
     @discardableResult
     func handleNativeInputEvent(_ inputEvent: EditorInputEvent) -> EditorUpdate?
     func handleActiveInputRenderRequest(_ request: AppKitActiveInputRenderRequest)
     func currentViewport() -> EditorViewport
     func reportUnhandledAction(_ action: AppKitEditorAction, defaultHandled: Bool) -> Bool
 }
+
+extension AppKitActiveInputOwner {
+    func clipboardWritePlan() -> EditorClipboardWritePlan? { nil }
+}
+
+enum AppKitClipboardContract {
+    static let structuredType = NSPasteboard.PasteboardType(
+        "com.hot666666.slopad.clipboard.v1"
+    )
+    static let maximumStructuredBytes = 8 * 1_024 * 1_024
+}
+
+@MainActor
+protocol AppKitPasteboardAccess: AnyObject {
+    @discardableResult func clearContents() -> Int
+    func setData(_ data: Data?, forType dataType: NSPasteboard.PasteboardType) -> Bool
+    func setString(_ string: String, forType dataType: NSPasteboard.PasteboardType) -> Bool
+    func data(forType dataType: NSPasteboard.PasteboardType) -> Data?
+    func string(forType dataType: NSPasteboard.PasteboardType) -> String?
+}
+
+extension NSPasteboard: AppKitPasteboardAccess {}
 
 // MARK: - AppKitActiveInputController
 
@@ -48,6 +71,7 @@ final class AppKitActiveInputController {
     // MARK: - Dependencies
 
     private weak var owner: (any AppKitActiveInputOwner)?
+    private let pasteboard: any AppKitPasteboardAccess
     private let syncGuard = SyncGuard()
 
     // MARK: - State
@@ -62,8 +86,12 @@ final class AppKitActiveInputController {
 
     // MARK: - Init
 
-    init(owner: any AppKitActiveInputOwner) {
+    init(
+        owner: any AppKitActiveInputOwner,
+        pasteboard: any AppKitPasteboardAccess = NSPasteboard.general
+    ) {
         self.owner = owner
+        self.pasteboard = pasteboard
     }
 
     // MARK: - State Access
@@ -424,8 +452,9 @@ final class AppKitActiveInputController {
     /// this callback exists to carry.
     private func handleSemanticAction(_ action: AppKitEditorAction) -> Bool {
         guard let owner else { return false }
-        guard owner.handleNativeInputEvent(action.inputEvent(viewport: owner.currentViewport()))
-            != nil
+        guard
+            owner.handleNativeInputEvent(action.inputEvent(viewport: owner.currentViewport()))
+                != nil
         else {
             // These selectors reported the command as handled even when the engine refused
             // it, so a host that sets no callback keeps observing exactly that.
@@ -446,15 +475,34 @@ final class AppKitActiveInputController {
     }
 
     private func copySelectionToPasteboard() -> Bool {
-        guard let text = owner?.selectedPlainTextForClipboard() else { return false }
-        let pasteboard = NSPasteboard.general
+        guard let owner else { return false }
+        if let plan = owner.clipboardWritePlan() {
+            let data = try? JSONEncoder().encode(plan.payload)
+            pasteboard.clearContents()
+            if let data, data.count <= AppKitClipboardContract.maximumStructuredBytes {
+                guard
+                    pasteboard.setData(data, forType: AppKitClipboardContract.structuredType)
+                else { return false }
+            }
+            return pasteboard.setString(plan.plainText, forType: .string)
+        }
+        guard let text = owner.selectedPlainTextForClipboard() else { return false }
         pasteboard.clearContents()
         return pasteboard.setString(text, forType: .string)
     }
 
     private func pasteTextFromPasteboard() -> Bool {
+        if let data = pasteboard.data(forType: AppKitClipboardContract.structuredType),
+            data.count <= AppKitClipboardContract.maximumStructuredBytes,
+            let payload = try? JSONDecoder().decode(EditorClipboardPayload.self, from: data),
+            payload.version == EditorClipboardPayload.currentVersion
+        {
+            if handleInputCommand(.pasteStructured(payload)) {
+                return true
+            }
+        }
         guard
-            let text = NSPasteboard.general.string(forType: .string),
+            let text = pasteboard.string(forType: .string),
             !text.isEmpty
         else {
             return false
@@ -502,7 +550,8 @@ extension AppKitActiveInputController {
 
     private func syncSelectionFromNativeSurface() {
         guard let activeTextHostBlockID else { return }
-        let range = selectedRange.slopadTextRange(in: text) ?? SlopadEngine.TextRange.point(text.count)
+        let range =
+            selectedRange.slopadTextRange(in: text) ?? SlopadEngine.TextRange.point(text.count)
         guard sessionSelectedRange != range else { return }
         owner?.handleNativeInputEvent(
             .activeTextSelectionChanged(
@@ -552,7 +601,8 @@ extension AppKitActiveInputController {
         return NSRange(location: location, length: length)
     }
 
-    private func normalizedMarkedSelectionRange(_ range: NSRange, in markedText: String) -> NSRange {
+    private func normalizedMarkedSelectionRange(_ range: NSRange, in markedText: String) -> NSRange
+    {
         let maxLength = markedText.utf16.count
         let location =
             range.location == NSNotFound

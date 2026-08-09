@@ -6,6 +6,14 @@ source and tests define what the code does, and [ADRs](../ADR/README.md) explain
 choices. The [interactive architecture map](slopad-architecture-map.html) is the visual
 companion to this document; it is a projection, not a separate authority.
 
+The implemented cross-block selection contract lives in
+[Selection Interaction Policy](SELECTION_INTERACTION_POLICY.md) and
+[ADR 0014](../ADR/0014-latch-selection-mode-and-support-cross-block-text.md). Its
+[interactive transition map](selection-interaction-map.html) is a visual projection of
+that policy. Canonical two-endpoint selection belongs to `EditorModel`; Session resolves
+command spans and visible presentation; AppKit owns physical hit classification, native
+callbacks, drawing, pasteboard negotiation, and autoscroll.
+
 ## System Shape
 
 Slopad is a headless native block editor. Its canonical document is a tree of blocks;
@@ -64,6 +72,12 @@ canonical editor state.
 
 The paths below identify the real producer-consumer direction. Each path must preserve the
 owner boundary even when optimized.
+
+The IME row describes the callback contract implemented after an event reaches
+`NSTextInputClient`. Direct `setMarkedText` tests exercise that consumer, but installed
+input-method events currently do not reach it in product use. The current consumer keeps a
+Session overlay until commit; installed delivery and the live replacement policy in ADR
+0014 remain unimplemented product work.
 
 | Interaction | Producer-to-consumer path | Invariant |
 | --- | --- | --- |

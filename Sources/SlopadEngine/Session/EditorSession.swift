@@ -85,6 +85,7 @@ public final class EditorSession {
     var blockSelectionRectangle: (anchor: EditorPoint, current: EditorPoint)?
     var blockSelectionDragAnchor: BlockHitTestResult?
     var textSelectionDragAnchor: TextPosition?
+    var textSelectionPendingOrigin: (blockID: BlockID, documentPoint: EditorPoint)?
     var textDoubleClickSelection: (blockID: BlockID, wordRange: TextRange)?
     var textNavigationRuntimeContext: EditorSessionTextNavigationRuntimeContext?
     /// Runtime interpretation of an ordinary leading `/query`; never canonical document
@@ -118,6 +119,7 @@ public final class EditorSession {
         self.blockSelectionRectangle = nil
         self.blockSelectionDragAnchor = nil
         self.textSelectionDragAnchor = nil
+        self.textSelectionPendingOrigin = nil
         self.textDoubleClickSelection = nil
         self.textNavigationRuntimeContext = nil
         self.slashCommandRuntime = nil

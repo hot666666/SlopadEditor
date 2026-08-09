@@ -61,6 +61,33 @@ struct AppKitBlockRenderingBoundaryTests {
         #expect(drawEvents == ["chrome:a", "chrome:b", "overlay", "completed"])
     }
 
+    @Test("역방향 cross-block text selection은 focus 블록을 active chrome으로 표시하지 않는다")
+    func reverseCrossBlockTextSelectionDoesNotActivateFocusChrome() throws {
+        // Given
+        let blockIDs: [BlockID] = ["a", "b", "c"]
+        let renderer = RecordingBlockChromeRenderer()
+        let selection = TextSelection(
+            anchor: TextPosition(blockID: blockIDs[2], offset: 4),
+            focus: TextPosition(blockID: blockIDs[0], offset: 1)
+        )
+        let controller = makeController(
+            blocks: blockIDs.map {
+                EditorBlockInput(id: $0, content: BlockContent(text: "Block \($0.rawValue)"))
+            },
+            selection: .text(selection),
+            chromeRenderer: renderer
+        )
+        prepare(controller)
+
+        // When
+        _ = try drawOnce(controller)
+
+        // Then
+        #expect(controller.snapshot?.selection == .text(selection))
+        #expect(renderer.records.map(\.isActive) == [false, false, false])
+        #expect(renderer.records.map(\.isSelected) == [false, false, false])
+    }
+
     @Test("host chrome hook과 무관하게 adapter-owned TextKit2 text를 그린다")
     func drawsText() throws {
         // Given
@@ -129,8 +156,8 @@ struct AppKitBlockRenderingBoundaryTests {
         #expect(differenceCount > 10)
     }
 
-    @Test("host chrome hook과 무관하게 focus 위치에 caret feedback을 그린다")
-    func drawsCaret() throws {
+    @Test("host chrome hook과 무관하게 focus 위치에 native insertion indicator를 둔다")
+    func placesNativeInsertionIndicator() throws {
         // Given
         let text = "Caret positions"
         let leadingController = makeTextController(
@@ -143,22 +170,19 @@ struct AppKitBlockRenderingBoundaryTests {
             selection: .caret(blockID: "text", offset: text.count),
             chromeRenderer: PoisoningBlockChromeRenderer()
         )
+        prepare(leadingController)
+        prepare(trailingController)
 
         // When
-        let leadingBitmap = try renderBitmap(for: leadingController)
-        let trailingBitmap = try renderBitmap(for: trailingController)
-        let textFrame = try #require(
-            leadingController.snapshot?.visibleBlocks.first?.textRender.frame
-        )
-        let differenceCount = try countPixelDifferences(
-            leadingBitmap,
-            trailingBitmap,
-            in: textFrame,
-            canvasBounds: leadingController.canvasView.bounds
-        )
+        let leadingFrame = leadingController.canvasView.insertionIndicatorFrame
+        let trailingFrame = trailingController.canvasView.insertionIndicatorFrame
+        let leadingCaret = try #require(leadingController.snapshot?.activeTextInput?.caretRect)
+        let trailingCaret = try #require(trailingController.snapshot?.activeTextInput?.caretRect)
 
         // Then
-        #expect(differenceCount > 5)
+        #expect(leadingFrame == CGRect(editorRect: leadingCaret))
+        #expect(trailingFrame == CGRect(editorRect: trailingCaret))
+        #expect(leadingFrame.minX < trailingFrame.minX)
     }
 
     @Test("host chrome hook과 무관하게 text selection feedback을 그린다")

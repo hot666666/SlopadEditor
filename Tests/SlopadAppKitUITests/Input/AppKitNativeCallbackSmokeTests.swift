@@ -1,7 +1,7 @@
 import AppKit
+import SlopadEngine
 import Testing
 
-import SlopadEngine
 @testable import SlopadAppKitUI
 
 @MainActor
@@ -148,6 +148,7 @@ private final class NativeCallbackTestHost {
             backing: .buffered,
             defer: false
         )
+        window.animationBehavior = .none
         window.contentViewController = controller
         window.makeKeyAndOrderFront(nil)
         controller.view.frame = NSRect(x: 0, y: 0, width: 640, height: 240)
@@ -194,6 +195,9 @@ private final class NativeCallbackTestHost {
     }
 
     func close() {
+        controller.setFocused(false)
+        window.orderOut(nil)
+        window.contentViewController = nil
         window.close()
     }
 }

@@ -89,4 +89,40 @@ struct EditorSessionSelectAllInputEventTests {
         let snapshot = allBlocksSession.render(in: EditorViewport(width: 240, scrollY: 0, height: 400))
         #expect(snapshot.selection == .blocks(BlockSelection(blockIDs: [a, b])))
     }
+
+    @Test("다중 블록 텍스트의 Cmd-A는 걸친 블록 전체 텍스트를 먼저 선택한 뒤 전체 블록으로 확장한다")
+    func escalatesCrossBlockTextSelectionInTwoStages() throws {
+        // Given
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let c: BlockID = "c"
+        let session = EditorSession(
+            document: makeFlatDocument([
+                Block(id: a, content: BlockContent(text: "AAA")),
+                Block(id: b, content: BlockContent(text: "BBB")),
+                Block(id: c, content: BlockContent(text: "CCC")),
+            ]),
+            selection: .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: b, offset: 2),
+                    focus: TextPosition(blockID: c, offset: 1)
+                )
+            )
+        )
+
+        // When
+        let textUpdate = try #require(session.handleInput(.command(.selectAll)))
+        let blockUpdate = try #require(session.handleInput(.command(.selectAll)))
+
+        // Then
+        #expect(
+            textUpdate.selection == .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: b, offset: 0),
+                    focus: TextPosition(blockID: c, offset: 3)
+                )
+            )
+        )
+        #expect(sessionBlockSelection(blockUpdate.selection)?.blockIDs == [a, b, c])
+    }
 }

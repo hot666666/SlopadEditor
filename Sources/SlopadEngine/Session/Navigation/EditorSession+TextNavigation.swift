@@ -14,10 +14,10 @@ extension EditorSession {
         case .caret(let position):
             return TextSelection(anchor: position, focus: position)
 
-        case .text(let selection) where selection.isSingleBlock:
+        case .text(let selection):
             return selection
 
-        case .inactive, .blocks, .text:
+        case .inactive, .blocks:
             return nil
         }
     }
@@ -26,11 +26,6 @@ extension EditorSession {
         for selection: TextSelection,
         viewport: EditorViewport
     ) -> BlockMeasureRequest? {
-        guard
-            selection.isSingleBlock,
-            selection.anchor.blockID == selection.focus.blockID
-        else { return nil }
-
         _ = preparedLayout(for: viewport)
         return renderedBlock(
             blockID: selection.focus.blockID,
@@ -69,7 +64,7 @@ extension EditorSession {
         let selection = anchor.map {
             TextSelection(anchor: $0, focus: resolvedSelection.focus)
         } ?? resolvedSelection
-        guard isValidTextNavigationSelection(selection, in: request) else { return nil }
+        guard editorModel.resolveTextSpan(selection) != nil else { return nil }
 
         let nextSelection: EditorSelection =
             selection.rangeInSingleBlock?.isEmpty == true
@@ -132,7 +127,7 @@ extension EditorSession {
         )
     }
 
-    private func isValidTextNavigationSelection(
+    func isValidTextNavigationSelection(
         _ selection: TextSelection,
         in request: BlockMeasureRequest
     ) -> Bool {

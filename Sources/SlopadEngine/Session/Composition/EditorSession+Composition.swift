@@ -132,13 +132,17 @@ extension EditorSession {
     private func commitCompositionText(
         _ currentComposition: TextComposition
     ) -> (previousSelection: EditorSelection?, invalidation: EditorUpdateInvalidation) {
-        applyCommandForUpdate(
-            .replaceText(
+        let command: EditorCommand
+        if case .text(let selection) = editorModel.selection, !selection.isSingleBlock {
+            command = .insertText(currentComposition.text)
+        } else {
+            command = .replaceText(
                 blockID: currentComposition.blockID,
                 range: currentComposition.replacementRange,
                 text: currentComposition.text
             )
-        )
+        }
+        return applyCommandForUpdate(command)
     }
 
     func normalizedCompositionSelection(

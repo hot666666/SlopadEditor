@@ -57,6 +57,12 @@ extension BlockLayout {
         return blockGeometry(at: index)
     }
 
+    /// Canonical visible-order rank from the prepared height index.
+    /// Session uses this to compare selection endpoints without walking sibling arrays.
+    package func visibleOrderIndex(of blockID: BlockID) -> Int? {
+        heightIndex.index(of: blockID)
+    }
+
     private func blockGeometry(
         at index: Int
     ) -> BlockLayoutGeometry? {

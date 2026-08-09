@@ -50,7 +50,7 @@ extension DebugViewController {
                 toTextX: 260
             )
 
-        case "text-drag-clamp-to-block":
+        case "text-drag-cross-block":
             dragTextSelectionAcrossBlocks(
                 from: DebugSeedFixture.intro,
                 to: DebugSeedFixture.todo
@@ -145,7 +145,6 @@ extension DebugViewController {
         case "slash-heading":
             focus(blockID: DebugSeedFixture.intro, offset: 0)
             renderAndSyncSurface(makeFirstResponder: true)
-            replaceActiveText("")
             insertTextThroughNativeSurface("/")
             insertTextThroughNativeSurface("hea")
 
@@ -183,10 +182,16 @@ extension DebugViewController {
 
         case "scroll-down":
             renderAndSyncSurface(makeFirstResponder: false)
-            let start = DebugScrollFixture.scrollDownStart
+            let visibleIDs = snapshot?.visibleBlocks.map(\.id) ?? []
+            let startIndex =
+                visibleIDs.last.flatMap(DebugScrollFixture.blocks.firstIndex(of:))
+                ?? DebugScrollFixture.scrollDownStartIndex
+            let targetIndex = min(startIndex + 1, DebugScrollFixture.blocks.count - 1)
+            let start = DebugScrollFixture.blocks[startIndex]
+            debugScenarioScrollDownTarget = DebugScrollFixture.blocks[targetIndex]
             let offset =
                 snapshotText(for: start)?.count
-                ?? DebugScrollFixture.text(for: DebugScrollFixture.scrollDownStartIndex).count
+                ?? DebugScrollFixture.text(for: startIndex).count
             focus(blockID: start, offset: offset)
             renderAndSyncSurface(makeFirstResponder: true)
             _ = handleNativeCommand(#selector(NSResponder.moveDown(_:)))
@@ -297,7 +302,7 @@ extension DebugViewController {
         case "slash-heading":
             try assertActiveTextInput(
                 blockID: DebugSeedFixture.intro,
-                expectedText: "/hea",
+                expectedText: "/hea\(DebugSeedFixture.introText)",
                 scenario: scenario
             )
             try require(
@@ -332,10 +337,17 @@ extension DebugViewController {
             )
 
         case "scroll-down":
+            let target = try require(
+                debugScenarioScrollDownTarget,
+                "\(scenario): missing viewport-derived target"
+            )
+            let targetIndex = try require(
+                DebugScrollFixture.blocks.firstIndex(of: target),
+                "\(scenario): target is not in the scroll fixture"
+            )
             try assertActiveTextInput(
-                blockID: DebugScrollFixture.scrollDownTarget,
-                expectedText: DebugScrollFixture.text(
-                    for: DebugScrollFixture.scrollDownTargetIndex),
+                blockID: target,
+                expectedText: DebugScrollFixture.text(for: targetIndex),
                 scenario: scenario
             )
             try require(
@@ -365,14 +377,15 @@ extension DebugViewController {
                 scenario: scenario
             )
 
-        case "text-drag-clamp-to-block":
+        case "text-drag-cross-block":
             try assertActiveTextInput(
-                blockID: DebugSeedFixture.intro,
-                expectedText: DebugSeedFixture.introText,
+                blockID: DebugSeedFixture.todo,
+                expectedText: DebugSeedFixture.todoText,
                 scenario: scenario
             )
-            try assertNonEmptyActiveTextSelection(
-                blockID: DebugSeedFixture.intro,
+            try assertCrossBlockTextSelection(
+                anchorBlockID: DebugSeedFixture.intro,
+                focusBlockID: DebugSeedFixture.todo,
                 scenario: scenario
             )
 
@@ -545,6 +558,38 @@ extension DebugViewController {
         try require(
             activeInput.selectedRange != SlopadEngine.TextRange(0, request.text.count),
             "\(scenario): expected partial text selection"
+        )
+    }
+
+    private func assertCrossBlockTextSelection(
+        anchorBlockID: BlockID,
+        focusBlockID: BlockID,
+        scenario: String
+    ) throws {
+        guard let snapshot, case .text(let textSelection) = snapshot.selection else {
+            throw DebugScenarioAssertionError(
+                message: "\(scenario): expected text selection"
+            )
+        }
+        try require(
+            textSelection.anchor.blockID == anchorBlockID,
+            "\(scenario): anchor block \(textSelection.anchor.blockID.rawValue) != \(anchorBlockID.rawValue)"
+        )
+        try require(
+            textSelection.focus.blockID == focusBlockID,
+            "\(scenario): focus block \(textSelection.focus.blockID.rawValue) != \(focusBlockID.rawValue)"
+        )
+        try require(
+            !textSelection.isSingleBlock,
+            "\(scenario): expected a cross-block text selection"
+        )
+        try require(
+            snapshot.activeTextInput?.renderDescriptor.measureRequest.blockID == focusBlockID,
+            "\(scenario): active native input must follow the focus block"
+        )
+        try require(
+            activeNativeSelectedRange.length > 0,
+            "\(scenario): expected a non-empty focus-block native selection"
         )
     }
 

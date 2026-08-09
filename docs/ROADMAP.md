@@ -17,7 +17,10 @@ implemented baseline includes the headless Session/model/layout split, the curat
 and SwiftUI host surfaces, coherent TextKit2 capabilities and bounded prepared-layout
 reuse, inline marks and parser-free typed shortcuts, slash-only block commands, committed
 document snapshots, reviewable atomic document patches, and fail-closed Markdown
-decode/encode.
+decode/encode. ADR 0014's non-IME cross-block text selection is implemented with
+gesture-origin mode latching, viewport-bounded presentation/damage, D1–D7 editing
+semantics, and a versioned structured clipboard plus literal plain-text fallback. Its
+decided live cross-block IME replacement policy is not implemented or product-verified.
 
 Do not reopen that work through a roadmap item. Verify exact current behavior in source
 and tests, and use the architecture map to find the owning path.
@@ -26,8 +29,11 @@ and tests, and use the architecture map to find the owning path.
 
 These constraints remain in force unless replaced by an ADR:
 
-- Multi-block editing uses block selection; there are no cross-block text ranges or a
-  global integer document position space.
+- Multi-block interaction has two distinct modes: cross-block `TextSelection` keeps two
+  block-local endpoints, while `BlockSelection` represents structural selection. Pointer
+  origin latches the mode; there is no global integer document position space. See
+  [ADR 0014](../ADR/0014-latch-selection-mode-and-support-cross-block-text.md) and the
+  [selection policy](SELECTION_INTERACTION_POLICY.md).
 - `BlockKind` and inline mark vocabulary remain closed core enums until a concrete
   consumer proves an extension/preservation contract.
 - Structure and content remain one canonical block store; do not add a second key-set
@@ -59,22 +65,37 @@ Exit: an ordinary host can integrate, persist, focus, resize, and customize supp
 chrome without touching raw callbacks, viewport ownership, TextKit graphs, model/layout
 internals, or development hooks.
 
-### P1 — Define structured clipboard and block interaction
+### P1 — Close cross-block selection product evidence
 
-- Specify structured block copy/cut/paste, rich inline paste, and pasteboard format
-  negotiation separately from existing plain-text behavior.
-- Preserve block selection as the multi-block interaction model across selection
-  rectangles, drag/reorder, Enter, Escape, Delete, cut, copy, paste, and select-all.
-- Route accepted paste content through canonical inputs/transactions; pasteboard payloads
-  must not become a second document model.
+- Exercise forward/reverse text and structural drags, empty-origin drag, autoscroll,
+  Escape/Cmd-A, structured clipboard round trips, and caret/selection chrome manually in
+  `SlopadDebugApp`.
+- Repair installed Korean IME delivery so product events reach the existing composition
+  consumer. Direct `setMarkedText` tests prove only that consumer's callback contract, not
+  installed-input-method delivery.
+- After delivery is proven, implement ADR 0014's decided live cross-block IME replacement,
+  grouped history, commit/cancel, and candidate-window behavior against the real product
+  path. Do not infer product behavior from direct callback injection.
+- Resolve or isolate the Swift Testing helper's AppKit `NSWindow` teardown signal 11. A
+  440-test focused Engine run and a 90-test focused AppKit run are recorded passing, but
+  the AppKit target can still fail intermittently during teardown and the combined suite
+  fails more often. Keep the passing owner runs as bounded evidence, not a stability
+  claim, until the runner issue is closed.
 
-Exit: every user-visible block interaction transition has an owner-level Session test and
-a real AppKit path; structured paste preserves supported tree/mark semantics atomically.
+Exit: the implemented non-IME D1–D7 behavior has recorded manual visual evidence, installed
+IME delivery reaches the consumer, the decided live replacement lifecycle is implemented
+and product-verified, and the canonical repository-wide test entrypoint exits successfully
+in one process.
 
 ### P2 — Complete product command reachability
 
 - Add toolbar reachability and todo checkbox product chrome without moving mutation
   semantics out of `EditorModel`/`EditorSession`.
+- Drive enablement, mixed inline/block values, and selection geometry from the shared
+  interaction projections defined by the selection policy; toolbar views must not switch
+  over `EditorSelection` or inspect TextKit directly.
+- Give asynchronous link/comment/AI surfaces an opaque stale-selection source only when a
+  concrete feature needs it; synchronous toolbar actions keep using the current selection.
 - Decide whether generalized suggestions need a public policy contract or remain separate
   adapter UI; the current slash runtime stays non-canonical.
 - Keep command selection and presentation distinct from command definition/application.

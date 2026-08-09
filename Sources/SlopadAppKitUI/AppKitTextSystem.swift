@@ -20,9 +20,7 @@ struct AppKitTextSystem {
         self.textKitSystem = system
         self.textLayouter = textLayouter
         self.textRenderer = system.renderer
-        self.textInputDecorationRenderer = AppKitTextInputDecorationRenderer(
-            textLayouter: textLayouter
-        )
+        self.textInputDecorationRenderer = AppKitTextInputDecorationRenderer()
     }
 
     func setActivePreparedLayoutBlockID(_ blockID: BlockID?) {

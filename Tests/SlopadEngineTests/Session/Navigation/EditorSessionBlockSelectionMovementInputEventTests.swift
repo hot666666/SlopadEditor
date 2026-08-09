@@ -55,23 +55,30 @@ struct EditorSessionBlockSelectionMovementInputEventTests {
         #expect(shrunk.focus == b)
     }
 
-    @Test("블록 선택의 좌우 방향키는 현재 scope에서 no-op이다")
-    func ignoresHorizontalArrowsWhenBlockSelected() {
+    @Test("블록 선택의 좌우 방향키는 canonical 앞·뒤 블록의 text edge로 접는다")
+    func collapsesHorizontalArrowsToDirectionalTextEdge() throws {
         // Given
-        let blockID: BlockID = "a"
-        let session = EditorSession(
-            document: .singleParagraph("A", id: blockID),
-            selection: .blocks(BlockSelection(blockIDs: [blockID]))
-        )
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let document = makeFlatDocument([
+            Block(id: a, content: BlockContent(text: "AA")),
+            Block(id: b, content: BlockContent(text: "BBB")),
+        ])
+        let selection = EditorSelection.blocks(BlockSelection(blockIDs: [a, b]))
+        let leftSession = EditorSession(document: document, selection: selection)
+        let rightSession = EditorSession(document: document, selection: selection)
         let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)
 
         // When
-        let left = session.handleInput(.command(.navigate(.moveLeft(viewport: viewport))))
-        let right = session.handleInput(.command(.navigate(.moveRight(viewport: viewport))))
+        let left = try #require(
+            leftSession.handleInput(.command(.navigate(.moveLeft(viewport: viewport))))
+        )
+        let right = try #require(
+            rightSession.handleInput(.command(.navigate(.moveRight(viewport: viewport))))
+        )
 
         // Then
-        #expect(left == nil)
-        #expect(right == nil)
-        #expect(session.render(in: viewport).selection == .blocks(BlockSelection(blockIDs: [blockID])))
+        #expect(left.selection == .caret(blockID: a, offset: 0))
+        #expect(right.selection == .caret(blockID: b, offset: 3))
     }
 }

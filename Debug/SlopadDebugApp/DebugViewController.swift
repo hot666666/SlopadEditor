@@ -21,6 +21,7 @@ final class DebugViewController: NSViewController {
     // MARK: - Debug State
 
     var debugHUDRevisionComparison: EditorSnapshotRevisionComparison?
+    var debugScenarioScrollDownTarget: BlockID?
 
     private let initialBlocks: [EditorBlockInput]
     private let initialSelection: EditorSelection

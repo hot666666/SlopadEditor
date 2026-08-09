@@ -12,11 +12,10 @@ extension EditorSession {
         case .beginTextSelection(let documentPoint, let viewport):
             return beginTextPointerSelection(at: documentPoint, viewport: viewport)
 
-        case .updateTextSelection(let documentPoint, let viewport, let blockSelectionThreshold):
+        case .updateTextSelection(let documentPoint, let viewport):
             return updateTextPointerSelection(
                 at: documentPoint,
-                viewport: viewport,
-                blockSelectionThreshold: blockSelectionThreshold
+                viewport: viewport
             )
 
         case .endTextSelection:
@@ -104,5 +103,6 @@ extension EditorSession {
         blockDrag = nil
         blockSelectionRectangle = nil
         textSelectionDragAnchor = nil
+        textSelectionPendingOrigin = nil
     }
 }

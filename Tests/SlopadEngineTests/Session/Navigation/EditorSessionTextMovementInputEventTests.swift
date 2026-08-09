@@ -5,30 +5,34 @@ import SlopadCoreModel
 
 @Suite("에디터 세션 텍스트 이동 입력 이벤트")
 struct EditorSessionTextMovementInputEventTests {
-    @Test("텍스트 편집 중 Shift-상하는 현재 블록 선택으로 전환한 뒤 기존 블록 선택 동작을 따른다")
-    func shiftVerticalArrowsEnterBlockSelectionFromTextEditing() throws {
+    @Test("텍스트 편집 중 Shift-상하는 anchor를 유지하고 다음 블록의 텍스트 위치까지 선택한다")
+    func shiftVerticalArrowsExtendTextSelectionAcrossBlocks() throws {
         // Given
         let a: BlockID = "a"
         let b: BlockID = "b"
         let c: BlockID = "c"
         let session = EditorSession(
-            document: makeFlatDocument([Block(id: a), Block(id: b), Block(id: c)]),
-            selection: .caret(blockID: b, offset: 0)
+            document: makeFlatDocument([
+                Block(id: a, content: BlockContent(text: "AA")),
+                Block(id: b, content: BlockContent(text: "BB")),
+                Block(id: c, content: BlockContent(text: "CC")),
+            ]),
+            selection: .caret(blockID: b, offset: 1)
         )
         let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)
 
         // When
         let firstUpdate = try #require(
             session.handleInput(.command(.navigate(.extendDown(viewport: viewport)))))
-        let secondUpdate = try #require(
-            session.handleInput(.command(.navigate(.extendDown(viewport: viewport)))))
-
         // Then
-        #expect(firstUpdate.selection == .blocks(BlockSelection(blockIDs: [b])))
-        let secondSelection = try #require(sessionBlockSelection(secondUpdate.selection))
-        #expect(secondSelection.blockIDs == [b, c])
-        #expect(secondSelection.anchor == b)
-        #expect(secondSelection.focus == c)
+        #expect(
+            firstUpdate.selection == .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: b, offset: 1),
+                    focus: TextPosition(blockID: c, offset: 1)
+                )
+            )
+        )
     }
 
     @Test("좌우 이동 입력 명령은 블록 내부와 블록 경계 이동을 런타임에서 처리한다")
