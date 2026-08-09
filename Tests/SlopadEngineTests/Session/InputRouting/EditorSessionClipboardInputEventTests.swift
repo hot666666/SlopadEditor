@@ -414,6 +414,39 @@ struct EditorSessionClipboardInputEventTests {
         #expect(update.selection == .caret(blockID: b, offset: 14))
     }
 
+    @Test("준비된 layout 뒤 블록 선택 plain paste는 survivor의 가시성과 높이를 유지한다")
+    func plainTextPasteKeepsSurvivorInPreparedLayout() throws {
+        // Given
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let c: BlockID = "c"
+        let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)
+        let session = EditorSession(
+            document: makeFlatDocument([
+                Block(id: a, content: BlockContent(text: "A")),
+                Block(id: b, kind: .heading(level: .h2), content: BlockContent(text: "B")),
+                Block(id: c, content: BlockContent(text: "C")),
+            ]),
+            selection: .blocks(BlockSelection(blockIDs: [b, c])),
+            textLayouter: DeterministicBlockTextLayouter(lineHeight: 10, verticalPadding: 2)
+        )
+        let initial = session.render(in: viewport)
+
+        // When
+        _ = try #require(session.handleInput(.command(.pasteText("replacement"))))
+        let rendered = session.render(in: viewport)
+        let revealFrame = session.blockRevealFrame(for: b, viewport: viewport)
+
+        // Then
+        #expect(initial.visibleBlocks.map(\.id) == [a, b, c])
+        #expect(rendered.visibleBlocks.map(\.id) == [a, b])
+        #expect(rendered.visibleBlocks.last?.textRender.measureRequest.text == "replacement")
+        #expect(rendered.activeTextInput?.renderDescriptor.measureRequest.blockID == b)
+        #expect(rendered.activeTextInput?.selectedRange == TextRange.point(11))
+        #expect(rendered.totalHeight == 24)
+        #expect(revealFrame?.height == 12)
+    }
+
     @Test("pasteText 명령은 활성 텍스트 선택 범위를 붙여넣은 문자열로 교체한다")
     func pastesTextIntoActiveTextSelection() throws {
         // Given

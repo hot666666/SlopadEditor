@@ -148,6 +148,41 @@ struct AppKitActiveInputControllerCommandTests {
         #expect(owner.receivedEvents == [.command(.pasteText("fallback"))])
     }
 
+    @Test("paste selector는 현재 버전 typed forest가 semantic 검증에 실패하면 plain text로 fallback한다")
+    func fallsBackFromSemanticallyInvalidCurrentStructuredPaste() throws {
+        // Given
+        let duplicateID: BlockID = "duplicate"
+        let payload = EditorClipboardPayload(
+            content: .blockSubtrees(
+                EditorClipboardBlockSubtrees(blocks: [
+                    EditorBlockInput(id: duplicateID, content: BlockContent(text: "first")),
+                    EditorBlockInput(id: duplicateID, content: BlockContent(text: "second")),
+                ])
+            )
+        )
+        let owner = CommandRecordingOwner(
+            viewport: EditorViewport(width: 320, scrollY: 0, height: 200)
+        )
+        let pasteboard = RecordingPasteboard()
+        pasteboard.dataByType[AppKitClipboardContract.structuredType] =
+            try JSONEncoder().encode(payload)
+        pasteboard.stringByType[.string] = "fallback"
+        let inputController = AppKitActiveInputController(owner: owner, pasteboard: pasteboard)
+
+        // When
+        let handled = inputController.handleCommand(AppKitCommandSelectors.paste)
+
+        // Then
+        #expect(handled)
+        #expect(
+            owner.receivedEvents
+                == [
+                    .command(.pasteStructured(payload)),
+                    .command(.pasteText("fallback")),
+                ]
+        )
+    }
+
     @Test("paste selector는 손상되거나 크기 제한을 넘은 typed data를 plain text로 fallback한다")
     func fallsBackFromMalformedAndOversizedStructuredPaste() {
         let invalidRepresentations = [
@@ -202,6 +237,94 @@ struct AppKitActiveInputControllerCommandTests {
         #expect(!handled)
         #expect(owner.receivedEvents.isEmpty)
     }
+
+    @Test("8 MiB를 넘는 typed copy는 plain text만 쓰고 성공한다")
+    func oversizedStructuredCopyWritesPlainTextOnly() {
+        // Given
+        let oversizedText = String(
+            repeating: "x",
+            count: AppKitClipboardContract.maximumStructuredBytes
+        )
+        let payload = EditorClipboardPayload(
+            content: .textSlice(
+                EditorClipboardTextSlice(blocks: [
+                    EditorBlockInput(
+                        id: "source",
+                        content: BlockContent(text: oversizedText)
+                    )
+                ])
+            )
+        )
+        let owner = CommandRecordingOwner(
+            viewport: EditorViewport(width: 320, scrollY: 0, height: 200),
+            clipboardPlan: EditorClipboardWritePlan(
+                payload: payload,
+                plainText: oversizedText
+            )
+        )
+        let pasteboard = RecordingPasteboard()
+        let inputController = AppKitActiveInputController(owner: owner, pasteboard: pasteboard)
+
+        // When
+        let handled = inputController.handleCommand(AppKitCommandSelectors.copy)
+
+        // Then
+        #expect(handled)
+        #expect(pasteboard.dataByType[AppKitClipboardContract.structuredType] == nil)
+        #expect(pasteboard.stringByType[.string] == oversizedText)
+    }
+
+    @Test("8 MiB를 넘는 typed cut은 plain 쓰기 성공 뒤에만 삭제한다")
+    func oversizedStructuredCutRequiresPlainWriteSuccess() {
+        let oversizedText = String(
+            repeating: "x",
+            count: AppKitClipboardContract.maximumStructuredBytes
+        )
+        let payload = EditorClipboardPayload(
+            content: .textSlice(
+                EditorClipboardTextSlice(blocks: [
+                    EditorBlockInput(
+                        id: "source",
+                        content: BlockContent(text: oversizedText)
+                    )
+                ])
+            )
+        )
+        let plan = EditorClipboardWritePlan(payload: payload, plainText: oversizedText)
+
+        for shouldFailPlainWrite in [true, false] {
+            // Given
+            let owner = CommandRecordingOwner(
+                viewport: EditorViewport(width: 320, scrollY: 0, height: 200),
+                clipboardPlan: plan,
+                selection: .text(
+                    TextSelection(
+                        anchor: TextPosition(blockID: "block", offset: 0),
+                        focus: TextPosition(blockID: "block", offset: 5)
+                    )
+                )
+            )
+            let pasteboard = RecordingPasteboard()
+            if shouldFailPlainWrite {
+                pasteboard.failingWriteTypes = [.string]
+            }
+            let inputController = AppKitActiveInputController(
+                owner: owner,
+                pasteboard: pasteboard
+            )
+
+            // When
+            let handled = inputController.handleCommand(AppKitCommandSelectors.cut)
+
+            // Then
+            #expect(handled == !shouldFailPlainWrite)
+            #expect(
+                owner.receivedEvents
+                    == (shouldFailPlainWrite ? [] : [.command(.cutSelection)])
+            )
+            #expect(pasteboard.dataByType[AppKitClipboardContract.structuredType] == nil)
+        }
+    }
 }
 
 @MainActor
@@ -246,7 +369,11 @@ private final class CommandRecordingOwner: AppKitActiveInputOwner {
     var unhandledActionResult: Bool?
     private let clipboardPlan: EditorClipboardWritePlan?
 
-    init(viewport: EditorViewport, clipboardPlan: EditorClipboardWritePlan? = nil) {
+    init(
+        viewport: EditorViewport,
+        clipboardPlan: EditorClipboardWritePlan? = nil,
+        selection: EditorSelection = .caret(blockID: "block", offset: 8)
+    ) {
         self.viewport = viewport
         self.clipboardPlan = clipboardPlan
         self.controller = AppKitEditorViewController(
@@ -256,7 +383,7 @@ private final class CommandRecordingOwner: AppKitActiveInputOwner {
                     content: BlockContent(text: "alpha beta gamma")
                 )
             ],
-            selection: .caret(blockID: "block", offset: 8)
+            selection: selection
         )
     }
 

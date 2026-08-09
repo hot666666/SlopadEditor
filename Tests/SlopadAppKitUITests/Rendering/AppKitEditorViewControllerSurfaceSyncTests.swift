@@ -474,6 +474,48 @@ struct AppKitEditorViewControllerSurfaceSyncTests {
         )
         #expect(window.firstResponder === controller.canvasView)
     }
+
+    @Test("TN의 offscreen focus는 reveal 뒤 active native input으로 재생성된다")
+    func revealsCrossBlockFocusAndRecreatesNativeInput() throws {
+        // Given
+        let blocks = (0..<100).map { index in
+            EditorBlockInput(
+                id: BlockID("tn-focus-\(index)"),
+                content: BlockContent(text: "Block \(index) long enough to measure")
+            )
+        }
+        let focusID = blocks[99].id
+        let selection = TextSelection(
+            anchor: TextPosition(blockID: blocks[0].id, offset: 1),
+            focus: TextPosition(blockID: focusID, offset: 3)
+        )
+        let controller = AppKitEditorViewController(
+            blocks: blocks,
+            selection: .text(selection)
+        )
+        controller.loadView()
+        controller.view.frame = NSRect(x: 0, y: 0, width: 320, height: 120)
+        controller.scrollView.frame = controller.view.bounds
+        controller.scrollView.contentView.frame = controller.scrollView.bounds
+        controller.view.layoutSubtreeIfNeeded()
+
+        // When
+        controller.renderAndSyncSurface(
+            makeFirstResponder: false,
+            scrollSelectionIntoView: true
+        )
+
+        // Then
+        #expect(controller.snapshot?.selection == .text(selection))
+        #expect(controller.currentViewport().scrollY > 0)
+        #expect(
+            controller.snapshot?.activeTextInput?.renderDescriptor.measureRequest.blockID
+                == focusID
+        )
+        #expect(controller.activeNativeText == blocks[99].content.text)
+        #expect(controller.activeNativeSelectedRange.location == 0)
+        #expect(controller.activeNativeSelectedRange.length == 3)
+    }
 }
 
 @MainActor

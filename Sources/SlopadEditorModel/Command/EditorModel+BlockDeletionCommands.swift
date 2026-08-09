@@ -12,13 +12,12 @@ extension EditorModel {
         let ordered = state.document.topLevelBlockIDs(blockSelection.blockIDs)
         guard
             let survivorID = ordered.first,
-            let firstBlock = state.document.block(survivorID)
+            state.document.block(survivorID) != nil
         else { throw .abort }
-        let parentID = firstBlock.parentID
-        let insertionIndex = state.document.children(of: parentID).firstIndex(of: survivorID) ?? 0
 
         var removed: [BlockID] = []
-        for blockID in ordered {
+        let survivorChildren = state.document.children(of: survivorID)
+        for blockID in survivorChildren + Array(ordered.dropFirst()) {
             switch state.document.removeSubtree(blockID) {
             case .success(let removedSubtree):
                 removed.append(contentsOf: removedSubtree)
@@ -27,20 +26,21 @@ extension EditorModel {
             }
         }
         try requireDocumentMutationSuccess(
-            state.document.insertBlock(
-                Block(
-                    id: survivorID,
-                    kind: .paragraph,
-                    content: BlockContent(text: text)
-                ),
-                parentID: parentID,
-                index: insertionIndex
+            state.document.setBlockKind(blockID: survivorID, kind: .paragraph)
+        )
+        try requireDocumentMutationSuccess(
+            state.document.replaceContent(
+                blockID: survivorID,
+                content: BlockContent(text: text)
             )
         )
         state.selection = .caret(blockID: survivorID, offset: text.count)
         changed.formUnion(removed)
         changed.insert(survivorID)
-        operations.append(.deleteBlocks(blockIDs: removed))
+        if !removed.isEmpty {
+            operations.append(.deleteBlocks(blockIDs: removed))
+        }
+        operations.append(.refreshMarker)
     }
 
     func deleteBlockSelection(

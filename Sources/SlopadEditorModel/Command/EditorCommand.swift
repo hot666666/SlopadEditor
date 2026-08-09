@@ -5,6 +5,8 @@ import SlopadCoreModel
 package enum EditorCommand {
     case insertText(String)
     case replaceText(blockID: BlockID, range: TextRange, text: String)
+    /// Applies native marked text to canonical content without running committed-input rules.
+    case replaceCompositionText(blockID: BlockID, range: TextRange, text: String)
     case deleteText(blockID: BlockID, range: TextRange)
     case indentText(blockID: BlockID, range: TextRange)
     case outdentText(blockID: BlockID, range: TextRange)

@@ -18,7 +18,9 @@ extension BlockLayout {
         visibleIndex = nil
         markerSequence = nil
 
-        var changeSet = BlockLayoutChangeSet()
+        var changeSet = BlockLayoutChangeSet(
+            updatedBlockIDs: dirtyInvalidation.blockIDs
+        )
         guard
             applyVisibleOrderMutation(
                 mutations: dirtyInvalidation.mutations,

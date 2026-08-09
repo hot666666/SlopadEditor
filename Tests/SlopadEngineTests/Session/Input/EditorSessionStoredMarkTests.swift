@@ -158,7 +158,7 @@ struct EditorSessionStoredMarkTests {
         _ = session.handleInput(
             .beginComposition(blockID: blockID, replacementRange: TextRange.point(0), text: "ㅎ"))
         _ = session.handleInput(
-            .updateComposition(blockID: blockID, replacementRange: TextRange.point(0), text: "한"))
+            .updateComposition(blockID: blockID, replacementRange: TextRange(0, 1), text: "한"))
         _ = session.handleInput(.commitComposition)
 
         // Then

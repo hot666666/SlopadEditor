@@ -138,7 +138,8 @@ struct EditorSessionAssistantEditorContractTests {
         // Then
         #expect(queryError == .activeComposition)
         #expect(applyError == .activeComposition)
-        #expect(session.documentSnapshot == context.document)
+        #expect(session.documentSnapshot.revision == context.document.revision)
+        #expect(session.documentSnapshot.blocks.first?.content.text == "A한B")
     }
 
     @Test("document revision이 바뀐 source는 stale로 거부된다")

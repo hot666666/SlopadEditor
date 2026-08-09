@@ -148,10 +148,19 @@ struct TextLayoutCacheTests {
         let blockID: BlockID = "a"
         let base = Block(id: blockID, kind: .paragraph, content: BlockContent(text: "AB"))
         let document = makeFlatDocument([base])
+        let liveDocument = makeFlatDocument([
+            Block(
+                id: blockID,
+                kind: .paragraph,
+                content: BlockContent(text: "조합중인긴텍스트")
+            )
+        ])
         let composing = EffectiveDocumentSnapshot(
-            document: document,
+            document: liveDocument,
             composition: TextComposition(
-                blockID: blockID, replacementRange: TextRange(0, 2), text: "조합중인긴텍스트",
+                blockID: blockID,
+                replacementRange: TextRange(0, 8),
+                text: "조합중인긴텍스트",
                 revision: 1)
         )
         let settled = EffectiveDocumentSnapshot(document: document)

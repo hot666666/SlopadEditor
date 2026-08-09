@@ -12,7 +12,7 @@ struct EditorSessionCompositionLifecycleInputEventTests {
         let session = EditorSession(document: .singleParagraph("", id: blockID))
 
         // When
-        _ = try #require(
+        let beginUpdate = try #require(
             session.handleInput(
                 .beginComposition(
                     blockID: blockID,
@@ -22,7 +22,9 @@ struct EditorSessionCompositionLifecycleInputEventTests {
             ))
 
         // Then
-        #expect(session.document.block(blockID)?.content == BlockContent())
+        #expect(session.document.block(blockID)?.content.text == "**bold**")
+        #expect(!beginUpdate.history.canUndo)
+        #expect(beginUpdate.committedDocumentRevision == nil)
         #expect(session.composition?.text == "**bold**")
 
         // When
@@ -87,7 +89,7 @@ struct EditorSessionCompositionLifecycleInputEventTests {
         _ = session.handleInput(
             .updateComposition(
                 blockID: blockID,
-                replacementRange: TextRange(0, 2),
+                replacementRange: TextRange(1, 2),
                 text: "Y"
             )
         )
@@ -95,12 +97,93 @@ struct EditorSessionCompositionLifecycleInputEventTests {
 
         // Then
         #expect(update.history.canUndo)
-        #expect(session.document.block(blockID)?.content.text == "Ycd")
+        #expect(session.document.block(blockID)?.content.text == "aYd")
         #expect(session.composition == nil)
-        #expect(session.activeTextRange() == TextRange.point(1))
+        #expect(session.activeTextRange() == TextRange.point(2))
     }
 
-    @Test("긴 조합의 유효 선택을 취소하면 canonical 선택을 그대로 복원한다")
+    @Test("원상 복귀한 live 조합은 redo branch와 history revision을 보존한다")
+    func netNoOpCompositionPreservesRedoBranch() throws {
+        // Given
+        let blockID: BlockID = "redo-no-op-composition"
+        let session = EditorSession(
+            document: .singleParagraph("A", id: blockID),
+            selection: .caret(blockID: blockID, offset: 1)
+        )
+        _ = try #require(session.handleInput(.command(.insertText("X"))))
+        let undo = try #require(session.handleInput(.command(.undo)))
+        #expect(!undo.history.canUndo)
+        #expect(undo.history.canRedo)
+        #expect(session.document.block(blockID)?.content.text == "A")
+
+        // When
+        let begin = try #require(
+            session.handleInput(
+                .beginComposition(
+                    blockID: blockID,
+                    replacementRange: TextRange.point(1),
+                    text: "한"
+                )
+            )
+        )
+        let restored = try #require(
+            session.handleInput(
+                .updateComposition(
+                    blockID: blockID,
+                    replacementRange: TextRange(1, 2),
+                    text: ""
+                )
+            )
+        )
+        let close = try #require(session.handleInput(.cancelComposition))
+
+        // Then
+        #expect(begin.committedDocumentRevision == nil)
+        #expect(restored.committedDocumentRevision == nil)
+        #expect(close.committedDocumentRevision == nil)
+        #expect(!close.history.canUndo)
+        #expect(close.history.canRedo)
+        #expect(session.document.block(blockID)?.content.text == "A")
+        #expect(close.selection == .caret(blockID: blockID, offset: 1))
+
+        let redo = try #require(session.handleInput(.command(.redo)))
+        #expect(session.document.block(blockID)?.content.text == "AX")
+        #expect(redo.selection == .caret(blockID: blockID, offset: 2))
+    }
+
+    @Test("실제 변경을 남긴 live 조합은 commit 시 redo branch를 비운다")
+    func committedCompositionClearsRedoBranch() throws {
+        // Given
+        let blockID: BlockID = "redo-commit-composition"
+        let session = EditorSession(
+            document: .singleParagraph("A", id: blockID),
+            selection: .caret(blockID: blockID, offset: 1)
+        )
+        _ = try #require(session.handleInput(.command(.insertText("X"))))
+        let undo = try #require(session.handleInput(.command(.undo)))
+        #expect(undo.history.canRedo)
+
+        // When
+        _ = try #require(
+            session.handleInput(
+                .beginComposition(
+                    blockID: blockID,
+                    replacementRange: TextRange.point(1),
+                    text: "한"
+                )
+            )
+        )
+        let commit = try #require(session.handleInput(.commitComposition))
+
+        // Then
+        #expect(commit.committedDocumentRevision != nil)
+        #expect(commit.history.canUndo)
+        #expect(!commit.history.canRedo)
+        #expect(session.document.block(blockID)?.content.text == "A한")
+        #expect(session.handleInput(.command(.redo)) == nil)
+    }
+
+    @Test("긴 조합 취소는 AppKit이 남긴 live content를 한 history로 닫는다")
     func cancelsCompositionInputEvent() throws {
         // Given
         let blockID: BlockID = "a"
@@ -118,26 +201,31 @@ struct EditorSessionCompositionLifecycleInputEventTests {
                 selectedRange: TextRange.point(4)
             )
         )
-        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 2))
+        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 5))
         #expect(session.activeTextRange() == TextRange.point(4))
 
         // When
         let update = try #require(session.handleInput(.cancelComposition))
 
         // Then
-        #expect(!update.history.canUndo)
+        #expect(update.history.canUndo)
+        #expect(update.committedDocumentRevision?.rawValue == 1)
         #expect(update.composition == nil)
         #expect(update.invalidation.blockIDs == Set([blockID]))
         #expect(update.invalidation.layoutGeometryChanged)
-        #expect(update.selection == .caret(blockID: blockID, offset: 2))
-        #expect(session.document.block(blockID)?.content.text == "Hi")
-        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 2))
-        #expect(session.activeTextRange() == TextRange.point(2))
+        #expect(update.selection == .caret(blockID: blockID, offset: 5))
+        #expect(session.document.block(blockID)?.content.text == "Hi긴조합")
+        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 5))
+        #expect(session.activeTextRange() == TextRange.point(5))
         #expect(session.composition == nil)
+
+        let undo = try #require(session.handleInput(.command(.undo)))
+        #expect(session.document.block(blockID)?.content.text == "Hi")
+        #expect(undo.selection == .caret(blockID: blockID, offset: 2))
     }
 
-    @Test("TN 위 조합 취소는 원문과 정확한 역방향 선택을 복원한다")
-    func crossBlockCompositionCancelRestoresOriginalSelection() throws {
+    @Test("TN 위 조합 취소는 live replacement를 남기고 undo가 원문과 역방향 선택을 복원한다")
+    func crossBlockCompositionCancelClosesLiveReplacement() throws {
         // Given
         let a: BlockID = "a"
         let b: BlockID = "b"
@@ -164,11 +252,17 @@ struct EditorSessionCompositionLifecycleInputEventTests {
         let update = try #require(session.handleInput(.cancelComposition))
 
         // Then
+        #expect(session.document.rootBlockIDs == [a])
+        #expect(session.document.block(a)?.content.text == "abc한jkl")
+        #expect(update.selection == .caret(blockID: a, offset: 4))
+        #expect(update.history.canUndo)
+        #expect(update.committedDocumentRevision?.rawValue == 1)
+
+        let undo = try #require(session.handleInput(.command(.undo)))
         #expect(session.document.rootBlockIDs == [a, b])
         #expect(session.document.block(a)?.content.text == "abcDEF")
         #expect(session.document.block(b)?.content.text == "GHIjkl")
-        #expect(update.selection == .text(selection))
-        #expect(!update.history.canUndo)
+        #expect(undo.selection == .text(selection))
     }
 
     @Test("TN 위 조합 확정은 범위를 한 transaction으로 병합하고 undo가 원선택을 복원한다")
@@ -187,7 +281,7 @@ struct EditorSessionCompositionLifecycleInputEventTests {
             ]),
             selection: .text(selection)
         )
-        _ = try #require(
+        let begin = try #require(
             session.handleInput(
                 .beginComposition(
                     blockID: a,
@@ -195,14 +289,33 @@ struct EditorSessionCompositionLifecycleInputEventTests {
                     text: "한"
                 )))
 
+        #expect(session.document.rootBlockIDs == [a])
+        #expect(session.document.block(a)?.content.text == "abc한jkl")
+        #expect(begin.committedDocumentRevision == nil)
+        #expect(!begin.history.canUndo)
+
+        let liveUpdate = try #require(
+            session.handleInput(
+                .updateComposition(
+                    blockID: a,
+                    replacementRange: TextRange(3, 4),
+                    text: "한국"
+                )
+            )
+        )
+        #expect(session.document.block(a)?.content.text == "abc한국jkl")
+        #expect(liveUpdate.committedDocumentRevision == nil)
+        #expect(!liveUpdate.history.canUndo)
+
         // When
         let commit = try #require(session.handleInput(.commitComposition))
 
         // Then
         #expect(session.document.rootBlockIDs == [a])
-        #expect(session.document.block(a)?.content.text == "abc한jkl")
-        #expect(commit.selection == .caret(blockID: a, offset: 4))
+        #expect(session.document.block(a)?.content.text == "abc한국jkl")
+        #expect(commit.selection == .caret(blockID: a, offset: 5))
         #expect(commit.history.canUndo)
+        #expect(commit.committedDocumentRevision?.rawValue == 1)
 
         let undo = try #require(session.handleInput(.command(.undo)))
         #expect(session.document.rootBlockIDs == [a, b])
@@ -242,7 +355,7 @@ struct EditorSessionCompositionLifecycleInputEventTests {
         #expect(update.composition == composition)
         #expect(snapshot.selection == .caret(blockID: blockID, offset: 4))
         #expect(snapshot.activeTextInput?.selectedRange == TextRange.point(4))
-        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 5))
+        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 2))
         #expect(session.activeTextRange() == TextRange.point(4))
         #expect(session.composition == composition)
     }

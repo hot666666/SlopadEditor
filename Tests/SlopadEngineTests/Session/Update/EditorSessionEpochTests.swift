@@ -116,7 +116,7 @@ struct EditorSessionEpochTests {
         // Then: persistence 호스트가 정확히 이 시점에 알고 싶어 하는 값이다.
         #expect(session.composition != nil)
         #expect(session.documentSnapshot.epoch == beforeComposition)
-        #expect(session.documentSnapshot.blocks.first?.content.text == "Hi")
+        #expect(session.documentSnapshot.blocks.first?.content.text == "Hi!")
     }
 
     @Test("조합 중 documentContextSnapshot은 기존대로 거절한다")

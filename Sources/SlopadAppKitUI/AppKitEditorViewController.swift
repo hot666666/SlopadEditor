@@ -155,7 +155,8 @@ public final class AppKitEditorViewController: NSViewController {
     public var editorStyle: AppKitEditorStyle {
         textSystem.style
     }
-    /// Complete committed canonical content, independent of the current viewport.
+    /// Complete current canonical content, independent of the current viewport. Live
+    /// marked content can be present before this snapshot's revision advances.
     /// `resetDocument` replaces the Session and starts this snapshot's revision at zero.
     public var documentSnapshot: EditorDocumentSnapshot {
         session.documentSnapshot
@@ -953,7 +954,10 @@ public final class AppKitEditorViewController: NSViewController {
     }
 
     private func syncNativeSurface(snapshot: EditorSessionSnapshot, makeFirstResponder: Bool) {
-        activeInputController.sync(activeTextInput: snapshot.activeTextInput)
+        activeInputController.sync(
+            activeTextInput: snapshot.activeTextInput,
+            composition: snapshot.composition
+        )
         focusNativeSurfaceIfRequested(
             snapshot: snapshot,
             makeFirstResponder: makeFirstResponder
@@ -1439,10 +1443,8 @@ extension AppKitEditorViewController {
             return nil
         case .caret(let position):
             return position
-        case .text(let selection) where selection.isSingleBlock:
+        case .text(let selection):
             return selection.focus
-        case .text:
-            return nil
         }
     }
 
@@ -1480,9 +1482,9 @@ extension AppKitEditorViewController {
         switch selection {
         case .caret(let position):
             return position.blockID
-        case .text(let selection) where selection.isSingleBlock:
+        case .text(let selection):
             return selection.focus.blockID
-        case .inactive, .blocks, .text:
+        case .inactive, .blocks:
             return nil
         }
     }

@@ -5,7 +5,7 @@ import SlopadCoreModel
 
 @Suite("에디터 세션 조합 렌더링")
 struct EditorSessionCompositionRenderTests {
-    @Test("조합 입력 렌더링은 원본 문서를 바꾸지 않고 합성 내용을 보여준다")
+    @Test("조합 입력 렌더링은 live canonical 내용과 같은 합성 내용을 보여준다")
     func rendersCompositionContent() throws {
         // Given
         let blockID: BlockID = "a"
@@ -31,13 +31,15 @@ struct EditorSessionCompositionRenderTests {
         #expect(update.invalidation.blockIDs == Set([blockID]))
         #expect(update.invalidation.layoutGeometryChanged)
         #expect(composition.blockID == blockID)
-        #expect(composition.replacementRange == TextRange.point(2))
+        #expect(composition.replacementRange == TextRange(2, 3))
         #expect(composition.text == "!")
         #expect(composition.compositionRevision == 1)
         #expect(update.composition == composition)
         #expect(snapshot.composition == composition)
         #expect(blockView.textRender.measureRequest.text == "Hi!")
-        #expect(session.document.block(blockID)?.content.text == "Hi")
+        #expect(session.document.block(blockID)?.content.text == "Hi!")
+        #expect(update.committedDocumentRevision == nil)
+        #expect(!update.history.canUndo)
         #expect(snapshot.revision.compositionRevision == 1)
     }
 
@@ -76,7 +78,7 @@ struct EditorSessionCompositionRenderTests {
         #expect(snapshot.revision.compositionRevision == 0)
     }
 
-    @Test("조합 입력 취소는 원본 문서를 유지하고 갱신에서 조합 입력을 제거한다")
+    @Test("조합 입력 취소는 live 문서를 유지하고 조합 history를 닫는다")
     func cancelsComposition() throws {
         // Given
         let blockID: BlockID = "a"
@@ -100,12 +102,13 @@ struct EditorSessionCompositionRenderTests {
         let blockView = try #require(snapshot.visibleBlocks.first)
 
         // Then
-        #expect(!update.history.canUndo)
+        #expect(update.history.canUndo)
+        #expect(update.committedDocumentRevision?.rawValue == 1)
         #expect(update.composition == nil)
         #expect(update.invalidation.blockIDs == Set([blockID]))
         #expect(update.invalidation.layoutGeometryChanged)
-        #expect(session.document.block(blockID)?.content.text == "Hi")
-        #expect(blockView.textRender.measureRequest.text == "Hi")
+        #expect(session.document.block(blockID)?.content.text == "Hi!")
+        #expect(blockView.textRender.measureRequest.text == "Hi!")
         #expect(snapshot.composition == nil)
     }
 }

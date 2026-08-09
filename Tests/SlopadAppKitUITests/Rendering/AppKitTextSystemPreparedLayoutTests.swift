@@ -97,6 +97,59 @@
             #expect(snapshot.residentEntryCount <= 96)
         }
 
+        @Test("TN의 offscreen focus는 reveal 뒤 active native input과 prepared pin을 소유한다")
+        func crossBlockFocusRevealsAndPinsNativeInput() throws {
+            // Given
+            let blocks = (0..<100).map { index in
+                EditorBlockInput(
+                    id: BlockID("tn-focus-\(index)"),
+                    content: BlockContent(text: "Block \(index) long enough to measure")
+                )
+            }
+            let focusID = blocks[99].id
+            let selection = TextSelection(
+                anchor: TextPosition(blockID: blocks[0].id, offset: 1),
+                focus: TextPosition(blockID: focusID, offset: 3)
+            )
+            let controller = AppKitEditorViewController(
+                blocks: blocks,
+                selection: .text(selection)
+            )
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 640, height: 240),
+                styleMask: [.borderless],
+                backing: .buffered,
+                defer: false
+            )
+            window.contentViewController = controller
+            defer {
+                controller.setFocused(false)
+                window.contentViewController = nil
+                window.close()
+            }
+            controller.view.frame = window.contentView?.bounds ?? .zero
+            controller.view.layoutSubtreeIfNeeded()
+
+            // When
+            controller.renderAndSyncSurface(
+                makeFirstResponder: true,
+                scrollSelectionIntoView: true
+            )
+            let instrumentation = controller.preparedLayoutInstrumentation
+
+            // Then
+            #expect(controller.snapshot?.selection == .text(selection))
+            #expect(controller.currentViewport().scrollY > 0)
+            #expect(
+                controller.snapshot?.activeTextInput?.renderDescriptor.measureRequest.blockID
+                    == focusID
+            )
+            #expect(controller.activeNativeText == blocks[99].content.text)
+            #expect(window.firstResponder === controller.canvasView)
+            #expect(instrumentation.pinnedEntryCount == 1)
+            #expect(instrumentation.pinnedBlockIDAtLastPrepare == focusID)
+        }
+
         @Test("visible block이 limit보다 많아도 initial render와 draw에서 active는 한 번만 준비한다")
         func initialRenderAndDrawRetainActiveEntry() throws {
             // Given

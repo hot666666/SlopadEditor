@@ -16,15 +16,19 @@ extension EditorSession {
         case .activeTextSelectionChanged(let blockID, let selectedRange):
             update = handleActiveTextSelectionChanged(blockID: blockID, selectedRange: selectedRange)
 
-        case .beginComposition(let blockID, let replacementRange, let text),
-            .updateComposition(let blockID, let replacementRange, let text):
+        case .beginComposition(let blockID, let replacementRange, let text):
             guard canReceiveCompositionInput(blockID: blockID) else { return nil }
-            update = setComposition(
-                nextTextComposition(
-                    blockID: blockID,
-                    replacementRange: replacementRange,
-                    text: text
-                )
+            update = beginComposition(
+                blockID: blockID,
+                replacementRange: replacementRange,
+                text: text
+            )
+
+        case .updateComposition(let blockID, let replacementRange, let text):
+            update = updateComposition(
+                blockID: blockID,
+                replacementRange: replacementRange,
+                text: text
             )
 
         case .commitComposition:

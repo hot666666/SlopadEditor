@@ -29,7 +29,7 @@ extension EditorSession {
 
         case .pasteStructured(let payload):
             guard payload.version == EditorClipboardPayload.currentVersion else { return nil }
-            return handleCommand(.pasteStructured(payload))
+            return handleTransaction([.command(.pasteStructured(payload))])
 
         case .cutSelection:
             return handleCutSelectionInputCommand()

@@ -152,7 +152,7 @@ struct EditorSessionTextHitTestingTests {
         // Then
         #expect(update.selection == .caret(blockID: blockID, offset: 3))
         #expect(session.activeTextRange() == TextRange.point(3))
-        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 1))
+        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 4))
         #expect(session.composition != nil)
         #expect(session.textNavigationRuntimeContext?.backendContext.preferredInlineOffset == 33)
     }
