@@ -43,6 +43,7 @@ private enum UIBenchmarkScenario: String {
     case longActiveParagraph = "long-active-paragraph"
     case coldFirstLayout = "cold-first-layout"
     case textSelectionDrag = "text-selection-drag"
+    case crossBlockSelectionDrag = "cross-block-selection-drag"
 
     init(argument: String) {
         self = UIBenchmarkScenario(rawValue: argument) ?? .scroll
@@ -55,7 +56,7 @@ private enum UIBenchmarkScenario: String {
         case .scroll, .nativeInsert, .composition, .heightExpansion, .blockSelection,
             .blockReorder, .styleChange, .unicodeNavigation, .repeatedViewport,
             .forwardReverseScroll, .widthResize, .pressureRecovery, .longActiveParagraph,
-            .coldFirstLayout, .textSelectionDrag, .mixed:
+            .coldFirstLayout, .textSelectionDrag, .crossBlockSelectionDrag, .mixed:
             return false
         }
     }
@@ -67,7 +68,7 @@ private enum UIBenchmarkScenario: String {
         case .scroll, .nativeInsert, .composition, .heightExpansion, .blockSelection,
             .blockReorder, .subtreeReorder, .styleChange, .unicodeNavigation,
             .repeatedViewport, .forwardReverseScroll, .widthResize, .pressureRecovery,
-            .longActiveParagraph, .textSelectionDrag, .mixed:
+            .longActiveParagraph, .textSelectionDrag, .crossBlockSelectionDrag, .mixed:
             return false
         }
     }
@@ -128,13 +129,13 @@ enum UIBenchmarkFixture {
                     parentID: parentID,
                     kind: kind(for: index),
                     content: BlockContent(
-                        text: scenario == .unicodeNavigation || scenario == .longActiveParagraph
-                            ? unicodeNavigationText(
-                                for: index,
-                                length: index == targetIndex ? resolvedActiveTextLength : nil
-                            )
-                            : text(for: index)
-                    )
+                        text: fixtureText(
+                            for: index,
+                            blockCount: blockCount,
+                            scenario: scenario,
+                            targetIndex: targetIndex,
+                            activeTextLength: resolvedActiveTextLength
+                        ))
                 )
             )
         }
@@ -167,6 +168,29 @@ enum UIBenchmarkFixture {
             characters.append(contentsOf: repeatedUnit.prefix(targetLength - characters.count))
         }
         return String(characters)
+    }
+
+    private static func fixtureText(
+        for index: Int,
+        blockCount: Int,
+        scenario: UIBenchmarkScenario,
+        targetIndex: Int,
+        activeTextLength: Int?
+    ) -> String {
+        if scenario == .crossBlockSelectionDrag,
+            index > 0,
+            index < blockCount - 1,
+            index.isMultiple(of: 13)
+        {
+            return ""
+        }
+        if scenario == .unicodeNavigation || scenario == .longActiveParagraph {
+            return unicodeNavigationText(
+                for: index,
+                length: index == targetIndex ? activeTextLength : nil
+            )
+        }
+        return text(for: index)
     }
 
     static func subtreeNodeCount(for blockCount: Int) -> Int {
@@ -926,7 +950,7 @@ enum UIBenchmarkRunner {
             return
         case .nativeInsert, .composition, .heightExpansion, .blockSelection, .blockReorder,
             .subtreeDelete, .subtreeReorder, .styleChange, .unicodeNavigation,
-            .longActiveParagraph, .textSelectionDrag, .mixed:
+            .longActiveParagraph, .textSelectionDrag, .crossBlockSelectionDrag, .mixed:
             break
         }
         let target = targetBlockID(blockCount: options.blockCount)
@@ -952,6 +976,9 @@ enum UIBenchmarkRunner {
             .textSelectionDrag:
             viewController.renderAndSyncSurface(makeFirstResponder: false)
 
+        case .crossBlockSelectionDrag:
+            centerBlock(UIBenchmarkFixture.blockID(0), viewController: viewController)
+
         case .scroll, .repeatedViewport, .forwardReverseScroll, .widthResize,
             .pressureRecovery, .coldFirstLayout:
             break
@@ -970,7 +997,7 @@ enum UIBenchmarkRunner {
         case .nativeInsert, .composition, .heightExpansion, .blockSelection, .blockReorder,
             .subtreeDelete, .subtreeReorder, .styleChange, .unicodeNavigation,
             .repeatedViewport, .widthResize, .pressureRecovery, .longActiveParagraph,
-            .coldFirstLayout, .textSelectionDrag:
+            .coldFirstLayout, .textSelectionDrag, .crossBlockSelectionDrag:
             return Double(viewController.scrollView.contentView.bounds.origin.y)
         }
 
@@ -1029,6 +1056,16 @@ enum UIBenchmarkRunner {
         case .textSelectionDrag:
             try dragTextSelection(frame: frame, options: options, viewController: viewController)
             return "textSelectionDrag"
+
+        case .crossBlockSelectionDrag:
+            try dragCrossBlockTextSelection(
+                frame: frame,
+                options: options,
+                viewController: viewController
+            )
+            return frame.isMultiple(of: 2)
+                ? "crossBlockSelectionForward"
+                : "crossBlockSelectionReverse"
 
         case .nativeInsert:
             insertText(frame: frame, options: options, viewController: viewController)
@@ -1159,6 +1196,56 @@ enum UIBenchmarkRunner {
         }
     }
 
+    /// Deterministically exercises the same viewport changes produced by text-drag
+    /// autoscroll without waiting on a wall-clock timer inside a benchmark frame.
+    private static func dragCrossBlockTextSelection(
+        frame: Int,
+        options: UIBenchmarkOptions,
+        viewController: UIBenchmarkHost
+    ) throws {
+        let lastIndex = max(1, options.blockCount - 1)
+        let startsForward = frame.isMultiple(of: 2)
+        let startID = UIBenchmarkFixture.blockID(startsForward ? 0 : lastIndex)
+        let endID = UIBenchmarkFixture.blockID(startsForward ? lastIndex : 0)
+        let textOriginX =
+            viewController.editorStyle.gutterWidth
+            + viewController.editorStyle.contentHorizontalPadding
+
+        centerBlock(startID, viewController: viewController)
+        guard
+            let start = blockPoint(
+                blockID: startID,
+                x: textOriginX + 8,
+                yFraction: 0.5,
+                viewController: viewController
+            )
+        else {
+            throw UIBenchmarkValidationError.textSelectionDragGeometryUnavailable(startID)
+        }
+        viewController.handleMouseDown(documentPoint: start)
+
+        centerBlock(endID, viewController: viewController)
+        guard
+            let end = blockPoint(
+                blockID: endID,
+                x: textOriginX + 32,
+                yFraction: 0.5,
+                viewController: viewController
+            )
+        else {
+            throw UIBenchmarkValidationError.textSelectionDragGeometryUnavailable(endID)
+        }
+        viewController.handleMouseDragged(documentPoint: end)
+        viewController.handleMouseUp(documentPoint: end)
+
+        guard case .text(let selection) = viewController.snapshot?.selection,
+            selection.anchor.blockID == startID,
+            selection.focus.blockID == endID
+        else {
+            throw UIBenchmarkValidationError.textSelectionDragDidNotProduceTextSelection
+        }
+    }
+
     private static func validateForwardReverseScrollPosition(
         _ scrollY: Double,
         previousScrollY: Double,
@@ -1195,7 +1282,8 @@ enum UIBenchmarkRunner {
     ) throws {
         #if SLOPAD_BENCHMARK_INSTRUMENTATION
             if scenario == .forwardReverseScroll {
-                let reverseHitCount = samples
+                let reverseHitCount =
+                    samples
                     .filter { $0.operation == "reverseScroll" }
                     .reduce(0) { $0 + $1.preparedLayoutHitCount }
                 guard reverseHitCount > 0 else {
@@ -1203,10 +1291,12 @@ enum UIBenchmarkRunner {
                 }
             }
             if scenario == .coldFirstLayout, options.preparedEntryLimit == 1 {
-                guard samples.contains(where: {
-                    $0.displayPrepareLayoutCount > 0
-                        && $0.prepareLayoutCount >= $0.displayPrepareLayoutCount
-                }) else {
+                guard
+                    samples.contains(where: {
+                        $0.displayPrepareLayoutCount > 0
+                            && $0.prepareLayoutCount >= $0.displayPrepareLayoutCount
+                    })
+                else {
                     throw UIBenchmarkValidationError.sameHeadControlDidNotCaptureDisplayPrepare
                 }
             }
@@ -1232,7 +1322,8 @@ enum UIBenchmarkRunner {
                 request: requestAvailableWidth
             )
         }
-        let isExpectedViewportBand = frame.isMultiple(of: 2)
+        let isExpectedViewportBand =
+            frame.isMultiple(of: 2)
             ? viewportWidth > 800
             : viewportWidth < 800
         guard isExpectedViewportBand else {

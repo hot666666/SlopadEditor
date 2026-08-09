@@ -21,7 +21,7 @@ SCENARIOS=(
   gutter-selection
   gutter-drag-selection
   text-drag-selection
-  text-drag-clamp-to-block
+  text-drag-cross-block
   double-click-word-selection
   double-click-block-text-selection
   drag-reorder
