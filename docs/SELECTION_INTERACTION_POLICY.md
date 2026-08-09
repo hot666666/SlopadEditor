@@ -64,8 +64,11 @@ until commit. Native marked-range presentation remains runtime state and is not 
    anchor/focus, not the document result.
 5. **One action, one history result.** A replacement, delete, cut, Enter, or formatting
    command spanning blocks produces one transaction. Composition may receive several
-   native updates, but they form one history group and publish one committed revision when
-   committed.
+   native updates, but they form one history group. Closure records one history item only
+   when the final canonical document, selection, or stored marks differ from the
+   pre-composition state, and publishes one committed revision only for a document change.
+   Exact restoration closes runtime composition without history or revision and preserves
+   the existing redo branch.
 6. **Rendering is viewport-bounded.** Canonical state stores two endpoints. Per-frame work
    derives only visible block-local ranges; full-span traversal is reserved for commands.
 7. **Input is language-independent.** Direct Latin input, committed Korean input, and any
@@ -448,8 +451,8 @@ Text selection and block selection need different structured payloads:
 
 | Selection | Structured payload | Plain-text projection |
 | --- | --- | --- |
-| `T1/TN` | Partial endpoint fragments, complete intermediate fragments, source kind/parent information, relative hierarchy, and rebased inline marks | Human-readable text; do not blindly join every block with `"\n"` |
-| `B` | Deduplicated selected roots and each complete subtree in canonical DFS order | Serialize whole blocks by kind |
+| `T1/TN` | Partial endpoint fragments, complete intermediate fragments, source kind/parent information, relative hierarchy, and rebased inline marks | Kind-aware DFS line projection; an empty logical block remains an empty line (`a\n\nb`), while hierarchy stays in the structured payload |
+| `B` | Deduplicated selected roots and each complete subtree in canonical DFS order | Kind-aware DFS line projection; empty blocks remain empty lines and relative hierarchy stays in the structured payload |
 
 Notion used a partial multi-text payload for `TN` and a different whole-block payload for
 `B`. Slopad follows its open-edge merge behavior while retaining its own canonical model:
@@ -467,6 +470,8 @@ Notion used a partial multi-text payload for `TN` and a different whole-block pa
 Copy writes the versioned Slopad structured representation and an ordinary plain-text
 fallback. Paste chooses a valid supported Slopad representation first, then plain text.
 Invalid, unsupported-version, or oversized structured data fails closed to plain text.
+If encoding a structured copy exceeds the 8 MiB cap, Copy and Cut deliberately write only
+the ordinary plain-text representation; Cut mutates only after that plain write succeeds.
 External plain text is inserted literally and is never auto-decoded as Markdown; Markdown
 conversion remains an explicit import operation.
 
@@ -531,6 +536,11 @@ uses prepared visible-order ranks instead of that full-span traversal.
   rerun.
 - The production `SlopadDebugApp` state harness passes all 18 scenarios, including the
   real cross-block text drag and viewport-derived down/up reveal boundaries.
+- Caret review disposition: no change. Direct product use confirmed that AppKit's native
+  automatic insertion indicator already has the intended idle and ordinary-input cadence.
+  The currently unreachable installed-IME composition path is not a reason to add
+  speculative composition-specific caret suppression; validate it when that native path
+  is repaired.
 - Collapsed subtrees remain a P4 feature because Slopad has no collapse state yet. D7 is
   the forward-compatible rule that feature must obey. Shared toolbar mixed-value and
   availability projection remains P2 and is not a second selection owner.
@@ -590,8 +600,10 @@ Focused `SlopadAppKitUITests` must enter through the production adapter and asse
 - paste prefers a valid supported Slopad payload, falls back on invalid/newer/oversized
   data, and never auto-decodes plain Markdown-looking text;
 - a failed required pasteboard write prevents Cut deletion;
-- caret blink is visible only for a focused idle `C`, stops during composition/input, and
-  resumes afterward using the native AppKit cadence.
+- the focused `C` uses AppKit's native automatic insertion-indicator cadence and
+  selection/unfocused states hide it. Ordinary-input behavior is accepted from direct
+  product use; composition-specific behavior remains part of the installed-IME boundary
+  rather than a speculative adapter rule.
 
 ### Gate 4 — native callback and visual behavior
 

@@ -18,8 +18,9 @@ entries and update callbacks.
 it deliberately excludes selection and Session identity. Its revision does not change for
 selection-only movement and resets to zero when an AppKit controller replaces its Session.
 It therefore cannot safely authorize a later mutation. Live IME composition is also a
-Session overlay rather than canonical content, so a context captured while marked text is
-active would not describe one stable mutation base.
+still-open Session history group: callbacks mutate canonical content live, but the committed
+revision and persistence notification remain deferred. A context captured while marked text
+is active would therefore not describe one stable committed mutation base.
 
 ## Decision
 

@@ -58,7 +58,7 @@ swift run SlopadDebugApp
 | --- | --- | --- |
 | `SlopadEditorModel` | Canonical block tree, selection, commands, transactions, history | Layout, viewport, native state |
 | `SlopadBlockLayout` | Visible order, block geometry, hit/reveal facts, height index, text-layout cache | Canonical mutation, platform callbacks |
-| `SlopadEngine` | `EditorSession`, composition/runtime overlays, owner coordination, snapshots | Duplicate document or layout state |
+| `SlopadEngine` | `EditorSession`, composition lifecycle/runtime state, owner coordination, snapshots | Duplicate document or layout state |
 | `SlopadAppKitTextKit` | Coherent TextKit2 measurement, geometry, navigation, deletion, attributed content | Editing semantics, native input host |
 | `SlopadAppKitUI` | AppKit callback translation, drawing, focus, scrolling, surface synchronization | Canonical mutation or command meaning |
 | `SlopadAppKit` | Curated ordinary-host API | Runtime state |
@@ -80,17 +80,21 @@ substitute for each other.
 ### Persistence
 
 `EditorUpdate.committedDocumentRevision` advances only for committed content or structure
-changes. Read `documentSnapshot` on demand to persist the complete canonical tree in
-parent-before-child depth-first order. It excludes selection, viewport, layout, scroll,
-and live IME composition. `visibleBlocks` is never a persistence source, and the revision
-is only monotonic within one Session.
+changes. Read `documentSnapshot` on demand to obtain the complete current canonical tree
+in parent-before-child depth-first order. It excludes selection, viewport, layout, scroll,
+marked-range, and composition-lifecycle metadata. Marked-text callbacks mutate the
+snapshot's canonical blocks live, while its revision and the host persistence notification
+remain at the last committed value until composition commit. Persist from a committed
+update or flush composition first. `visibleBlocks` is never a persistence source, and the
+revision is only monotonic within one Session.
 
 ### Reviewable document replacement
 
 External assistants and review UIs use `documentContextSnapshot()` followed by
 `applyDocumentPatch(_:)`. The context carries an opaque source bound to the exact Session,
 committed revision, and selection. The patch is a complete canonical post-image; stale
-sources and active composition are rejected. A changed patch commits as one model
+sources are rejected, and both context capture and patch apply remain unavailable during
+active composition. A changed patch commits as one model
 transaction and one undo step, while an exact no-op creates no history or revision.
 
 ### AppKit synchronization
