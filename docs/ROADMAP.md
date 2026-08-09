@@ -1,316 +1,143 @@
 # ROADMAP
 
-This document keeps only the current development direction for the Slopad project. See
-[Architecture](ARCHITECTURE.md) for the current target graph, ownership model, and
-platform extension philosophy.
+This document contains only unfinished product direction, priority, and exit criteria.
+Current source and tests define what Slopad does today. [Architecture](ARCHITECTURE.md),
+the [architecture map](slopad-architecture-map.html), and the ADRs define established
+boundaries; the active tracking issue defines the executable work order.
 
-This file, together with `ADR/` and the active tracking issue, is the single source of
-truth for **what the code should become**. Current source and tests remain the authority
-for **what the code does today**. When the two disagree about intent, correct this
-document first, then change code.
+When source and this document disagree about intent, fix the document or open an issue
+before changing code. Historical handoffs and completion pages are evidence, not work
+orders.
 
-`Slopad_Semantic_Editor_Architecture_Handoff.md` is a background record of how the current
-direction was reached. It is not a work order.
+## Current Baseline
 
-## Completed Epic
+[Epic #23](https://github.com/hot666666/Slopad/issues/23) is complete. Its
+[completion page](epic-23-status.html) records historical integration evidence. The
+implemented baseline includes the headless Session/model/layout split, the curated AppKit
+and SwiftUI host surfaces, coherent TextKit2 capabilities and bounded prepared-layout
+reuse, inline marks and parser-free typed shortcuts, slash-only block commands, committed
+document snapshots, reviewable atomic document patches, and fail-closed Markdown
+decode/encode.
 
-**[Epic #23 — Markdown-semantic 편집 계층 정립](https://github.com/hot666666/Slopad/issues/23)**
-is complete. [Completion status and evidence](epic-23-status.html) is a historical
-projection of its integration, not the active issue queue.
+Do not reopen that work through a roadmap item. Verify exact current behavior in source
+and tests, and use the architecture map to find the owning path.
 
-Two tracks run in parallel; they do not share files.
+## Settled Constraints
 
-| Track | Issues | Focus |
-| --- | --- | --- |
-| A — semantics | [#24](https://github.com/hot666666/Slopad/issues/24) [#25](https://github.com/hot666666/Slopad/issues/25) [#26](https://github.com/hot666666/Slopad/issues/26) [#27](https://github.com/hot666666/Slopad/issues/27) [#28](https://github.com/hot666666/Slopad/issues/28) [#29](https://github.com/hot666666/Slopad/issues/29) [#30](https://github.com/hot666666/Slopad/issues/30) [#31](https://github.com/hot666666/Slopad/issues/31) [#32](https://github.com/hot666666/Slopad/issues/32) [#33](https://github.com/hot666666/Slopad/issues/33) | inline mark reachability, editing state, command vocabulary, input rules, Markdown decode/encode |
-| B — layout | [#34](https://github.com/hot666666/Slopad/issues/34) [#35](https://github.com/hot666666/Slopad/issues/35) [#36](https://github.com/hot666666/Slopad/issues/36) [#37](https://github.com/hot666666/Slopad/issues/37) | text capability split, caret geometry path, cache key alignment, prepared layout store |
+These constraints remain in force unless replaced by an ADR:
 
-All fourteen issues are closed: Track A establishes the canonical inline and Markdown
-boundaries, including fail-closed decode/encode and parser-free typed input rules; Track B
-establishes TextKit capability/geometry boundaries and a bounded prepared-layout store.
-The slash-only AppKit command menu completes the product-facing command discovery in this
-scope. GFM tables remain a separate future Core-vocabulary expansion in
-[#50](https://github.com/hot666666/Slopad/issues/50).
+- Multi-block editing uses block selection; there are no cross-block text ranges or a
+  global integer document position space.
+- `BlockKind` and inline mark vocabulary remain closed core enums until a concrete
+  consumer proves an extension/preservation contract.
+- Structure and content remain one canonical block store; do not add a second key-set
+  invariant without measured need such as lazy content loading.
+- Markdown typed-input rules and whole-document conversion remain separate. There is no
+  format plugin registry while only one codec exists.
+- Text backend cache identity follows the effective measurement request and style, not a
+  model revision convention.
+- Caret/selection geometry is published through Session facts; AppKit UI does not bypass
+  Session to ask the backend for editing meaning.
+- Markdown is not persistence state. Its semantic round-trip creates fresh `BlockID`s;
+  persistence identity needs a separate decision.
 
-### Decisions fixed for this epic
+## Priorities
 
-These are settled. Sub-issues implement them rather than re-opening them.
+These are capability buckets, not permission to implement without an owner decision and a
+bounded tracking issue.
 
-| # | Decision | Rationale |
-| --- | --- | --- |
-| D1 | caret geometry is published through the Session snapshot; AppKit UI does not call the text backend directly | UI then needs only the rendering contract. focus, damage, and content height already travel that path |
-| D2 | no cross-block text ranges; multi-block work stays block selection | allowing them pulls in split/join position mapping, which requires the global integer coordinate space that is an explicit non-goal |
-| D3 | measurement keys align on `BlockMeasureRequest` value equality; no new revision-based key | `PreparedLayoutKey = (BlockMeasureRequest, TextKitEditorStyle)` already makes "same key implies same layout" true by construction. A revision key would weaken that to a convention |
-| D4 | `BlockKind` stays a closed enum; no open `typeID` with dynamic payload | the Markdown block vocabulary is closed by its specification. Opening it loses exhaustive `switch` checking and requires unknown-type preservation machinery with no consumer |
-| D5 | structure and content maps are not split | Swift's `[BlockID: Block]` is already copy-on-write, so most of the expected benefit is automatic. Splitting adds a key-set agreement invariant. Revisit when lazy content loading is real |
-| D6 | no format plugin protocol or registry | there is one format implementation. The point of a separate target is isolating the `swift-markdown` AST, not extensibility |
-| D7 | the inline mark vocabulary is a closed set owned by the core; neither format nor backend may extend it | `TextKitAttributedStringBuilder` already only interprets marks. What a format cannot express becomes an encoder diagnostic, not a new mark |
+### P0 — Harden the host integration contract
 
-### Historical scope boundary
+- Keep `SlopadAppKit` as the ordinary one-product/one-import path and `SlopadSwiftUI` as
+  the declarative lifecycle surface.
+- Admit new host operations only as synchronized actions, style/chrome customization,
+  engine input contracts, or a complete custom-adapter requirement.
+- Keep both downstream host fixtures exercising mount → edit → observe → flush → replace
+  → unmount without `@testable`, package access, or underlying-module bypass.
 
-- `DocumentStep` / `PositionMap` — blocked by D2; snapshot history stays.
-- `DocumentSchema` / `BlockSpec` / `MarkSpec` — `Document+Invariants.swift` already
-  enforces the listed checks, and extension blocks have no first consumer.
-- Persistence source-of-truth choice — the round-trip criterion is now fixed by
-  [ADR 0013](../ADR/0013-markdown-format-boundary.md). Markdown does not preserve
-  `BlockID`s or source spelling; a later persistence ADR must decide whether to accept that
-  discontinuity or choose a native archive or hybrid/sidecar.
-- HTML artifact and image blocks — consuming-product requirements that cannot yet be
-  expressed as engine-verifiable completion criteria. GFM tables are not a permanent
-  product non-goal: [#50](https://github.com/hot666666/Slopad/issues/50) first expands the
-  Core table vocabulary, after which the Markdown adapter adds lossless table support.
-  The completed codec deliberately returns the typed `.table` diagnostic until that Core
-  contract exists.
+Exit: an ordinary host can integrate, persist, focus, resize, and customize supported
+chrome without touching raw callbacks, viewport ownership, TextKit graphs, model/layout
+internals, or development hooks.
 
-## Achieved Baseline
+### P1 — Define structured clipboard and block interaction
 
-- The headless `EditorSession` facade is the host-facing surface.
-- Committed content and structure changes publish a Session-local monotonic revision. A
-  host can read a viewport-independent full canonical `EditorDocumentSnapshot` on demand;
-  selection, scrolling, layout, and live IME composition do not publish persistence
-  changes.
-- Review-before-apply integrations can capture an `EditorDocumentContextSnapshot` and
-  submit an `EditorDocumentPatch` full post-image. Its opaque source exact-CASes Session
-  epoch, committed revision, and selection; composition and stale sources are typed
-  rejections. Valid changed post-images commit as one model transaction and one update,
-  while exact no-ops create no revision or history. Mutable content canonicality is
-  checked with typed rollback, and deep hierarchy/cycle validation is iterative.
-- The SwiftPM target split is complete. `SlopadEngine` composes `SlopadEditorModel` and
-  `SlopadBlockLayout`; those two targets do not import each other.
-- `SlopadCoreModel` contains public vocabulary, backend seams, package canonical document
-  values, and the narrow package-only input-rule value contract shared by Markdown syntax
-  data and the editor-model runner.
-- The opt-in `SlopadMarkdown` target pins `swift-markdown` 0.8.0 exactly and exposes
-  stateless typed-throws decode and encode over fresh depth-first `[EditorBlockInput]`
-  values. Its AST stays behind `internal import Markdown`; unsupported syntax produces
-  nonempty typed diagnostics and no partial blocks or partial output. A separate downstream
-  fixture applies decoded output unchanged through an inactive-selection
-  `EditorDocumentPatch` and `EditorSession`.
-- Built-in typed Markdown shortcuts use the separate internal `SlopadMarkdownInputRules`
-  target, not the parser-backed codec. It supplies bounded block-prefix and inline pattern
-  data; the editor-model runner applies the chosen core effect in the same transaction as
-  the completed input. Multi-character replacements evaluate once from their final character
-  so IME commit works. The separately classified paste command routes through `insertText`
-  and evaluates the pasted string once as well. An unmatched backtick opener keeps its candidate literal and
-  suppresses other inline shortcuts until an equal-length closing run arrives. Whole-document
-  decode remains opt-in.
-- `SlopadAppKit` is the recommended ordinary macOS host product and import. It curates
-  the default AppKit controller, action, style, chrome, document, selection, update, and
-  snapshot vocabulary without becoming a runtime owner.
-- `SlopadAppKitTextKit` provides the AppKit/TextKit2-based measurement, line fragment,
-  caret/selection rect, hit-test, Unicode navigation, and drawing backend.
-- The default `BlockHeightIndexStorage` implementation is RBTree-backed. Array storage is
-  not the default for structural-mutation-heavy paths.
-- The viewport-driven lazy initial layout baseline is in place. Large documents exact-
-  measure blocks around the viewport and start the rest from cached/estimated heights.
-- The `SlopadAppKitUI` target provides the reusable AppKit view/controller/input/render
-  adapter assembled by `SlopadAppKit`. Its product remains available for advanced and
-  compatibility integrations. The adapter also handles edge autoscroll near the
-  top/bottom of the viewport during block selection rectangles, gutter block selection,
-  and block reorder.
-- AppKit block appearance customization is a chrome-only public contract. Host renderers
-  can draw backgrounds, borders, gutters, and markers, while the adapter always owns
-  TextKit2 fragment-based text drawing with effective live composition, followed by
-  text-selection and caret feedback after clipped and isolated host chrome passes.
-- Public AppKit `resetDocument` and `scrollDocument` actions are synchronized boundaries.
-  Reset updates the replacement document and native surface before returning; scroll
-  updates viewport, visible snapshot, canvas, and observers without discarding live
-  marked text or stealing focus. Unsynchronized batching helpers remain package-only.
-- Programmatic default-adapter editing uses context-free `AppKitEditorAction` values via
-  `perform(_:)`; the controller supplies its current viewport when a command needs it.
-  `commitActiveComposition()` provides the explicit persistence/document-lifecycle flush.
-  Raw `EditorInputEvent` and `currentViewport` are not public controller APIs.
-- `AppKitEditorViewController` owns one coherent `AppKitTextSystem`. One
-  `AppKitEditorStyle` value configures TextKit2 geometry, drawing, IME decoration, and
-  block chrome style together, including during runtime replacement.
-- `Fixtures/DownstreamAppKitHost` compile-checks the intended downstream API with one
-  `SlopadAppKit` product dependency and one regular import, and executes the public
-  context/patch round trip without underlying-module access.
-- `Fixtures/DownstreamSwiftUIHost` does the same for `SlopadSwiftUI`, covering what a
-  window-filling fixture cannot see: embedding as one subview, identity-guarded document
-  replacement, committed-change filtering, focus binding, and the composition flush before
-  a host reads the document to persist it.
-- [Architecture](ARCHITECTURE.md) records the compiler dependency graph, runtime owner
-  flow, chrome-only AppKit extension boundary, and complete adapter/backend replacement
-  path.
-- The AppKit path already routes native command selectors, IME/marked text, plain-text
-  copy/cut/paste, undo/redo, scroll reveal, text selection, block selection, block
-  selection rectangles, and selected-block drag/reorder through `EditorSession`.
-- Physical character movement and Unicode word movement/selection/deletion are resolved by
-  the active text backend against Session's effective text request; canonical selection,
-  block-boundary transitions, commands, and history remain engine-owned.
-- Bidirectional physical traversal keeps its layout-derived inline context in Session
-  runtime state only and invalidates it whenever the matching selection/request changes.
-- Custom adapters driving `EditorSession` directly still construct raw
-  `EditorInputEvent` values and pass `EditorViewport` where engine navigation commands
-  require it. That advanced Session surface is separate from the ordinary AppKit facade.
-- The editing model already supports block split/merge, indent/outdent, block movement,
-  block kind changes, todo toggling, snapshot-based undo/redo with a bounded budget, and
-  markdown prefix shortcuts for common block kinds.
-- The inline content model stores `strong`, `emphasis`, `code`, `strikethrough`, and `link`
-  marks; legacy `bold`/`italic` spellings decode to the format-neutral names. Public Session
-  commands toggle or clear them for a selection, caret-only styles live in transient
-  `EditorState.storedMarks`, and the TextKit backend consumes the resulting inline runs for
-  measurement and rendering.
-- The slash-only AppKit command overlay exposes a Session-owned block-command catalog and
-  applies its selection as one semantic transaction and undo step; suggestion UI remains
-  adapter runtime state, not canonical document state.
-- `TextKitPreparedLayoutStore` retains complete coherent TextKit layout graphs with
-  deterministic LRU eviction. The selected default is a 96-entry / 6 MiB estimated-cost
-  budget, protects the active text block, and exposes instrumentation for capacity and
-  pressure behavior. See [AppKit UI benchmark results](APPKIT_UI_BENCHMARK_RESULTS.md) for
-  the evidence and its limits.
-- The AppKit UI benchmark harness covers scroll, native insert, composition, height
-  expansion, block selection, block reorder, mixed interaction, subtree delete, and
-  subtree reorder plus runtime style replacement and Unicode navigation at
-  100/1000/10000 block scales. Unicode navigation also has a 100/1000/10000-grapheme
-  active-paragraph sweep.
+- Specify structured block copy/cut/paste, rich inline paste, and pasteboard format
+  negotiation separately from existing plain-text behavior.
+- Preserve block selection as the multi-block interaction model across selection
+  rectangles, drag/reorder, Enter, Escape, Delete, cut, copy, paste, and select-all.
+- Route accepted paste content through canonical inputs/transactions; pasteboard payloads
+  must not become a second document model.
 
-## Current Product Gaps
+Exit: every user-visible block interaction transition has an owner-level Session test and
+a real AppKit path; structured paste preserves supported tree/mark semantics atomically.
 
-These are not a request to rebuild existing behavior. They are the missing contracts
-needed before a host app can use the engine as a Notion/Craft-style editor surface.
+### P2 — Complete product command reachability
 
-- Product hosts may eventually need platform behavior beyond the default AppKit policy.
-  That is not a reason to expose raw key, IME, reveal, pointer, or paint hooks from
-  `SlopadAppKit`: each request must first be classified as a synchronized host action,
-  chrome/style customization, engine input contract, or a separate custom adapter need.
-- Clipboard support is currently plain text. Structured block copy/paste, rich inline
-  paste, and format negotiation with platform pasteboards are not yet modeled.
-- Session input exposes `toggleInlineStyle` and `clearInlineStyles`, including the real
-  AppKit `replaceText` path, and caret-only `storedMarks` apply to the next insertion. The
-  slash-only command menu is present; toolbar and generalized suggestion policy remain
-  separate product decisions.
-- Physical character and linguistic word navigation now use the text backend, but native
-  soft-line beginning/end commands still resolve to logical block start/end. A complete
-  bidi insertion contract must also decide whether a backend secondary insertion location
-  needs platform-neutral state beyond the current transient inline navigation context.
-- Block kind transforms exist inside `EditorModel`; prefix shortcuts and the slash menu
-  exercise the supported command path. Toolbar transforms and todo checkbox product chrome
-  remain separate host-facing work.
-- The document is tree-capable, but collapsed subtree state, visible-order filtering,
-  selection behavior, reveal behavior, and copy/paste behavior for collapsed content are
-  not implemented.
-- Markdown decode and encode exist as opt-in format adapters. Product import/export UX and
-  structured clipboard policy remain separate from parser-free typing shortcuts.
+- Add toolbar reachability and todo checkbox product chrome without moving mutation
+  semantics out of `EditorModel`/`EditorSession`.
+- Decide whether generalized suggestions need a public policy contract or remain separate
+  adapter UI; the current slash runtime stays non-canonical.
+- Keep command selection and presentation distinct from command definition/application.
 
-## Next Direction
+Exit: product UI can reach supported block and inline commands through Session, with one
+transaction/undo per command and no public model internals.
 
-These are long-range capability buckets, not the active issue queue.
+### P3 — Add import/export UX and choose persistence identity
 
-- P0 - AppKit integration contract hardening
-  - Stabilize the reusable AppKit host surface before adding large product features.
-  - Keep public visual customization limited to `AppKitEditorStyle` and
-    `AppKitBlockChromeRenderer`; keep controller actions and observers synchronized host
-    operations rather than arbitrary policy hooks.
-  - Keep `SlopadAppKit` as the ordinary one-product/one-import integration path while the
-    underlying Engine, UI adapter, and TextKit2 backend products remain advanced seams.
-  - Add new ordinary programmatic operations as context-free `AppKitEditorAction` cases
-    or explicit synchronized controller actions; do not return raw viewport ownership to
-    the host.
-  - Keep native key mapping, IME transport, reveal, pointer routing, fragment drawing,
-    focus, scroll, and surface synchronization inside the default adapter. Semantic
-    editing behavior stays behind `EditorSession`.
-  - When a host needs a different native pipeline or policy model, use a separate platform
-    adapter with a coherent backend instead of widening the default high-level paint
-    surface.
-  - Add a host-facing capability only when it passes all three parts of the ADR 0012
-    exposure test; "a host would find this convenient" is not sufficient.
-  - Contract regression gate: **both** `Fixtures/DownstreamAppKitHost` and
-    `Fixtures/DownstreamSwiftUIHost` continue to build without `@testable`, direct
-    underlying-product dependencies, package-only controller state, raw callbacks, or
-    development hooks. A fixture that compiles while avoiding the difficult path is not a
-    gate, so each exercises the full mount → edit → observe → flush → replace → unmount
-    sequence.
-  - Completion signal: downstream hosts can use synchronized actions plus chrome/style
-    customization without reaching into native adapter internals, `EditorModel`,
-    `BlockLayout`, layout cache, or canonical `Document`.
+- Build caller-owned Markdown import/export UX and failure handling on top of the existing
+  fail-closed codec; do not add lossy fallback inside `SlopadMarkdown`.
+- Decide in a persistence ADR whether storage uses a native archive, Markdown plus a
+  sidecar, or accepts fresh identities on reload.
+- Add GFM table support only after the Core table vocabulary in
+  [#50](https://github.com/hot666666/Slopad/issues/50) has a real owner and invariants.
 
-- P1 - Block interaction UX contract
-  - Turn the existing block selection, selection rectangle, drag/reorder, Enter, Escape,
-    Delete, cut, copy, paste, and select-all behavior into an explicit product contract.
-  - Define structured block copy/paste semantics separately from existing plain-text
-    clipboard behavior.
-  - Preserve the current model that multi-block work is block selection, not cross-block
-    text ranges.
-  - Completion signal: each user-visible block selection transition has a Session test and
-    a real AppKit verification path.
+Exit: import/export behavior is explicit, diagnostics reach product UX, and persistence
+identity/selection/reference consequences are documented and tested.
 
-- P2 - Product command surface and slash discovery
-  - Inline formatting reachability, caret `storedMarks`, and the command vocabulary split
-    are complete, as is the slash-only command catalog and AppKit menu for block
-    transforms. Toolbar UI and generalized suggestion triggers remain separate work.
-  - Keep canonical `BlockKind`, `BlockContent.InlineMark`, and `EditorModel` command owners;
-    product UI selects commands and routes them through `EditorSession` rather than owning
-    mutation semantics.
-  - Completion signal: the slash menu applies a block command as one transaction and one undo
-    without exposing `EditorModel` or storing suggestion UI state canonically.
+### P4 — Design collapsed subtrees
 
-- P3 - Structured paste and Markdown import/export
-  - The dependency boundary and the round-trip guarantee are settled in
-    [ADR 0013](../ADR/0013-markdown-format-boundary.md): `swift-markdown` lives behind
-    `SlopadMarkdown` alone, its exact 0.8.0 dependency requires a Swift 6.2-or-later
-    resolving toolchain, and round-trip is semantic rather than byte-exact. `BlockID`s do
-    not survive it; the later persistence ADR decides whether Markdown-only storage may
-    accept that discontinuity or needs a native archive or sidecar.
-  - The codec preserves supported block trees and inline marks, produces fresh IDs on
-    decode, and fails closed with typed UTF-8 source or block diagnostics. Product
-    import/paste policy remains caller work.
-  - Keep markdown as import/export format and input shortcut syntax, not canonical state.
-  - Add structured block paste before broad markdown import/export if product editing
-    needs copy/paste workflows first.
-  - Preserve inline marks and block tree structure when Markdown can represent them. The
-    codec fails closed with typed diagnostics for unsupported constructs; choosing a
-    separate plain-text paste fallback is caller policy, not a lossy codec behavior.
-  - Completion signal: paste/import behavior round-trips through canonical `Document` and
-    has focused engine tests plus AppKit pasteboard coverage.
+- Decide whether collapsed state is canonical document content, host preference, or
+  Session runtime before implementation.
+- Update visible order, selection, reveal, hit testing, render, clipboard, drag/drop, and
+  benchmarks as one coherent feature.
 
-- P4 - Collapsed subtree feature
-  - Add collapsed state without making collapsed visibility canonical document content
-    unless the owner decision proves it should be stored there.
-  - Update visible-order, selection, reveal, hit-test, render, copy/paste, drag/drop, and
-    benchmark scenarios for collapsed content.
-  - Completion signal: collapsed subtrees change visible layout and interaction behavior
-    without corrupting canonical tree structure or block selection semantics.
+Exit: collapsed content changes visibility and interaction without corrupting canonical
+tree structure or creating two collapse owners.
 
-- P5 - Performance gates for product UX
-  - Extend the existing 100/1000/10000 AppKit and session benchmark coverage as new UX
-    paths land.
-  - Define thresholds for ordinary typing, composition, text selection, block selection,
-    structured paste, collapsed subtree reveal, and subtree reorder.
-  - Keep ordinary typing bounded around changed blocks and structural editing bounded by
-    ordered diff range where possible.
-  - Re-check blockID-based measurement invalidation cost in large caches and design a
-    secondary cache-key index only if measured data shows it is needed.
-  - Explore coalescing or delta strategies to reduce snapshot undo/redo memory cost.
+### P5 — Close native text and performance gaps
 
-- P6 - Platform expansion
-  - Design a UIKit adapter only after the AppKit adapter contract is stable enough to be a
-    reusable reference.
-  - Preserve the `EditorSession` semantic boundary and `BlockTextLayoutProtocol` seam when
-    adding a platform adapter or text backend beyond AppKit/TextKit2.
+- Resolve native soft-line beginning/end behavior; it currently falls back to logical
+  block boundaries.
+- Decide whether secondary bidi insertion location needs an additional platform-neutral
+  transient fact beyond the current navigation context.
+- Extend 100/1,000/10,000-scale gates for structured paste, collapsed reveal, and new
+  product interactions. Add cache indices or history coalescing only after measurements
+  show the need.
+
+Exit: new UX paths have explicit correctness scenarios and measured thresholds, with
+ordinary typing/composition remaining bounded around changed content.
+
+### P6 — Expand platforms
+
+- Design UIKit or another native adapter only after the AppKit contract is stable enough
+  to serve as a reference.
+- Preserve `EditorSession` semantics and the coherent text-layout capability seam rather
+  than sharing platform objects.
+
+Exit: the new adapter proves the same owner boundaries and native behavior through its own
+platform-hosted tests and fixtures.
 
 ## Open Risks
 
-- TextKit2 geometry is sensitive to OS/font/layout-manager behavior, so unit tests should
-  focus on invariants.
-- If the AppKit facade or UI adapter accumulates too many convenience features, platform
-  code can start owning engine semantics again. The facade should curate synchronized
-  host contracts, and the adapter should stay focused on callback translation, drawing,
-  and focus/scroll sync.
-- Treating block appearance customization as a partial text renderer would split the
-  geometry pipeline and can duplicate or suppress text, selection, caret, or marked-text
-  feedback. Complete replacement belongs in a separate adapter/backend pair.
-- If public product commands are added by exposing internal `EditorModel` or `BlockLayout`
-  types, the host-facing Session boundary will regress.
-- Structured paste can easily become a second canonical model. Paste/import should always
-  normalize into the tree-capable `Document`/`Block` store.
-- Collapsed subtree state needs an owner decision before implementation. Treating it as
-  both canonical document content and runtime visibility policy would create conflicting
-  sources of truth.
-- Full-rebuild layout remains the correctness baseline, but large documents need both
-  incremental layout and viewport-driven lazy measurement paths.
-- Snapshot undo/redo is simple and correct, but memory cost can become high for large
-  documents.
-- Parser-free Markdown shortcuts and the opt-in fail-closed codec are implemented, but
-  broad product import/export UX and rich/structured paste are still separate features.
+- TextKit2 geometry varies with OS, font, and layout-manager behavior; unit tests should
+  assert invariants and real UI paths should cover native interaction.
+- Convenience APIs can pull semantics into `SlopadAppKit`/`SlopadAppKitUI`; apply the
+  ADR 0012 host-surface test before widening them.
+- A partial text-renderer hook would split measurement, geometry, and drawing. Full text
+  replacement requires a coherent adapter/backend pair.
+- Structured paste, collapsed state, or Markdown persistence can each accidentally become
+  a second canonical model if ownership is not decided first.
+- Full-rebuild layout remains the correctness baseline; large documents still require
+  measured incremental and viewport-driven strategies.
+- Snapshot undo/redo is simple and correct but may need a measured memory strategy for
+  large documents.

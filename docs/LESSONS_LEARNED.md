@@ -200,6 +200,55 @@ Next time:
 - Keep readability cleanup limited to currently relevant files and meaningful owner
   splits.
 
+### Combining Typed-Input Rules with a Whole-Document Codec
+
+Symptom: ordinary typing starts depending on a parser AST, or import/export behavior leaks
+into per-keystroke transactions.
+
+Cause: typed shortcuts and document conversion were treated as one Markdown feature even
+though they have different callers, cost, failure policy, and transaction boundaries.
+
+Next time:
+
+- Keep parser-free pattern data in `SlopadMarkdownInputRules` and let `EditorModel` own
+  gating and atomic application.
+- Keep `SlopadMarkdown` stateless and opt-in over public `[EditorBlockInput]` values.
+- Treat typing syntax and document conversion as two integrations even when they recognize
+  similar spelling.
+
+### Promoting Runtime Overlays into Canonical State
+
+Symptom: slash query, IME composition, drag preview, focus, or viewport state appears in
+the stored document or model history.
+
+Cause: a short-lived value was classified by what it displays instead of by the exact
+source revision, selection, responder, or gesture that keeps it valid.
+
+Next time:
+
+- Keep semantic transient state in `EditorSession` and native transient state in the
+  platform adapter.
+- Publish only the presentation facts needed by the consumer and invalidate them when
+  their source no longer matches.
+- Classify every new value as canonical, runtime, derived, or projection before choosing
+  its owner.
+
+### Keying a Coherent Text Cache with an Unrelated Revision
+
+Symptom: cache correctness depends on callers remembering to bump a revision, or separate
+text facts can come from different effective content/style inputs.
+
+Cause: a revision convention was used instead of the values that determine layout, or
+measurement was cached separately from fragments, hit testing, caret geometry, navigation,
+and drawing.
+
+Next time:
+
+- Key prepared layout by the effective `BlockMeasureRequest` values and text style.
+- Reuse one complete prepared TextKit graph for every capability derived from that key,
+  with deterministic bounded eviction.
+- Require "same cache key" to imply "same complete layout input" by construction.
+
 ## Pre-Work Checklist
 
 Do not edit yet if you cannot answer these questions before starting cleanup/refactor
