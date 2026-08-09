@@ -155,8 +155,7 @@ public final class AppKitEditorViewController: NSViewController {
     public var editorStyle: AppKitEditorStyle {
         textSystem.style
     }
-    /// Complete current canonical content, independent of the current viewport. Live
-    /// marked content can be present before this snapshot's revision advances.
+    /// Complete committed canonical content, independent of the current viewport.
     /// `resetDocument` replaces the Session and starts this snapshot's revision at zero.
     public var documentSnapshot: EditorDocumentSnapshot {
         session.documentSnapshot
@@ -954,10 +953,7 @@ public final class AppKitEditorViewController: NSViewController {
     }
 
     private func syncNativeSurface(snapshot: EditorSessionSnapshot, makeFirstResponder: Bool) {
-        activeInputController.sync(
-            activeTextInput: snapshot.activeTextInput,
-            composition: snapshot.composition
-        )
+        activeInputController.sync(activeTextInput: snapshot.activeTextInput)
         focusNativeSurfaceIfRequested(
             snapshot: snapshot,
             makeFirstResponder: makeFirstResponder

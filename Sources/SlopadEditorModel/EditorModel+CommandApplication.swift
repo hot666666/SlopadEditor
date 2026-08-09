@@ -1,21 +1,5 @@
 import SlopadCoreModel
 
-// MARK: - Live Transaction
-
-/// An owner-issued handle for canonical edits that are visible immediately but become one
-/// history entry only when the coordinating runtime closes the group.
-package struct EditorLiveTransaction {
-    fileprivate let before: EditorState
-    fileprivate var after: EditorState
-    fileprivate var changedBlockIDs: Set<BlockID> = []
-    fileprivate var operations: [EditorOperation] = []
-
-    fileprivate init(state: EditorState) {
-        before = state
-        after = state
-    }
-}
-
 // MARK: - EditorModel CommandApplication
 
 extension EditorModel {
@@ -26,70 +10,7 @@ extension EditorModel {
 
     @discardableResult
     package func apply(_ entries: [EditorTransactionEntry]) -> EditorCommandResult {
-        let execution = execute(entries)
-        guard let transaction = execution.transaction else { return execution.result }
-        record(transaction)
-        return execution.result
-    }
-
-    package func beginLiveTransaction() -> EditorLiveTransaction {
-        EditorLiveTransaction(state: state)
-    }
-
-    @discardableResult
-    package func apply(
-        _ command: EditorCommand,
-        in liveTransaction: inout EditorLiveTransaction
-    ) -> EditorCommandResult {
-        apply([.command(command)], in: &liveTransaction)
-    }
-
-    @discardableResult
-    package func apply(
-        _ entries: [EditorTransactionEntry],
-        in liveTransaction: inout EditorLiveTransaction
-    ) -> EditorCommandResult {
-        let execution = execute(entries)
-        guard let transaction = execution.transaction else { return execution.result }
-        liveTransaction.after = transaction.after
-        liveTransaction.changedBlockIDs.formUnion(transaction.change.changedBlockIDs)
-        liveTransaction.operations.append(contentsOf: transaction.change.operations)
-        return execution.result
-    }
-
-    @discardableResult
-    package func commit(
-        _ liveTransaction: EditorLiveTransaction
-    ) -> EditorCommandOutcome? {
-        let documentChanged = !liveTransaction.before.document.hasSameCanonicalContent(
-            as: liveTransaction.after.document
-        )
-        guard
-            documentChanged
-                || liveTransaction.before.selection != liveTransaction.after.selection
-                || liveTransaction.before.storedMarks != liveTransaction.after.storedMarks
-        else { return nil }
-
-        let transaction = EditorTransaction(
-            before: liveTransaction.before,
-            after: liveTransaction.after,
-            change: EditorChange(
-                documentChanged: documentChanged,
-                changedBlockIDs: liveTransaction.changedBlockIDs,
-                operations: liveTransaction.operations
-            )
-        )
-        record(transaction)
-        return EditorCommandOutcome(
-            selectionBefore: transaction.selectionBefore,
-            change: transaction.change
-        )
-    }
-
-    private func execute(
-        _ entries: [EditorTransactionEntry]
-    ) -> (result: EditorCommandResult, transaction: EditorTransaction?) {
-        guard !entries.isEmpty else { return (.notApplicable, nil) }
+        guard !entries.isEmpty else { return .notApplicable }
         let beforeState = state
         var operations: [EditorOperation] = []
         var changed: Set<BlockID> = []
@@ -108,7 +29,7 @@ extension EditorModel {
             guard documentChanged || beforeState.selection != selection
                 || beforeState.storedMarks != state.storedMarks || !operations.isEmpty
             else {
-                return (.notApplicable, nil)
+                return .notApplicable
             }
 
             let transaction = EditorTransaction(
@@ -120,26 +41,20 @@ extension EditorModel {
                     operations: operations
                 )
             )
+            undoStack.append(transaction)
+            trimUndoStackToBudget()
+            redoStack.removeAll()
             assertDocumentValidInDebug()
             let outcome = EditorCommandOutcome(
                 selectionBefore: transaction.selectionBefore,
                 change: transaction.change
             )
-            return (
-                documentChanged ? .document(outcome) : .selectionOnly(outcome),
-                transaction
-            )
+            return documentChanged ? .document(outcome) : .selectionOnly(outcome)
         } catch {
             state = beforeState
             assertDocumentValidInDebug()
-            return (.notApplicable, nil)
+            return .notApplicable
         }
-    }
-
-    private func record(_ transaction: EditorTransaction) {
-        undoStack.append(transaction)
-        trimUndoStackToBudget()
-        redoStack.removeAll()
     }
 
     private func perform(
@@ -155,15 +70,6 @@ extension EditorModel {
             try replaceText(
                 blockID: blockID, range: range, text: text, operations: &operations,
                 changed: &changed)
-
-        case .replaceCompositionText(let blockID, let range, let text):
-            try replaceCompositionText(
-                blockID: blockID,
-                range: range,
-                text: text,
-                operations: &operations,
-                changed: &changed
-            )
 
         case .deleteText(let blockID, let range):
             try deleteText(

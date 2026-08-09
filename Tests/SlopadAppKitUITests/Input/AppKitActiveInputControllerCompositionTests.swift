@@ -71,7 +71,7 @@ struct AppKitActiveInputControllerCompositionTests {
                     ),
                     .updateComposition(
                         blockID: blockID,
-                        replacementRange: TextRange(1, 4),
+                        replacementRange: TextRange(1, 2),
                         text: "pq"
                     ),
                     .activeTextSelectionChanged(
@@ -159,12 +159,14 @@ struct AppKitActiveInputControllerCompositionTests {
         #expect(
             owner.receivedEvents.suffix(2)
                 == [
-                    .updateComposition(
-                        blockID: blockID,
-                        replacementRange: TextRange(1, 4),
-                        text: "X"
+                    .cancelComposition,
+                    .command(
+                        .replaceText(
+                            blockID: blockID,
+                            range: TextRange(1, 2),
+                            text: "X"
+                        )
                     ),
-                    .commitComposition,
                 ]
         )
         #expect(snapshot.composition == nil)

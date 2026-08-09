@@ -282,7 +282,6 @@ struct EditorSessionDocumentSnapshotTests {
                 )
             )
         )
-        let liveSnapshot = session.documentSnapshot
         let liveSelection = try #require(
             session.handleInput(
                 .activeTextSelectionChanged(blockID: blockID, selectedRange: .point(2))
@@ -292,7 +291,7 @@ struct EditorSessionDocumentSnapshotTests {
             session.handleInput(
                 .updateComposition(
                     blockID: blockID,
-                    replacementRange: TextRange(1, 2),
+                    replacementRange: .point(1),
                     text: "각"
                 )
             )
@@ -304,8 +303,6 @@ struct EditorSessionDocumentSnapshotTests {
         #expect(selection.committedDocumentRevision == nil)
         #expect(layout.committedDocumentRevision == nil)
         #expect(begin.committedDocumentRevision == nil)
-        #expect(liveSnapshot.revision.rawValue == 0)
-        #expect(liveSnapshot.blocks.first?.content.text == "H가i")
         #expect(liveSelection.committedDocumentRevision == nil)
         #expect(update.committedDocumentRevision == nil)
         #expect(committed.revision.rawValue == 1)

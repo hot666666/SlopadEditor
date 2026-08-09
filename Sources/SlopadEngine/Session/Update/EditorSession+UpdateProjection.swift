@@ -43,12 +43,9 @@ extension EditorSession {
         )
     }
 
-    func markLayoutDirty(
-        for change: EditorChange?,
-        recordsCommittedDocumentChange: Bool = true
-    ) -> EditorUpdateInvalidation {
+    func markLayoutDirty(for change: EditorChange?) -> EditorUpdateInvalidation {
         guard let change else { return EditorUpdateInvalidation() }
-        if recordsCommittedDocumentChange, change.documentChanged {
+        if change.documentChanged {
             recordDocumentChange()
         }
         let invalidations = Self.projectInvalidations(for: change)

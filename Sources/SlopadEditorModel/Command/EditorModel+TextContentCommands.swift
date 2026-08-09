@@ -107,52 +107,6 @@ extension EditorModel {
         operations: inout [EditorOperation],
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
-        try replaceText(
-            blockID: blockID,
-            range: range,
-            text: text,
-            applyingInputRules: true,
-            operations: &operations,
-            changed: &changed
-        )
-    }
-
-    func replaceCompositionText(
-        blockID: BlockID,
-        range: TextRange,
-        text: String,
-        operations: inout [EditorOperation],
-        changed: inout Set<BlockID>
-    ) throws(EditorCommandAbort) {
-        if case .text(let selection) = state.selection, !selection.isSingleBlock {
-            guard let span = resolveTextSpan(selection) else { throw .abort }
-            try replaceCrossBlockText(
-                in: span,
-                with: text,
-                applyingInputRules: false,
-                operations: &operations,
-                changed: &changed
-            )
-            return
-        }
-        try replaceText(
-            blockID: blockID,
-            range: range,
-            text: text,
-            applyingInputRules: false,
-            operations: &operations,
-            changed: &changed
-        )
-    }
-
-    private func replaceText(
-        blockID: BlockID,
-        range: TextRange,
-        text: String,
-        applyingInputRules: Bool,
-        operations: inout [EditorOperation],
-        changed: inout Set<BlockID>
-    ) throws(EditorCommandAbort) {
         guard !range.isEmpty || !text.isEmpty else { throw .abort }
         guard state.document.containsBlock(blockID) else { throw .abort }
         // This — not `insertText` — is what an ordinary keystroke and an IME commit arrive
@@ -161,8 +115,8 @@ extension EditorModel {
         // final character because IME commits need that behavior. Paste is separately routed
         // through `insertText`, where the pasted string is likewise evaluated once.
         let armedMarks = state.storedMarks
-        let shouldCaptureInputCandidate = applyingInputRules
-            && (inputRuleRunner.mayMatch(committedText: text) || text == "/")
+        let shouldCaptureInputCandidate = inputRuleRunner.mayMatch(committedText: text)
+            || text == "/"
         var inputRuleCandidate: EditorInputRuleCandidate?
         try requireDocumentMutationSuccess(
             state.document.updateContent(blockID: blockID) { content in
@@ -182,7 +136,7 @@ extension EditorModel {
         let newOffset = range.lowerBound + text.count
         state.selection = .caret(blockID: blockID, offset: newOffset)
         changed.insert(blockID)
-        if applyingInputRules, !text.isEmpty {
+        if !text.isEmpty {
             try applyInputRulesIfNeeded(
                 committedText: text, blockID: blockID, candidate: inputRuleCandidate,
                 operations: &operations, changed: &changed)
@@ -213,7 +167,6 @@ extension EditorModel {
     private func replaceCrossBlockText(
         in span: ResolvedTextSpan,
         with replacementText: String,
-        applyingInputRules: Bool = true,
         operations: inout [EditorOperation],
         changed: inout Set<BlockID>
     ) throws(EditorCommandAbort) {
@@ -226,9 +179,8 @@ extension EditorModel {
         }
 
         let armedMarks = state.storedMarks
-        let shouldCaptureInputCandidate = applyingInputRules
-            && (inputRuleRunner.mayMatch(committedText: replacementText)
-                || replacementText == "/")
+        let shouldCaptureInputCandidate = inputRuleRunner.mayMatch(committedText: replacementText)
+            || replacementText == "/"
         var mergedContent = startBlock.content
         mergedContent.delete(TextRange(span.start.offset, startBlock.content.length))
         appendSuffix(
@@ -281,7 +233,7 @@ extension EditorModel {
             blockID: span.start.blockID,
             offset: span.start.offset + replacementText.count
         )
-        if applyingInputRules, !replacementText.isEmpty {
+        if !replacementText.isEmpty {
             try applyInputRulesIfNeeded(
                 committedText: replacementText,
                 blockID: span.start.blockID,

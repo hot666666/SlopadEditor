@@ -60,7 +60,7 @@ struct EditorSessionTextBackendNavigationTests {
                     TextPosition(blockID: blockID, offset: 3, affinity: .downstream)
                 )
         )
-        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 3))
+        #expect(session.editorModel.selection == .caret(blockID: blockID, offset: 1))
         #expect(session.composition != nil)
     }
 

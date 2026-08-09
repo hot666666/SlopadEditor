@@ -25,9 +25,8 @@ public final class EditorSession {
         )
     }
 
-    /// Returns the complete current canonical document without viewport or composition
-    /// lifecycle metadata. Live marked content is present while its committed revision is
-    /// deferred until the composition history group closes.
+    /// Returns the complete committed canonical document without viewport or live
+    /// composition state.
     ///
     /// Unlike `documentContextSnapshot()` this never throws, so it stays readable while a
     /// native IME composition is in flight.
@@ -82,7 +81,6 @@ public final class EditorSession {
 
     var composition: TextComposition?
     var compositionSelection: TextSelection?
-    var compositionTransaction: EditorLiveTransaction?
     var blockDrag: (blockIDs: [BlockID], dropTarget: BlockDropTarget?, dropIndicator: EditorRect?)?
     var blockSelectionRectangle: (anchor: EditorPoint, current: EditorPoint)?
     var blockSelectionDragAnchor: BlockHitTestResult?
@@ -117,7 +115,6 @@ public final class EditorSession {
         self.textBackend = textLayouter
         self.composition = nil
         self.compositionSelection = nil
-        self.compositionTransaction = nil
         self.blockDrag = nil
         self.blockSelectionRectangle = nil
         self.blockSelectionDragAnchor = nil

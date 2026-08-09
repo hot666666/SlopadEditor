@@ -82,6 +82,7 @@ final class AppKitActiveInputController {
     private var sessionSelectedRange: SlopadEngine.TextRange?
     private var markedRange: NSRange?
     private var markedReplacementRange: NSRange?
+    private var markedDocumentText: String?
 
     // MARK: - Init
 
@@ -117,10 +118,7 @@ final class AppKitActiveInputController {
 
     // MARK: - Session Sync
 
-    func sync(
-        activeTextInput: EditorSessionActiveTextInputDescriptor?,
-        composition: TextComposition? = nil
-    ) {
+    func sync(activeTextInput: EditorSessionActiveTextInputDescriptor?) {
         let nextTextHostBlockID = activeTextInput?.renderDescriptor.measureRequest.blockID
         activeTextHostBlockID = nil
         syncGuard.performSessionSync {
@@ -134,20 +132,9 @@ final class AppKitActiveInputController {
                 selectedRange = NSRange(location: 0, length: 0)
                 sessionSelectedRange = nil
             }
-            if
-                let activeTextInput,
-                let composition,
-                composition.blockID
-                    == activeTextInput.renderDescriptor.measureRequest.blockID
-            {
-                let request = activeTextInput.renderDescriptor.measureRequest
-                let range = composition.replacementRange.textKitNSRange(in: request.text)
-                markedRange = range
-                markedReplacementRange = range
-            } else {
-                markedRange = nil
-                markedReplacementRange = nil
-            }
+            markedRange = nil
+            markedReplacementRange = nil
+            markedDocumentText = nil
         }
         activeTextHostBlockID = nextTextHostBlockID
     }
@@ -159,47 +146,22 @@ final class AppKitActiveInputController {
         sessionSelectedRange = nil
         markedRange = nil
         markedReplacementRange = nil
+        markedDocumentText = nil
     }
 
     // MARK: - Native Text Input
 
     func insertText(_ insertedText: String, replacementRange: NSRange) {
         guard syncGuard.shouldForwardNativeCallback, let activeTextHostBlockID else { return }
-        let documentText = markedRange == nil
-            ? (owner?.documentTextForNativeInput(blockID: activeTextHostBlockID) ?? text)
-            : text
+        let documentText =
+            markedDocumentText
+            ?? owner?.documentTextForNativeInput(blockID: activeTextHostBlockID)
+            ?? text
         let replacementRange =
             replacementRange.location == NSNotFound
             ? (markedReplacementRange ?? selectedRange)
             : replacementRange
-
-        if markedRange != nil,
-            let replacementTextRange = normalizedReplacementRange(
-                replacementRange,
-                in: documentText
-            ).slopadTextRange(in: documentText)
-        {
-            let replacementLeavesLiveTextUnchanged =
-                replacingText(documentText, in: replacementRange, with: insertedText)
-                == documentText
-            if !replacementLeavesLiveTextUnchanged {
-                guard
-                    owner?.handleNativeInputEvent(
-                        .updateComposition(
-                            blockID: activeTextHostBlockID,
-                            replacementRange: replacementTextRange,
-                            text: insertedText
-                        )
-                    ) != nil
-                else { return }
-            }
-            markedRange = nil
-            markedReplacementRange = nil
-            sessionSelectedRange = nil
-            owner?.handleNativeInputEvent(.commitComposition)
-            requestRender(makeFirstResponder: true, scrollSelectionIntoView: true)
-            return
-        }
+        clearComposition()
 
         applyNativeReplacement(
             insertedText,
@@ -216,9 +178,10 @@ final class AppKitActiveInputController {
     ) {
         guard syncGuard.shouldForwardNativeCallback, let activeTextHostBlockID else { return }
         let isBeginningComposition = markedRange == nil
-        let documentText = markedRange == nil
-            ? (owner?.documentTextForNativeInput(blockID: activeTextHostBlockID) ?? text)
-            : text
+        let documentText =
+            markedDocumentText
+            ?? owner?.documentTextForNativeInput(blockID: activeTextHostBlockID)
+            ?? text
         let replacementRange = normalizedReplacementRange(
             replacementRange.location == NSNotFound
                 ? (markedReplacementRange ?? selectedRange)
@@ -235,7 +198,8 @@ final class AppKitActiveInputController {
 
         text = replacingText(documentText, in: replacementRange, with: markedText)
         markedRange = NSRange(location: replacementRange.location, length: markedText.utf16.count)
-        markedReplacementRange = markedRange
+        markedReplacementRange = replacementRange
+        markedDocumentText = documentText
         selectedRange = NSRange(
             location: replacementRange.location + markedSelectedRange.location,
             length: markedSelectedRange.length
@@ -254,40 +218,25 @@ final class AppKitActiveInputController {
                 replacementRange: replacementTextRange,
                 text: markedText
             )
-        let compositionUpdate = owner?.handleNativeInputEvent(compositionEvent)
-        let compositionSelection: (blockID: BlockID, range: SlopadEngine.TextRange)?
-        if
-            let composition = compositionUpdate?.composition,
-            let relativeSelection = markedSelectedRange.slopadTextRange(in: markedText)
-        {
-            self.activeTextHostBlockID = composition.blockID
-            let range = SlopadEngine.TextRange(
-                composition.replacementRange.lowerBound + relativeSelection.lowerBound,
-                composition.replacementRange.lowerBound + relativeSelection.upperBound
-            )
-            compositionSelection = (composition.blockID, range)
-        } else {
-            compositionSelection = nil
-        }
-        if let effectiveSelection = compositionSelection
-            ?? selectedRange.slopadTextRange(in: text).map({ (activeTextHostBlockID, $0) })
-        {
+        owner?.handleNativeInputEvent(compositionEvent)
+        if let effectiveSelectedRange = selectedRange.slopadTextRange(in: text) {
             let update = owner?.handleNativeInputEvent(
                 .activeTextSelectionChanged(
-                    blockID: effectiveSelection.blockID,
-                    selectedRange: effectiveSelection.range
+                    blockID: activeTextHostBlockID,
+                    selectedRange: effectiveSelectedRange
                 )
             )
             if update != nil {
-                sessionSelectedRange = effectiveSelection.range
+                sessionSelectedRange = effectiveSelectedRange
             }
         }
-        requestRender(makeFirstResponder: true, preserveNativeSurface: false)
+        requestRender(makeFirstResponder: true, preserveNativeSurface: true)
     }
 
     func unmarkText() {
         markedRange = nil
         markedReplacementRange = nil
+        markedDocumentText = nil
         sessionSelectedRange = nil
         owner?.handleNativeInputEvent(.commitComposition)
         syncSelectionFromNativeSurface()
@@ -317,6 +266,7 @@ final class AppKitActiveInputController {
             self.sessionSelectedRange = nil
             self.markedRange = nil
             self.markedReplacementRange = nil
+            self.markedDocumentText = nil
         }
         owner?.handleNativeInputEvent(
             .command(
@@ -582,6 +532,7 @@ extension AppKitActiveInputController {
         sessionSelectedRange = nil
         markedRange = nil
         markedReplacementRange = nil
+        markedDocumentText = nil
 
         owner?.handleNativeInputEvent(
             .command(
@@ -609,6 +560,11 @@ extension AppKitActiveInputController {
             )
         )
         sessionSelectedRange = range
+    }
+
+    private func clearComposition() {
+        owner?.handleNativeInputEvent(.cancelComposition)
+        requestRender(makeFirstResponder: true, preserveNativeSurface: true)
     }
 
     // MARK: - Block Commands

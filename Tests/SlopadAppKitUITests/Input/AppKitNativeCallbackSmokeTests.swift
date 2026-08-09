@@ -72,7 +72,7 @@ struct AppKitNativeCallbackSmokeTests {
         )
     }
 
-    @Test("NSTextInputClient marked text는 canonical 문서를 live 갱신하고 revision은 한 번만 확정한다")
+    @Test("NSTextInputClient marked text는 commit 전 canonical 문서를 바꾸지 않고 한 번만 확정한다")
     func markedTextCommitsCanonicalDocumentOnce() throws {
         // Given
         let blockID: BlockID = "composition"
@@ -97,10 +97,10 @@ struct AppKitNativeCallbackSmokeTests {
             replacementRange: NSRange(location: NSNotFound, length: 0)
         )
 
-        // Then: marked text는 actual editing content지만 아직 committed revision은 없다.
+        // Then: marked text와 selection/rendering은 adapter에 보이지만 canonical 문서는 그대로다.
         #expect(host.controller.canvasView.hasMarkedText())
         #expect(host.controller.documentSnapshot.revision.rawValue == 0)
-        #expect(host.controller.documentSnapshot.blocks.first?.content.text == "A한")
+        #expect(host.controller.documentSnapshot.blocks.first?.content.text == "A")
         #expect(committedRevisions.isEmpty)
         #expect(host.controller.snapshot?.composition?.text == "한")
         #expect(host.controller.snapshot?.selection == .caret(blockID: blockID, offset: 2))
@@ -108,95 +108,21 @@ struct AppKitNativeCallbackSmokeTests {
             host.controller.snapshot?.visibleBlocks.first?.textRender.measureRequest.text == "A한"
         )
 
-        // When: 같은 native composition session이 marked text를 갱신한다.
-        host.controller.canvasView.setMarkedText(
-            "한국",
-            selectedRange: NSRange(location: 2, length: 0),
-            replacementRange: NSRange(location: NSNotFound, length: 0)
-        )
-
-        // Then
-        #expect(host.controller.documentSnapshot.revision.rawValue == 0)
-        #expect(host.controller.documentSnapshot.blocks.first?.content.text == "A한국")
-        #expect(committedRevisions.isEmpty)
-
         // When: AppKit의 일반적인 IME 확정 callback을 같은 native client에 전달한다.
         host.controller.canvasView.insertText(
-            "한국",
+            "한",
             replacementRange: NSRange(location: NSNotFound, length: 0)
         )
 
         // Then
         #expect(!host.controller.canvasView.hasMarkedText())
         #expect(host.controller.snapshot?.composition == nil)
-        #expect(host.controller.documentSnapshot.blocks.first?.content.text == "A한국")
+        #expect(host.controller.documentSnapshot.blocks.first?.content.text == "A한")
         #expect(committedRevisions.map(\.rawValue) == [1])
-        #expect(host.controller.snapshot?.selection == .caret(blockID: blockID, offset: 3))
+        #expect(host.controller.snapshot?.selection == .caret(blockID: blockID, offset: 2))
         #expect(
-            host.controller.snapshot?.visibleBlocks.first?.textRender.measureRequest.text == "A한국"
+            host.controller.snapshot?.visibleBlocks.first?.textRender.measureRequest.text == "A한"
         )
-    }
-
-    @Test("TN marked callback begin update commit은 survivor를 live 갱신하고 한 undo로 묶는다")
-    func crossBlockMarkedTextUsesLiveCanonicalTransaction() throws {
-        // Given
-        let a: BlockID = "tn-a"
-        let b: BlockID = "tn-b"
-        let selection = TextSelection(
-            anchor: TextPosition(blockID: b, offset: 3, affinity: .upstream),
-            focus: TextPosition(blockID: a, offset: 3, affinity: .downstream)
-        )
-        let host = NativeCallbackTestHost(
-            blocks: [
-                EditorBlockInput(id: a, content: BlockContent(text: "abcDEF")),
-                EditorBlockInput(id: b, content: BlockContent(text: "GHIjkl")),
-            ],
-            selection: .text(selection)
-        )
-        defer { host.close() }
-        host.controller.setFocused(true)
-        var committedRevisions: [EditorDocumentRevision] = []
-        host.controller.onUpdate = { update in
-            if let revision = update.committedDocumentRevision {
-                committedRevisions.append(revision)
-            }
-        }
-
-        // When
-        host.controller.canvasView.setMarkedText(
-            "한",
-            selectedRange: NSRange(location: 1, length: 0),
-            replacementRange: NSRange(location: NSNotFound, length: 0)
-        )
-
-        // Then
-        #expect(host.controller.documentSnapshot.blocks.map(\.content.text) == ["abc한jkl"])
-        #expect(host.controller.documentSnapshot.revision.rawValue == 0)
-        #expect(committedRevisions.isEmpty)
-        #expect(
-            host.controller.snapshot?.activeTextInput?.renderDescriptor.measureRequest.blockID
-                == a
-        )
-
-        // When
-        host.controller.canvasView.setMarkedText(
-            "한국",
-            selectedRange: NSRange(location: 2, length: 0),
-            replacementRange: NSRange(location: NSNotFound, length: 0)
-        )
-        host.controller.canvasView.insertText(
-            "한국",
-            replacementRange: NSRange(location: NSNotFound, length: 0)
-        )
-
-        // Then
-        #expect(host.controller.documentSnapshot.blocks.map(\.content.text) == ["abc한국jkl"])
-        #expect(committedRevisions.map(\.rawValue) == [1])
-        #expect(host.controller.snapshot?.selection == .caret(blockID: a, offset: 5))
-
-        _ = try #require(controllerUndo(host.controller))
-        #expect(host.controller.documentSnapshot.blocks.map(\.content.text) == ["abcDEF", "GHIjkl"])
-        #expect(host.controller.snapshot?.selection == .text(selection))
     }
 }
 
@@ -209,17 +135,10 @@ private final class NativeCallbackTestHost {
     let controller: AppKitEditorViewController
     let window: NSWindow
 
-    convenience init(blockID: BlockID, text: String, selection: EditorSelection) {
-        self.init(
-            blocks: [EditorBlockInput(id: blockID, content: BlockContent(text: text))],
-            selection: selection
-        )
-    }
-
-    init(blocks: [EditorBlockInput], selection: EditorSelection) {
+    init(blockID: BlockID, text: String, selection: EditorSelection) {
         _ = NSApplication.shared
         controller = AppKitEditorViewController(
-            blocks: blocks,
+            blocks: [EditorBlockInput(id: blockID, content: BlockContent(text: text))],
             selection: selection,
             focusOnAppear: false
         )
@@ -281,13 +200,4 @@ private final class NativeCallbackTestHost {
         window.contentViewController = nil
         window.close()
     }
-}
-
-@MainActor
-private func controllerUndo(_ controller: AppKitEditorViewController) -> EditorUpdate? {
-    controller.perform(
-        .undo,
-        makeFirstResponder: false,
-        scrollSelectionIntoView: false
-    )
 }

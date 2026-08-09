@@ -21,15 +21,14 @@ public struct EditorDocumentRevision: RawRepresentable, Hashable, Codable, Compa
 
 // MARK: - EditorDocumentSnapshot
 
-/// A viewport-independent projection of the complete current canonical document.
+/// A viewport-independent projection of the complete committed canonical document.
 ///
 /// `revision` is monotonically increasing for the lifetime of one `EditorSession`.
 /// Its revision advances only for committed canonical document mutations. Selection,
-/// layout, scrolling, and live IME updates do not advance it. During composition, `blocks`
-/// includes the live canonical marked content while `revision` remains the last committed
-/// value. A persistence host acts on `EditorUpdate.committedDocumentRevision` or commits
-/// composition before saving. Reading this value never throws; unlike
-/// `documentContextSnapshot()`, it remains available while composition is active.
+/// layout, scrolling, and live IME composition do not advance it.
+/// Reading this value never throws, so a host can capture it during live IME composition —
+/// the moment a persistence host most needs it, and the moment
+/// `documentContextSnapshot()` refuses to answer.
 ///
 /// Not `Codable`: `epoch` is meaningful only against a live Session in this process, and a
 /// decodable epoch would defeat the staleness check it exists for. Hosts persist `blocks`,

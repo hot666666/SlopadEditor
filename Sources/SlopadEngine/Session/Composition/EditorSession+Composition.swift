@@ -10,69 +10,6 @@ extension EditorSession {
             && activeTextPosition()?.blockID == blockID
     }
 
-    func beginComposition(
-        blockID: BlockID,
-        replacementRange: TextRange,
-        text: String
-    ) -> EditorUpdate? {
-        guard composition == nil, compositionTransaction == nil else { return nil }
-
-        var transaction = editorModel.beginLiveTransaction()
-        let result = editorModel.apply(
-            .replaceCompositionText(
-                blockID: blockID,
-                range: replacementRange,
-                text: text
-            ),
-            in: &transaction
-        )
-        guard result.isApplied, let markedRange = liveMarkedRange(for: text) else { return nil }
-
-        compositionTransaction = transaction
-        return setLiveComposition(
-            nextTextComposition(
-                blockID: markedRange.blockID,
-                replacementRange: markedRange.range,
-                text: text
-            ),
-            change: result.outcome?.change,
-            previousSelection: result.outcome?.selectionBefore
-        )
-    }
-
-    func updateComposition(
-        blockID: BlockID,
-        replacementRange: TextRange,
-        text: String
-    ) -> EditorUpdate? {
-        guard
-            let currentComposition = composition,
-            currentComposition.blockID == blockID,
-            var transaction = compositionTransaction
-        else { return nil }
-
-        let result = editorModel.apply(
-            .replaceCompositionText(
-                blockID: blockID,
-                range: replacementRange,
-                text: text
-            ),
-            in: &transaction
-        )
-        guard result.isApplied, let markedRange = liveMarkedRange(for: text) else { return nil }
-
-        compositionTransaction = transaction
-        return setLiveComposition(
-            nextTextComposition(
-                blockID: markedRange.blockID,
-                replacementRange: markedRange.range,
-                text: text
-            ),
-            change: result.outcome?.change,
-            previousSelection: result.outcome?.selectionBefore
-        )
-    }
-
     func commitCompositionForImplicitExitIfNeeded(
         compatibleWith selection: EditorSelection
     ) -> (previousSelection: EditorSelection?, invalidation: EditorUpdateInvalidation) {
@@ -84,19 +21,58 @@ extension EditorSession {
         }
 
         let previousSelection = activeEditorSelection
-        let invalidation = finishComposition(applyingCommittedInputRules: true)
-        return (previousSelection: previousSelection, invalidation: invalidation)
+        let clearInvalidation = clearComposition(currentComposition)
+        let commit = commitCompositionText(currentComposition)
+        var invalidation = clearInvalidation
+        invalidation.formUnion(commit.invalidation)
+        return (
+            previousSelection: previousSelection,
+            invalidation: invalidation
+        )
+    }
+
+    func setComposition(_ newComposition: TextComposition) -> EditorUpdate {
+        let previousSelection = activeEditorSelection
+        recordCompositionRevision(newComposition.compositionRevision)
+        var blockIDs: Set<BlockID> = [newComposition.blockID]
+        if let composition {
+            blockIDs.insert(composition.blockID)
+        }
+        composition = newComposition
+        compositionSelection = defaultCompositionSelection(for: newComposition)
+        textNavigationRuntimeContext = nil
+        let layoutInvalidation = BlockLayoutInvalidation(
+            blockIDs: blockIDs,
+            layoutGeometryChanged: true
+        )
+        blockLayout.markDirty(layoutInvalidation)
+        let invalidation = EditorUpdateInvalidation(
+            blockIDs: blockIDs,
+            layoutGeometryChanged: true
+        )
+        return makeEditorUpdate(
+            invalidation: invalidation,
+            previousSelection: previousSelection
+        )
     }
 
     func endComposition(commit: Bool) -> EditorUpdate {
-        guard composition != nil else {
+        guard let currentComposition = composition else {
             return makeEditorUpdate(invalidation: EditorUpdateInvalidation())
         }
         let previousSelection = activeEditorSelection
-        // AppKit reports the actual post-callback marked content before ending the lifecycle.
-        // Both commit and cancel therefore close the live history group; cancel does not
-        // restore a shadow document that AppKit no longer presents.
-        let invalidation = finishComposition(applyingCommittedInputRules: commit)
+        let clearInvalidation = clearComposition(currentComposition)
+
+        guard commit else {
+            return makeEditorUpdate(
+                invalidation: clearInvalidation,
+                previousSelection: previousSelection
+            )
+        }
+
+        let committed = commitCompositionText(currentComposition)
+        var invalidation = clearInvalidation
+        invalidation.formUnion(committed.invalidation)
         return makeEditorUpdate(
             invalidation: invalidation,
             previousSelection: previousSelection
@@ -113,28 +89,25 @@ extension EditorSession {
                 effectiveSelection,
                 for: currentComposition
             ),
-            normalizedSelection == effectiveSelection,
-            var transaction = compositionTransaction
+            normalizedSelection == effectiveSelection
         else { return nil }
 
         let previousSelection = activeEditorSelection
-        var invalidation = applyCommittedCompositionText(
-            currentComposition,
-            transaction: &transaction
-        )
-        let result = editorModel.apply(
-            [
-                .replaceSelection(editorSelection(for: effectiveSelection)),
-                .command(command),
-            ],
-            in: &transaction
-        )
-        guard result.isApplied else { return nil }
-        invalidation.formUnion(markLayoutDirtyWithoutCommit(for: result.outcome?.change))
+        let result = editorModel.apply([
+            .command(
+                .replaceText(
+                    blockID: currentComposition.blockID,
+                    range: currentComposition.replacementRange,
+                    text: currentComposition.text
+                )
+            ),
+            .replaceSelection(editorSelection(for: effectiveSelection)),
+            .command(command),
+        ])
+        guard let outcome = result.outcome else { return nil }
 
-        compositionTransaction = transaction
-        invalidation.formUnion(clearComposition(currentComposition))
-        commitCompositionHistory()
+        var invalidation = clearComposition(currentComposition)
+        invalidation.formUnion(markLayoutDirty(for: outcome.change))
         return makeEditorUpdate(
             invalidation: invalidation,
             previousSelection: previousSelection
@@ -156,6 +129,22 @@ extension EditorSession {
         return EditorUpdateInvalidation(blockIDs: blockIDs, layoutGeometryChanged: true)
     }
 
+    private func commitCompositionText(
+        _ currentComposition: TextComposition
+    ) -> (previousSelection: EditorSelection?, invalidation: EditorUpdateInvalidation) {
+        let command: EditorCommand
+        if case .text(let selection) = editorModel.selection, !selection.isSingleBlock {
+            command = .insertText(currentComposition.text)
+        } else {
+            command = .replaceText(
+                blockID: currentComposition.blockID,
+                range: currentComposition.replacementRange,
+                text: currentComposition.text
+            )
+        }
+        return applyCommandForUpdate(command)
+    }
+
     func normalizedCompositionSelection(
         _ selection: TextSelection,
         for composition: TextComposition
@@ -173,113 +162,22 @@ extension EditorSession {
         )
     }
 
-    func effectiveTextLength(for composition: TextComposition) -> Int? {
-        editorModel.document.block(composition.blockID)?.content.length
-    }
-
-    private func setLiveComposition(
-        _ newComposition: TextComposition,
-        change: EditorChange?,
-        previousSelection: EditorSelection?
-    ) -> EditorUpdate {
-        recordCompositionRevision(newComposition.compositionRevision)
-        var blockIDs: Set<BlockID> = [newComposition.blockID]
-        if let composition {
-            blockIDs.insert(composition.blockID)
-        }
-        composition = newComposition
-        compositionSelection = defaultCompositionSelection(for: newComposition)
-        textNavigationRuntimeContext = nil
-
-        var invalidation = markLayoutDirtyWithoutCommit(for: change)
-        invalidation.formUnion(
-            EditorUpdateInvalidation(
-                blockIDs: blockIDs,
-                layoutGeometryChanged: true
-            )
-        )
-        blockLayout.markDirty(
-            BlockLayoutInvalidation(
-                blockIDs: blockIDs,
-                layoutGeometryChanged: true
-            )
-        )
-        return makeEditorUpdate(
-            invalidation: invalidation,
-            previousSelection: previousSelection
-        )
-    }
-
-    private func finishComposition(
-        applyingCommittedInputRules: Bool
-    ) -> EditorUpdateInvalidation {
-        guard let currentComposition = composition else {
-            return EditorUpdateInvalidation()
-        }
-
-        var invalidation = EditorUpdateInvalidation()
-        if applyingCommittedInputRules, var transaction = compositionTransaction {
-            invalidation.formUnion(
-                applyCommittedCompositionText(
-                    currentComposition,
-                    transaction: &transaction
-                )
-            )
-            compositionTransaction = transaction
-        }
-        invalidation.formUnion(clearComposition(currentComposition))
-        commitCompositionHistory()
-        return invalidation
-    }
-
-    private func applyCommittedCompositionText(
-        _ currentComposition: TextComposition,
-        transaction: inout EditorLiveTransaction
-    ) -> EditorUpdateInvalidation {
-        let result = editorModel.apply(
-            .replaceText(
-                blockID: currentComposition.blockID,
-                range: currentComposition.replacementRange,
-                text: currentComposition.text
-            ),
-            in: &transaction
-        )
-        return markLayoutDirtyWithoutCommit(for: result.outcome?.change)
-    }
-
-    private func commitCompositionHistory() {
-        guard let transaction = compositionTransaction else { return }
-        compositionTransaction = nil
-        guard let outcome = editorModel.commit(transaction) else { return }
-        if outcome.change.documentChanged {
-            recordDocumentChange()
-        }
-    }
-
-    private func markLayoutDirtyWithoutCommit(
-        for change: EditorChange?
-    ) -> EditorUpdateInvalidation {
-        markLayoutDirty(for: change, recordsCommittedDocumentChange: false)
-    }
-
-    private func liveMarkedRange(for text: String) -> (blockID: BlockID, range: TextRange)? {
-        guard case .caret(let position) = editorModel.selection else { return nil }
-        let lowerBound = position.offset - text.count
-        guard lowerBound >= 0 else { return nil }
-        return (
-            position.blockID,
-            TextRange(lowerBound, position.offset)
-        )
-    }
-
     private func defaultCompositionSelection(
         for composition: TextComposition
-    ) -> TextSelection {
+    ) -> TextSelection? {
+        guard let block = editorModel.document.block(composition.blockID) else { return nil }
+        let replacementRange = composition.replacementRange.clamped(to: block.content.length)
         let position = TextPosition(
             blockID: composition.blockID,
-            offset: composition.replacementRange.upperBound
+            offset: replacementRange.lowerBound + composition.text.count
         )
         return TextSelection(anchor: position, focus: position)
+    }
+
+    func effectiveTextLength(for composition: TextComposition) -> Int? {
+        guard let block = editorModel.document.block(composition.blockID) else { return nil }
+        let replacementRange = composition.replacementRange.clamped(to: block.content.length)
+        return block.content.length - replacementRange.length + composition.text.count
     }
 
     private func clampedPosition(_ position: TextPosition, to textLength: Int) -> TextPosition {
