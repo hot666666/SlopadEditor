@@ -64,7 +64,7 @@ extension EditorModel {
         case .slashTrigger(let triggerRange):
             guard
                 triggerRange == TextRange(0, 1),
-                block.content.text == "/"
+                block.content.text.first == "/"
             else {
                 throw .abort
             }
