@@ -17,9 +17,10 @@ implemented baseline includes the headless Session/model/layout split, the curat
 and SwiftUI host surfaces, coherent TextKit2 capabilities and bounded prepared-layout
 reuse, inline marks and parser-free typed shortcuts, slash-only block commands, committed
 document snapshots, reviewable atomic document patches, and fail-closed Markdown
-decode/encode. ADR 0014's cross-block text selection is implemented with gesture-origin
-mode latching, viewport-bounded presentation/damage, D1–D7 editing semantics, and a
-versioned structured clipboard plus literal plain-text fallback.
+decode/encode. ADR 0014's non-IME cross-block text selection is implemented with
+gesture-origin mode latching, viewport-bounded presentation/damage, D1–D7 editing
+semantics, and a versioned structured clipboard plus literal plain-text fallback. Its
+decided live cross-block IME replacement policy is not implemented or product-verified.
 
 Do not reopen that work through a roadmap item. Verify exact current behavior in source
 and tests, and use the architecture map to find the owning path.
@@ -69,17 +70,22 @@ internals, or development hooks.
 - Exercise forward/reverse text and structural drags, empty-origin drag, autoscroll,
   Escape/Cmd-A, structured clipboard round trips, and caret/selection chrome manually in
   `SlopadDebugApp`.
-- Exercise installed Korean IME composition/cancel and candidate-window placement; the
-  native callback tests prove the producer-consumer path but not the installed input
-  source UI.
+- Repair installed Korean IME delivery so product events reach the existing composition
+  consumer. Direct `setMarkedText` tests prove only that consumer's callback contract, not
+  installed-input-method delivery.
+- After delivery is proven, implement ADR 0014's decided live cross-block IME replacement,
+  grouped history, commit/cancel, and candidate-window behavior against the real product
+  path. Do not infer product behavior from direct callback injection.
 - Resolve or isolate the Swift Testing helper's AppKit `NSWindow` teardown signal 11. A
   440-test focused Engine run and a 90-test focused AppKit run are recorded passing, but
   the AppKit target can still fail intermittently during teardown and the combined suite
   fails more often. Keep the passing owner runs as bounded evidence, not a stability
   claim, until the runner issue is closed.
 
-Exit: the implemented D1–D7 behavior has recorded manual visual/installed-IME evidence and
-the canonical repository-wide test entrypoint exits successfully in one process.
+Exit: the implemented non-IME D1–D7 behavior has recorded manual visual evidence, installed
+IME delivery reaches the consumer, the decided live replacement lifecycle is implemented
+and product-verified, and the canonical repository-wide test entrypoint exits successfully
+in one process.
 
 ### P2 — Complete product command reachability
 

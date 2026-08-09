@@ -6,10 +6,6 @@ Date: 2026-07-18
 
 Accepted
 
-Amended 2026-08-10 by [ADR 0014](0014-latch-selection-mode-and-support-cross-block-text.md):
-IME callbacks now update canonical editing content live while deferring the committed
-revision until the composition history group closes.
-
 ## Context
 
 Downstream document products need to persist the complete canonical block tree after an
@@ -40,25 +36,15 @@ exposes the same projection as `AppKitEditorViewController.documentSnapshot`; it
 `onUpdate` callback runs synchronously, so a downstream host can read and verify the
 matching snapshot before returning from the callback.
 
-Content edits, insertions, deletions, reorders, parent changes, undo, and redo advance the
-revision. Composition begin/update changes the current canonical blocks but remains inside
-one open history group, so it does not advance the externally committed revision. Explicit
-or implicit composition closure compares the final canonical document, selection, and
-stored marks with the state before composition. A difference records one grouped history
-item, and a document difference advances the committed revision once. Exact restoration of
-all three closes only the runtime composition: it records no history, publishes no revision,
-and leaves the existing redo branch intact. Cancellation follows the canonical
-post-callback content reported by AppKit and uses the same comparison. Selection, layout,
-render, scrolling, and compatible selection inside live composition do not by themselves
-advance the revision.
-`resetDocument` establishes a new Session baseline at revision zero and is not a user commit.
+Content edits, insertions, deletions, reorders, parent changes, undo, redo, and explicit or
+implicit IME commit advance the revision. Selection, layout, render, scrolling, compatible
+selection inside live composition, composition begin/update, and composition cancel do
+not. `resetDocument` establishes a new Session baseline at revision zero and is not a user
+commit.
 
-The full snapshot never contains viewport, selection, scroll, layout, marked-range, or
-composition-lifecycle metadata. Its blocks are the current canonical editing content, so a
-read during composition can contain live marked text while retaining the last committed
-revision. Persistence hosts act on `committedDocumentRevision` or flush composition first;
-they do not treat an arbitrary mid-composition read as a new committed snapshot. The value
-is `Sendable`; the mutable `EditorSession` remains confined to one executor.
+The full snapshot never contains viewport, selection, scroll, layout, or live composition
+state. It is a `Sendable` value; the mutable `EditorSession` remains confined to one
+executor.
 
 ## Consequences
 

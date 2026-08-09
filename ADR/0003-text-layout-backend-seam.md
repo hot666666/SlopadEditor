@@ -5,8 +5,6 @@ Date: 2026-07-08
 ## Status
 
 Accepted. Amended 2026-08-08 — see "Amendment: narrow contracts, one backend".
-Composition wording amended 2026-08-10 by
-[ADR 0014](0014-latch-selection-mode-and-support-cross-block-text.md).
 
 ## Context
 
@@ -30,25 +28,17 @@ default `SlopadAppKitUI` adapter. TextKit2 types do not belong in `SlopadEngine`
 `SlopadEditorModel`, or `SlopadBlockLayout`.
 
 The seam anchors a coherent geometry contract, not a height-only service or high-level
-paint hook. Marked-text callbacks apply their replacement to the canonical document through
-the model. `EditorSession` owns the still-live composition group, marked range, native
-selection projection, and candidate geometry; those runtime facts do not become document
-fields. BlockLayout measurement, Session geometry queries, and adapter drawing helpers then
-consume the same current canonical content and runtime selection facts. A complete
+paint hook. `EditorSession` owns the live composition overlay and supplies it to
+`BlockLayout`'s effective content projection. BlockLayout measurement, Session geometry
+queries, and adapter drawing helpers then consume the same effective request. A complete
 alternative pipeline therefore pairs a coherent backend with its own platform adapter
 around `EditorSession`.
 
-Selection inside marked text uses the same ownership rule. Marked offsets live in a Session
-runtime selection projection and are published through updates, snapshots, and active-input
-descriptors. `EditorModel.selection` stays in current canonical document coordinates.
-Begin and update mutate canonical content but do not publish a committed revision. Closing
-composition compares the final canonical document, selection, and stored marks with their
-pre-composition state. A difference records one grouped history item, and a document
-difference publishes one committed revision. Exact restoration closes the runtime group
-without history or revision and preserves the existing redo branch. Cancel uses the same
-comparison with the canonical content left by AppKit's callback result rather than restoring
-a shadow document. Closing composition discards the runtime marked-range and selection
-projection, not the already-applied canonical callback content.
+Selection inside marked text uses the same ownership rule. Effective composition offsets
+live in a Session runtime selection overlay and are projected through updates, snapshots,
+and active-input descriptors. `EditorModel.selection` stays in canonical document
+coordinates; commit, cancel, or an implicit composition exit discards the overlay before
+canonical mutation or selection replacement.
 
 Block-local text navigation is part of that coherent contract. Physical left/right
 movement, Unicode word boundaries, word deletion ranges, and pointer word selection depend

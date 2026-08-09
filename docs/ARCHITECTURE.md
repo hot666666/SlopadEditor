@@ -57,12 +57,12 @@ interchangeable.
 | --- | --- | --- | --- |
 | Canonical document | `SlopadEditorModel` stores types defined in `SlopadCoreModel` | block tree/order, `BlockID`, kind, text, inline marks | Changes only through validated model transactions |
 | Canonical editing state | `SlopadEditorModel` | caret/text/block selection, stored marks, history | Platform callbacks request transitions; they do not mutate it directly |
-| Session runtime | `EditorSession` | composition history group/marked range, composition selection, slash query/source revision, drag/navigation context | Cleared or invalidated when its exact source state no longer matches |
+| Session runtime | `EditorSession` | live composition, composition selection, slash query/source revision, drag/navigation context | Cleared or invalidated when its exact source state no longer matches |
 | Platform runtime | `SlopadAppKitUI` | responder, native marked range, scroll position, overlay widgets | Must converge on Session facts without becoming semantics |
 | Derived layout | `SlopadBlockLayout` and text backend | visible order, y/height index, prepared text layout, hit/caret/selection geometry | Rebuildable from canonical plus runtime inputs; never persisted as document state |
 | Render projection | `EditorSessionSnapshot` | visible blocks, active text input, overlays, total height | Viewport-scoped and disposable |
-| Persistence projection | `EditorDocumentSnapshot` | complete current canonical DFS block inputs and Session epoch/committed revision | Excludes selection, layout, viewport, scroll, and composition metadata; blocks can contain live marked callback content before the revision advances |
-| Review context | `EditorDocumentContextSnapshot` | full document, exact selection, selected content, opaque source | Short-lived CAS authority used only by `applyDocumentPatch(_:)`; capture and apply are unavailable during active composition |
+| Persistence projection | `EditorDocumentSnapshot` | complete canonical DFS block inputs and Session epoch/revision | Full-tree read; excludes selection, layout, viewport, scroll, and composition |
+| Review context | `EditorDocumentContextSnapshot` | full document, exact selection, selected content, opaque source | Short-lived CAS authority used only by `applyDocumentPatch(_:)` |
 
 Canonical value definitions living in `SlopadCoreModel` do not make that target the
 mutation owner. Likewise, a complete TextKit prepared graph is a derived cache entry, not
@@ -73,14 +73,20 @@ canonical editor state.
 The paths below identify the real producer-consumer direction. Each path must preserve the
 owner boundary even when optimized.
 
+The IME row describes the callback contract implemented after an event reaches
+`NSTextInputClient`. Direct `setMarkedText` tests exercise that consumer, but installed
+input-method events currently do not reach it in product use. The current consumer keeps a
+Session overlay until commit; installed delivery and the live replacement policy in ADR
+0014 remain unimplemented product work.
+
 | Interaction | Producer-to-consumer path | Invariant |
 | --- | --- | --- |
-| Typing/IME | AppKit callback → `SlopadAppKitUI` → `EditorSession.handleInput` → model live transaction → layout invalidation → snapshot → synchronized native surface | Marked callbacks update canonical content live in one history group; the committed revision and persistence notification advance only at composition commit |
+| Typing/IME | AppKit callback → `SlopadAppKitUI` → `EditorSession.handleInput` → model transaction → layout invalidation → snapshot → synchronized native surface | Composition is a Session overlay until commit; canonical selection stays in canonical coordinates |
 | Text pointer selection | AppKit point → Session pointer event → `SlopadBlockLayout` block hit → text backend grapheme hit → Session selection transition → snapshot | Backend returns facts; Session owns selection meaning |
 | Block selection/drag | AppKit gutter/body routing → Session runtime preview → layout drop/reveal geometry → model move transaction on successful drop | Preview is runtime state; only the final valid drop mutates the tree |
 | Slash command | Model typed-`/` rule → Session query/source runtime → snapshot anchor/catalog → AppKit overlay → Session CAS apply → one model transaction | Query/menu state is not canonical; `/query` deletion and kind change form one undo step |
 | Rendering/scroll | AppKit viewport → `EditorSession.render` → block visibility/layout → coherent text backend facts → render snapshot → AppKit surface sync | Only visible projection is rendered; it is not a persistence source |
-| Persistence | committed model change or composition commit → Session committed revision → host callback → on-demand `documentSnapshot` | Live marked callbacks can change snapshot blocks without this signal; hosts persist from the committed callback or flush composition first |
+| Persistence | model semantic change → Session committed revision → host callback → on-demand `documentSnapshot` | Revision is Session-local and signals when to read; it is not a storage revision |
 | Reviewed replacement | context snapshot → external review → complete patch → Session epoch/revision/selection CAS → model validation/replacement → layout/runtime invalidation | A changed post-image is one transaction; stale, invalid, or composing sources fail without partial mutation |
 | Markdown import/export | caller → `SlopadMarkdown` → fresh `[EditorBlockInput]` or deterministic text → optional Session patch | Codec AST never crosses its target and no conversion is implicit |
 

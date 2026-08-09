@@ -370,14 +370,15 @@ footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(-
 </nav>
 
 <header class="hero shell">
-  <div class="eyebrow">Slopad · implemented policy</div>
+  <div class="eyebrow">Slopad · selection policy · IME gap</div>
   <h1>선택 모드는 시작점에서 정하고,<br>끝까지 바꾸지 않는다.</h1>
   <p class="lede">텍스트에서 시작하면 블록 경계를 넘어 정확한 글자 위치까지 텍스트 선택. 구조 여백에서 시작하면 블록 선택. 상태별 액션 전이와 함께 toolbar·context menu·clipboard·link/comment UI가 selection policy를 복제하지 않도록 필요한 엔진 계약까지 정리했다.</p>
   <div class="status-row" aria-label="문서 상태">
     <span class="badge target">구현 정책</span>
     <span class="badge observed">Notion 실측 · 2026-08-09</span>
     <span class="badge user">사용자 규칙 반영</span>
-    <span class="badge conflict">D1–D7 구현 완료</span>
+    <span class="badge conflict">비-IME D1–D7 구현 완료</span>
+    <span class="badge open">IME 정책 확정 · 구현 차단</span>
     <span class="badge target">D1–D7 확정</span>
     <span class="badge target">고수준 UI 엔진 계약</span>
   </div>
@@ -409,7 +410,7 @@ footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(-
       <article class="panel state-card"><span class="state-code">TN</span><h3>Cross-block text</h3><p>서로 다른 블록의 anchor / focus</p></article>
       <article class="panel state-card"><span class="state-code">B</span><h3>Block selection</h3><p>명시적인 구조 단위 선택</p></article>
     </div>
-    <div class="composition-note"><span class="state-code">M</span><span><strong>Composition</strong>은 여섯 번째 selection mode가 아니다. callback마다 실제 편집 내용을 갱신하고, Session이 history와 외부 committed revision을 commit 시점까지 하나로 묶는다.</span></div>
+    <div class="composition-note"><span class="state-code">M</span><span><strong>Composition</strong>은 여섯 번째 selection mode가 아니다. callback마다 실제 편집 내용을 갱신하는 것은 결정된 미래 목표다. 현재 구현은 Session overlay를 commit 때 canonical content에 적용하며, 설치된 IME 입력은 아직 이 consumer에 도달하지 않는다.</span></div>
   </section>
 
   <section id="matrix" aria-labelledby="matrix-title">
@@ -426,6 +427,7 @@ footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(-
             <option value="observed">Notion 실측</option>
             <option value="user">사용자 확인</option>
             <option value="conflict">구현 완료</option>
+            <option value="blocked">정책 결정 · 구현 차단</option>
             <option value="unverified">실환경 미검증</option>
           </select>
         </label>
@@ -557,7 +559,7 @@ footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(-
     <div class="projection-grid" aria-label="구현 검증 단계">
       <article class="panel projection-card canonical"><span class="projection-owner">Gate 0–1</span><h3>정책 + Canonical</h3><p>문서 일치, exact DFS post-image, tree repair, one transaction, exact undo selection.</p><span class="projection-cost">Model owner tests</span></article>
       <article class="panel projection-card command"><span class="projection-owner">Gate 2–3</span><h3>Session + Adapter</h3><p>전체 전이표, visible-only projection, native sync, typed pasteboard 우선순위와 fallback.</p><span class="projection-cost">Engine/AppKit tests</span></article>
-      <article class="panel projection-card presentation"><span class="projection-owner">Gate 4</span><h3>Native + Visual</h3><p>NSWindow event와 NSTextInputClient callback, cross drag, caret blink, 실제 한글 IME 경계.</p><span class="projection-cost">DebugApp + smoke</span></article>
+      <article class="panel projection-card presentation"><span class="projection-owner">Gate 4</span><h3>Native + Visual</h3><p>NSWindow event와 직접 NSTextInputClient callback, cross drag, caret blink. 실제 한글 IME delivery는 미구현 product gate다.</p><span class="projection-cost">DebugApp + smoke</span></article>
       <article class="panel projection-card canonical"><span class="projection-owner">Gate 5</span><h3>Performance</h3><p>100/1,000/10,000 blocks의 정·역방향 drag와 autoscroll. offscreen span 비례 allocation 금지.</p><span class="projection-cost">UIBenchmarkApp</span></article>
       <article class="panel projection-card command"><span class="projection-owner">Gate 6</span><h3>Repository</h3><p>전체 test, diff check, AppKit/TextKit/UI/Debug/Benchmark products와 downstream host build.</p><span class="projection-cost">Baseline + fixtures</span></article>
       <article class="panel projection-card presentation"><span class="projection-owner">Final review</span><h3>Stable diff</h3><p>움직이지 않는 diff를 독립 검토하고 지적 수정 뒤 최종 diff를 다시 검토한다.</p><span class="projection-cost">Review → fix → re-review</span></article>
@@ -583,13 +585,13 @@ footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(-
       <article class="panel evidence-card">
         <h3>증거 한계</h3>
         <p>Notion contenteditable의 실제 pointer selection은 브라우저 자동화가 신뢰성 있게 구동하지 못했다. 이 부분은 제공된 스크린샷과 사용자 확정 규칙을 사용했다. 실제 IME 조합과 block-selection printable input도 자동화 결과를 정책 근거로 쓰지 않았다.</p>
-        <div class="scenario-evidence"><span class="badge user">pointer · user confirmed</span><span class="badge open">IME · live unverified</span></div>
+        <div class="scenario-evidence"><span class="badge user">pointer · user confirmed</span><span class="badge open">IME · policy decided / implementation blocked</span></div>
       </article>
     </div>
   </section>
 
   <section class="panel notice" aria-label="현재 구현 주의">
-    <strong>현재 코드는 이 표의 D1–D7 정책을 구현한다.</strong> text drag는 origin mode를 유지하고, Shift 탐색·mutation·clipboard·IME 확정·viewport-bounded damage가 같은 canonical selection을 사용한다. 설치된 IME 후보창과 최종 시각 검증 범위는 Markdown 정책 문서에 남아 있다.
+    <strong>현재 코드는 이 표의 비-IME D1–D7 정책을 구현한다.</strong> text drag는 origin mode를 유지하고, Shift 탐색·mutation·clipboard·viewport-bounded damage가 같은 canonical selection을 사용한다. 직접 marked-text callback은 기존 overlay contract만 검증하며, 설치된 IME delivery와 live replacement lifecycle은 구현·product 검증 전이다.
   </section>
 </main>
 
@@ -616,6 +618,7 @@ const evidenceMeta = {
   observed: ["Notion 실측", "observed"],
   user: ["사용자 확인", "user"],
   conflict: ["구현 완료", "conflict"],
+  blocked: ["정책 결정 · 구현 차단", "open"],
   unverified: ["실환경 미검증", "open"]
 };
 
@@ -635,7 +638,7 @@ const matrix = [
   { id:"clear", group:"transition", action:"Host clearSelection", evidence:["target"], cells:{I:"No-op",C:"I",T1:"I",TN:"I",B:"I"}, detail:"Escape의 단계별 전이와 구분되는 host API다. 현재 selection mode를 몰라도 한 번에 inactive가 된다.", notes:["포커스 해제 자체와 selection clear는 별도 host policy다."] },
   { id:"input", group:"editing", action:"Committed text", evidence:["target","observed","user","conflict"], cells:{I:"No-op",C:"Insert → C",T1:"Replace → C",TN:"Cross replace → C",B:"No-op"}, detail:"TN은 earlier endpoint block을 살리고 prefix + input + later suffix로 합친다. B의 printable input은 언어와 무관하게 무시한다.", notes:["forward/reverse drag의 document 결과는 같다.","모든 mutation과 selection placement는 한 transaction이다."] },
   { id:"plain-paste", group:"clipboard", action:"Plain-text paste", evidence:["target","user","conflict"], cells:{I:"No-op",C:"Literal insert → C",T1:"Literal replace → C",TN:"Literal cross replace → C",B:"Replace roots with paragraph"}, detail:"외부 문자열은 #, -, checkbox 문법이 있어도 Markdown으로 자동 해석하지 않고 문자 그대로 붙인다.", notes:["Markdown 변환은 명시적 import에서만 수행한다.","B paste는 명시적 명령이므로 printable input과 달리 선택 roots를 교체한다."] },
-  { id:"ime", group:"editing", action:"IME composition lifecycle", evidence:["target","user","conflict","unverified"], cells:{I:"No-op",C:"Live marked replacement",T1:"Same replacement",TN:"Live cross replacement; 1 undo group",B:"No-op"}, detail:"일반 입력과 같은 실제 편집 상태를 composition callback마다 갱신하되 하나의 composition/history session으로 묶는다. 별도 shadow document rollback은 만들지 않는다.", notes:["composition presentation은 canonical state가 아니다.","cancel 결과는 AppKit callback sequence를 따른다.","실제 입력기 후보창은 수동 UI 검증 대상이다."] },
+  { id:"ime", group:"editing", action:"IME composition lifecycle · future target", evidence:["target","user","blocked","unverified"], cells:{I:"Future: no-op",C:"Future: live marked replacement",T1:"Future: same live replacement",TN:"Future: live cross replacement; 1 undo group",B:"Future: no-op"}, detail:"결정된 미래 목표는 일반 입력과 같은 실제 편집 상태를 composition callback마다 갱신하고 하나의 composition/history session으로 묶는 것이다. 현재 구현은 composing 동안 Session effective-document overlay를 투영하고 commit 때 canonical content를 한 번 변경한다.", notes:["composition presentation은 canonical state가 아니다.","설치된 IME 입력은 현재 product use에서 composition consumer에 도달하지 않는다.","직접 setMarkedText 테스트는 callback contract만 증명한다.","future live replacement와 candidate-window behavior는 구현 차단 상태다."] },
   { id:"delete", group:"editing", action:"Backspace / Delete", evidence:["target","observed","user","conflict"], cells:{I:"No-op",C:"Native char / boundary rule",T1:"Delete range",TN:"Delete + merge endpoints",B:"Delete roots; all → empty paragraph"}, detail:"TN 삭제는 earlier block prefix와 later block suffix를 합치고 later/intermediate blocks를 제거한다. 삭제된 B의 선택 밖 자식은 B.parent로 승격한다.", notes:["모든 텍스트를 지우면 earlier block 하나가 empty로 남는다.","빈 중간 block도 제거된다.","B(all)은 첫 블록 identity를 유지한 empty paragraph + caret 0이다."] },
   { id:"enter", group:"editing", action:"Enter / Shift-Enter", evidence:["target","observed","user","conflict"], cells:{I:"No-op",C:"Split / soft break",T1:"Delete then split/break",TN:"Delete then split/break",B:"Enter → first end; Shift-Enter no-op"}, detail:"TN은 범위를 한 번에 collapse한 뒤 survivor에서 기존 split 또는 soft-break 명령을 수행한다. B Enter는 첫 선택 블록 끝 caret으로 가고 Shift-Enter는 B를 유지한다.", notes:["전체 결과는 한 transaction이다.","earlier endpoint의 kind와 identity가 생존한다."] },
   { id:"format", group:"editing", action:"Inline style", evidence:["target","observed","user","conflict"], cells:{I:"No-op",C:"Toggle stored mark",T1:"Style fragment",TN:"Style every fragment",B:"Style all selected block text"}, detail:"TN은 각 block-local fragment, B는 선택된 모든 text-capable block의 전체 text에 같은 command를 적용한다.", notes:["atomic block은 건너뛴다.","모두 on이면 remove, 하나라도 off면 apply한다.","B는 스타일 적용 뒤에도 B로 남는다."] },

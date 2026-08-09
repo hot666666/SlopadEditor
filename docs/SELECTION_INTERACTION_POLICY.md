@@ -1,6 +1,7 @@
 # Selection Interaction Policy
 
-Status: implemented; installed-IME/manual visual verification remains
+Status: non-IME policy implemented; live cross-block IME replacement is not implemented or
+product-verified
 
 Decided: 2026-08-09
 
@@ -10,8 +11,9 @@ Visual companion: [Selection interaction map](selection-interaction-map.html)
 
 This is the implementation-facing source of truth for caret, text selection, cross-block
 text selection, and block selection. Current source and tests are authoritative for the
-implemented behavior; this document records the policy they implement and the remaining
-manual verification boundary.
+implemented behavior. The IME rows remain the decided target, but installed input-method
+events currently do not reach the composition consumer in product use; direct
+`setMarkedText` tests prove the callback contract only, not installed-IME delivery.
 
 ## Evidence Labels
 
@@ -47,9 +49,10 @@ integer document position is forbidden.
 Focus and caret presentation do not add canonical states. A focused `C` uses AppKit's
 native caret blink cadence; `T1`, `TN`, and `B` show selection feedback rather than a
 blinking caret. Window/editor focus loss hides the caret but does not implicitly rewrite
-canonical selection. During `M`, callback updates replace the actual editing content while
-Session keeps one composition/history group and defers the externally committed revision
-until commit. Native marked-range presentation remains runtime state and is not persisted.
+canonical selection. The decided future `M` target replaces actual editing content during the
+callback lifecycle and groups its history. The current foundation instead keeps a Session
+composition overlay, projects it through layout, and mutates canonical content once on
+commit. Native marked-range presentation remains runtime state and is not persisted.
 
 ## Non-Negotiable Invariants
 
@@ -63,16 +66,19 @@ until commit. Native marked-range presentation remains runtime state and is not 
 4. **Direction is retained; mutation is direction-independent.** Reverse drag changes
    anchor/focus, not the document result.
 5. **One action, one history result.** A replacement, delete, cut, Enter, or formatting
-   command spanning blocks produces one transaction. Composition may receive several
-   native updates, but they form one history group. Closure records one history item only
-   when the final canonical document, selection, or stored marks differ from the
-   pre-composition state, and publishes one committed revision only for a document change.
-   Exact restoration closes runtime composition without history or revision and preserves
-   the existing redo branch.
+   command spanning blocks produces one transaction. In the future IME target, several
+   native updates would form one live history group; closure would record one history item
+   only when the final canonical document, selection, or stored marks differ from the
+   pre-composition state, and would publish one committed revision only for a document
+   change. The current implementation does not apply those updates to canonical content:
+   Session projects an effective-document overlay and commits it through one model
+   transaction. Exact overlay cancellation closes runtime composition without history or
+   revision and preserves the existing redo branch.
 6. **Rendering is viewport-bounded.** Canonical state stores two endpoints. Per-frame work
    derives only visible block-local ranges; full-span traversal is reserved for commands.
 7. **Input is language-independent.** Direct Latin input, committed Korean input, and any
-   other committed text use the same replacement policy. IME differs only in lifecycle.
+   other committed text use the same replacement policy. The future IME target differs only
+   in lifecycle; the current overlay implementation is not that live-replacement target.
 
 ## Pointer Origin Policy
 
@@ -113,7 +119,7 @@ validation requirement, not an unresolved product choice.
 | Committed text | No-op | Insert, then `C` after input | Replace range, then `C` | Cross-block replace, then `C` in the earlier endpoint survivor | No-op; printable input does not leave structural selection |
 | Plain-text paste | No-op | Insert literally, then `C` after input | Replace range literally, then `C` | Cross-block replace literally, then `C` in the earlier endpoint survivor | Replace selected roots with paragraph content; do not auto-decode Markdown |
 | Structured paste | No-op | Insert with the source-selection merge rules below | Same | Same | Replace selected roots with the copied roots/subtrees |
-| IME begin/update/commit/cancel | No-op | Native marked-text lifecycle; one history group | Same replacement semantics | Apply live replacement through the native composition lifecycle and group the session as one undo action | No-op, matching other printable input |
+| IME begin/update/commit/cancel — **future target, implementation blocked** | Future: no-op | Future: live marked-text lifecycle grouped as one history session | Future: same live replacement semantics | Future: live cross-block replacement grouped as one undo action | Future: no-op, matching other printable input |
 | Backspace / Delete | No-op | Native character or block-boundary deletion | Delete range | Delete normalized span and merge endpoints | Delete selected block roots; deleting every block leaves one empty paragraph with `C(0)` |
 | Enter | No-op | Existing block split/list-empty behavior | Delete selection, then split at the collapsed position | Cross-block replace with empty text, then run the existing split behavior | Exit `B` and place `C` at the canonical first selected block's end |
 | Shift-Enter | No-op | Insert soft line break | Replace range with soft line break | Cross-block replace with a soft line break | No-op; preserve `B` |
@@ -423,7 +429,8 @@ Built-in AppKit UI should first consume package fields on `EditorSessionSnapshot
 
 - `selectionPresentation` for visible fragments and geometry;
 - a future P2 `commandState` for availability/mixed values;
-- the existing singular `activeTextInput` for native IME/focus synchronization.
+- the existing singular `activeTextInput` for callback-contract composition/focus
+  synchronization. This does not prove installed-IME delivery.
 
 If a host-owned SwiftUI toolbar becomes a real supported use case, expose a curated,
 viewport-independent command state through `SlopadEditorModel` and a synchronized
@@ -495,7 +502,7 @@ The old-policy sites were migrated under their existing owners:
 | [`EditorModel+StructuredPasteCommands.swift`](../Sources/SlopadEditorModel/Command/EditorModel+StructuredPasteCommands.swift) | Applies fresh-ID structured forests using root-aware open-edge merging while preserving endpoint and middle subtrees. |
 | [`AppKitEditorViewController.swift`](../Sources/SlopadAppKitUI/AppKitEditorViewController.swift) | Classifies the origin once, keeps text/block drag modes distinct, and continues text selection during autoscroll. |
 | [`AppKitActiveInputController.swift`](../Sources/SlopadAppKitUI/AppKitActiveInputController.swift) | Negotiates typed plus plain clipboard representations, fail-closed paste fallback, and cut-after-write-success. |
-| Session/AppKit tests and UI benchmark | Cover forward/reverse `TN`, empty and atomic blocks, native text/gutter event paths, autoscroll, structured clipboard, IME commit/cancel, exact undo, and 100/1,000/10,000-block projection. |
+| Session/AppKit tests and UI benchmark | Cover forward/reverse `TN`, empty and atomic blocks, native text/gutter event paths, autoscroll, structured clipboard, direct callback-contract composition, exact undo, and 100/1,000/10,000-block projection. They do not prove installed-IME delivery or the unimplemented live IME policy. |
 
 `ResolvedTextSpan` is the shared command-time owner used by mutation, formatting,
 clipboard, selection escalation, and Assistant projection. Render-time code deliberately
@@ -513,11 +520,12 @@ uses prepared visible-order ranks instead of that full-span traversal.
 | `D6` | Undo/redo restores exact selection mode, anchor/focus direction, offsets, and affinity. |
 | `D7` | `B` Shift-Right enters first-character `T1`, Shift-Left is a no-op; `TN` indent/outdent acts on every touched block; atomic and collapsed subtree content participates logically and uses block tint when it has no text geometry. |
 
-### Implemented result — 2026-08-10
+### Implemented non-IME result — 2026-08-10
 
-- D1–D7 are implemented in `EditorModel`/`EditorSession`; the AppKit adapter owns only
-  physical hit classification, native callbacks, pasteboard negotiation, drawing, and
-  autoscroll.
+- D1–D7 are implemented for non-IME editing in `EditorModel`/`EditorSession`; the AppKit
+  adapter owns only physical hit classification, native callbacks, pasteboard negotiation,
+  drawing, and autoscroll. Direct composition callbacks retain the earlier overlay
+  implementation; the live cross-block IME replacement policy is not implemented.
 - `TN` remains two `TextPosition` endpoints. Visible selection and redraw damage use only
   prepared visible-order ranks; the 10,000-block regression tests assert viewport-bounded
   projection.
@@ -529,8 +537,10 @@ uses prepared visible-order ranks instead of that full-span traversal.
   failure described below, so this is recorded passing evidence rather than a claim that
   every rerun is stable. The deterministic UI benchmark covers forward/reverse text
   selection at 100, 1,000, and 10,000 blocks with empty blocks mixed in.
-- Installed input-source candidate-window behavior and visual inspection in
-  `SlopadDebugApp` remain manual evidence boundaries. The repository-wide Swift Testing
+- Installed input-method events currently do not reach the composition consumer in
+  `SlopadDebugApp`. Repairing and proving that delivery is future work, followed by
+  implementation and product verification of the decided live replacement policy. The
+  repository-wide Swift Testing
   helper can still terminate with an AppKit `NSWindow` teardown signal 11, most often
   when AppKit and SwiftUI suites share one process and occasionally in a focused AppKit
   rerun.
@@ -539,8 +549,8 @@ uses prepared visible-order ranks instead of that full-span traversal.
 - Caret review disposition: no change. Direct product use confirmed that AppKit's native
   automatic insertion indicator already has the intended idle and ordinary-input cadence.
   The currently unreachable installed-IME composition path is not a reason to add
-  speculative composition-specific caret suppression; validate it when that native path
-  is repaired.
+  speculative composition-specific caret suppression; validate it after native delivery
+  and composition semantics are implemented.
 - Collapsed subtrees remain a P4 feature because Slopad has no collapse state yet. D7 is
   the forward-compatible rule that feature must obey. Shared toolbar mixed-value and
   availability projection remains P2 and is not a second selection owner.
@@ -583,12 +593,13 @@ must include:
 
 ### Gate 2 — Session semantics and bounded projection
 
-Focused `SlopadEngineTests` must exercise every changed matrix row through
+Focused `SlopadEngineTests` must exercise every implemented matrix row through
 `EditorSession.handleInput`, including pointer-origin latching, separator-only keyboard
-steps, Escape, staged Cmd-A, `B` printable/IME no-op, `B` Enter/Shift-Enter, and typed
-clipboard payload routing. Rendering tests must prove that `TN` stores only endpoints and
-projects only visible block-local ranges while command-time operations still visit the
-complete logical span.
+steps, Escape, staged Cmd-A, `B` printable no-op, `B` Enter/Shift-Enter, and typed clipboard
+payload routing. A direct `B` composition-event no-op remains callback-contract coverage,
+not installed-IME delivery or implementation of the future live-replacement row. Rendering
+tests must prove that `TN` stores only endpoints and projects only visible block-local
+ranges while command-time operations still visit the complete logical span.
 
 ### Gate 3 — AppKit adapter and pasteboard negotiation
 
@@ -602,8 +613,8 @@ Focused `SlopadAppKitUITests` must enter through the production adapter and asse
 - a failed required pasteboard write prevents Cut deletion;
 - the focused `C` uses AppKit's native automatic insertion-indicator cadence and
   selection/unfocused states hide it. Ordinary-input behavior is accepted from direct
-  product use; composition-specific behavior remains part of the installed-IME boundary
-  rather than a speculative adapter rule.
+  product use; composition-specific behavior remains future work after installed-IME
+  delivery reaches the consumer rather than a speculative adapter rule.
 
 ### Gate 4 — native callback and visual behavior
 
@@ -611,8 +622,9 @@ Build and run `SlopadDebugApp`. The native callback smoke must use synthesized `
 delivery through `NSWindow.sendEvent(_:)` and real `NSTextInputClient` callbacks rather
 than calling semantic handlers directly. Manually inspect forward/reverse cross-block
 drag, empty gaps, autoscroll, Escape/Cmd-A, clipboard round trips, caret blink, and Korean
-composition/cancel. The marked-text smoke proves callback handling but is not evidence for
-the installed IME candidate window or physical keyboard path; report that manual boundary.
+composition/cancel after installed-IME delivery is repaired. The direct marked-text smoke
+proves callback handling only; it is not evidence that an installed input method reaches
+that consumer, nor that the decided live replacement policy is implemented.
 
 ### Gate 5 — performance and redraw
 
@@ -653,9 +665,11 @@ and downstream-build evidence as separate claims.
    navigation, including forward/reverse and empty-block tests.
 3. Add the viewport-bounded selection projection, visible-fragment damage, and focus-block
    native input contract.
-4. Route delete, paste, Enter, formatting, Escape, Cmd-A, and composition through the
-   shared range semantics. Shared command availability/mixed-state derivation stays P2
-   until the toolbar becomes its first real consumer.
+4. Route delete, paste, Enter, formatting, Escape, and Cmd-A through the shared range
+   semantics. Composition remains open until installed-IME delivery reaches the consumer;
+   then implement the decided live replacement lifecycle against that real path. Shared
+   command availability/mixed-state derivation stays P2 until the toolbar becomes its first
+   real consumer.
 5. Add clipboard-plan negotiation and kind-aware plain/structured serialization.
 6. Add built-in high-level UI only against the shared snapshot/action contracts; add a
    public host projection only when its first real consumer exists.

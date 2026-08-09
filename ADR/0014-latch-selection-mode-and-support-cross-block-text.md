@@ -6,11 +6,16 @@ Date: 2026-08-09
 
 Accepted
 
-Implementation: completed 2026-08-10
+Implementation: the non-IME selection, editing, clipboard, and rendering policy was
+completed 2026-08-10. The live cross-block IME replacement policy is not implemented or
+product-verified.
 
-Validation boundary: owner and native-callback suites plus the deterministic 100/1,000/
-10,000-block benchmark are complete. Installed-IME candidate-window and final manual
-visual inspection remain separate product evidence.
+Validation boundary: owner suites, direct native-callback contract tests, and the
+deterministic 100/1,000/10,000-block benchmark cover the implemented non-IME behavior.
+Direct `setMarkedText` calls prove how the existing callback consumer handles an overlay;
+they do not prove delivery from an installed input method. In current product use,
+installed-IME input does not reach the composition consumer, so routing, candidate-window
+behavior, and the decided live replacement policy remain future product work.
 
 ## Context
 
@@ -81,12 +86,18 @@ selected text fragments whether the range is within one block or crosses blocks.
 cross-block replacement is one canonical transaction and one undo step. Forward and
 reverse selections have the same document result.
 
-IME is not a separate product policy. Marked-text begin/update/commit/cancel uses the same
-replacement semantics through the native composition lifecycle. Each callback updates the
-actual editing content; Session groups those updates as one composition/history session
-and advances the externally committed revision only at commit. Marked-range geometry and
-candidate-window presentation remain runtime state. Cancellation follows the AppKit
-callback result instead of maintaining a shadow document solely for rollback.
+IME is not a separate product policy. The decided future target is for marked-text
+begin/update/commit/cancel to use the same replacement semantics through the native
+composition lifecycle: each callback would update the actual editing content, Session
+would group those updates as one composition/history session, and the externally committed
+revision would advance only at commit. Marked-range geometry and candidate-window
+presentation would remain runtime state, and cancellation would follow the AppKit callback
+result instead of maintaining a shadow document solely for rollback.
+
+That future target is not the current implementation. Today Session keeps an effective-
+document composition overlay while composing and mutates canonical content once at commit.
+Installed-IME events do not currently reach this consumer in product use; direct
+`setMarkedText` tests exercise the callback contract only.
 
 ### Block selection remains an explicit structural mode
 
@@ -127,13 +138,15 @@ exposure.
   logically touched block; a subsequent Escape clears block selection.
 - Cmd-A first expands text at its current scope, then escalates to whole-document block
   selection. Empty-block and cross-block details are normative in the policy document.
-- Source and tests implement the decision. The policy document records the closed migration
-  sites, focused evidence, benchmark scales, and remaining manual verification boundary.
+- Source and tests implement the non-IME decision. The policy document records the closed
+  non-IME migration sites, focused evidence, benchmark scales, and the unimplemented IME
+  delivery/replacement boundary.
 
-The implementation details that were initially left as gates are now settled in the
-normative policy: removed-endpoint children are promoted to the removed endpoint's parent;
-an all-block deletion retains one empty paragraph; printable and IME input are ignored in
-block selection; cross-block Enter/Shift-Enter use delete-then-existing-command semantics;
+The details that were initially left as gates are now settled in the normative policy:
+removed-endpoint children are promoted to the removed endpoint's parent; an all-block
+deletion retains one empty paragraph; printable input is ignored in block selection and
+future installed-IME input follows the same target; cross-block Enter/Shift-Enter use
+delete-then-existing-command semantics;
 clipboard uses versioned Slopad text-slice/block-subtree payloads plus literal plain text;
 history restores exact selection direction and affinity; and atomic or collapsed content
 participates logically with block tint where text geometry does not exist.
