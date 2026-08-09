@@ -6,6 +6,14 @@ source and tests define what the code does, and [ADRs](../ADR/README.md) explain
 choices. The [interactive architecture map](slopad-architecture-map.html) is the visual
 companion to this document; it is a projection, not a separate authority.
 
+The implemented cross-block selection contract lives in
+[Selection Interaction Policy](SELECTION_INTERACTION_POLICY.md) and
+[ADR 0014](../ADR/0014-latch-selection-mode-and-support-cross-block-text.md). Its
+[interactive transition map](selection-interaction-map.html) is a visual projection of
+that policy. Canonical two-endpoint selection belongs to `EditorModel`; Session resolves
+command spans and visible presentation; AppKit owns physical hit classification, native
+callbacks, drawing, pasteboard negotiation, and autoscroll.
+
 ## System Shape
 
 Slopad is a headless native block editor. Its canonical document is a tree of blocks;

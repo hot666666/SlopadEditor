@@ -21,3 +21,4 @@ the decisions that led to it.
 - [0011 - Provide reviewable atomic document transactions](0011-reviewable-atomic-document-transactions.md)
 - [0012 - Decide the host embedding surface by a three-part test](0012-host-embedding-contract.md)
 - [0013 - Depend on swift-markdown behind a format target, and guarantee semantic round-trip only](0013-markdown-format-boundary.md)
+- [0014 - Latch selection mode at gesture origin and support cross-block text](0014-latch-selection-mode-and-support-cross-block-text.md)
