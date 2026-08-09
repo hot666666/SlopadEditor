@@ -146,6 +146,55 @@ struct AppKitEditorViewControllerMouseTextSelectionTests {
         #expect(selection.focus.blockID == c)
     }
 
+    @Test("아래 block에서 위 block으로 drag하면 역방향 TN을 유지한다")
+    func reverseDragProducesCrossBlockTextSelection() throws {
+        // Given
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let c: BlockID = "c"
+        let controller = AppKitEditorViewController(
+            blocks: [
+                EditorBlockInput(id: a, content: BlockContent(text: "Alpha")),
+                EditorBlockInput(id: b, content: BlockContent(text: "Bravo")),
+                EditorBlockInput(id: c, content: BlockContent(text: "Charlie")),
+            ],
+            selection: .inactive,
+            focusOnAppear: false
+        )
+        controller.view.frame = NSRect(x: 0, y: 0, width: 640, height: 300)
+        controller.view.layoutSubtreeIfNeeded()
+        controller.renderAndSyncSurface(makeFirstResponder: false)
+        let snapshot = try #require(controller.snapshot)
+        let first = try #require(snapshot.visibleBlocks.first { $0.id == a })
+        let last = try #require(snapshot.visibleBlocks.first { $0.id == c })
+        let start = CGPoint(
+            x: last.textRender.frame.x + 32,
+            y: last.textRender.frame.midY
+        )
+        let end = CGPoint(
+            x: first.textRender.frame.x + 8,
+            y: first.textRender.frame.midY
+        )
+
+        // When
+        controller.handleMouseDown(documentPoint: start, clickCount: 1)
+        controller.handleMouseDragged(documentPoint: end)
+        controller.handleMouseUp(documentPoint: end)
+
+        // Then
+        guard case .text(let selection) = controller.snapshot?.selection else {
+            Issue.record("역방향 drag가 cross-block text selection을 남기지 않음")
+            return
+        }
+        #expect(selection.anchor.blockID == c)
+        #expect(selection.focus.blockID == a)
+        #expect(
+            controller.snapshot?.selectionPresentation.visibleTextSelections.map(\.blockID)
+                == [a, b, c]
+        )
+        #expect(controller.snapshot?.activeTextInput?.renderDescriptor.measureRequest.blockID == a)
+    }
+
     @Test("NSWindow gutter drag는 글자 위를 지나도 block selection 모드를 유지한다")
     func nativeWindowGutterDragProducesBlockSelection() throws {
         // Given

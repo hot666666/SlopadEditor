@@ -1040,7 +1040,7 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
 
         guard let cgContext = NSGraphicsContext.current?.cgContext else { return }
         let selectedBlockIDs = selectedBlockIDs(in: snapshot)
-        let activeTextBlockID = snapshot.activeTextInput?.renderDescriptor.measureRequest.blockID
+        let activeTextBlockID = activeChromeBlockID(in: snapshot)
         for rendered in snapshot.visibleBlocks {
             let isActive = rendered.id == activeTextBlockID
             let blockFrame = CGRect(editorRect: rendered.frame)
@@ -1502,6 +1502,15 @@ extension AppKitEditorViewController {
     private func selectedBlockIDs(in snapshot: EditorSessionSnapshot) -> Set<BlockID> {
         guard case .blocks(let selection) = snapshot.selection else { return [] }
         return Set(selection.blockIDs)
+    }
+
+    /// Cross-block text selection keeps its focus block as the native input host, but that
+    /// implementation detail must not make one endpoint look structurally selected.
+    private func activeChromeBlockID(in snapshot: EditorSessionSnapshot) -> BlockID? {
+        if case .text(let selection) = snapshot.selection, !selection.isSingleBlock {
+            return nil
+        }
+        return snapshot.activeTextInput?.renderDescriptor.measureRequest.blockID
     }
 
     private func selectedBlockIDs() -> Set<BlockID> {
