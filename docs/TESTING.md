@@ -85,15 +85,19 @@ debug builds; release retains the semantics-neutral inlined owner forwarding hel
 trace branch or payload. Each prefixed JSON record carries OS and declared source
 provenance; native callback records also carry the public
 `NSTextInputContext.selectedKeyboardInputSource` identifier when AppKit exposes it. The
-trace distinguishes canvas focus, key routing and the before/after
+trace distinguishes adapter-owned canvas focus transitions, key routing and the before/after
 `interpretKeyEvents` boundary, text callbacks and ranges, ActiveInput guard outcomes,
-emitted Session event/results, native-surface block synchronization, and `firstRect`
-request/result availability. Surface-sync records explicitly report that this diagnostic
-did not call `invalidateCharacterCoordinates`; the trace does not change that behavior.
+emitted Session event/results, native-surface block-token synchronization, and `firstRect`
+request/result availability. Actual `canvasIsFirstResponder` is sampled only on later key
+and text callback records, after AppKit has settled responder assignment. Surface-sync
+records explicitly report that this diagnostic did not call
+`invalidateCharacterCoordinates`; the trace does not change that behavior.
 
 No canonical document text or snapshot is written. Callback/key text is capped at 16
-characters with the full UTF-16 length and a truncation flag, so the log is still sensitive
-diagnostic output and should not be retained unnecessarily.
+characters with the full UTF-16 length and a truncation flag. Raw `BlockID` values are never
+serialized; a process-seeded 16-hex-character `blockToken` correlates records only within
+one app run and is intentionally unstable across runs. The log is still sensitive diagnostic
+output and should not be retained unnecessarily.
 
 A trace containing direct `setMarkedText` injection remains direct-callback evidence. An
 installed-IME claim additionally requires a real physical event and selected input source,

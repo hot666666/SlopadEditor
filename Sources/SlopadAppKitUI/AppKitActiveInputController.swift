@@ -146,7 +146,7 @@ final class AppKitActiveInputController {
                 AppKitNativeInputTraceEvent(
                     category: .nativeSurfaceSync,
                     phase: .before,
-                    blockID: nextTextHostBlockID?.rawValue,
+                    blockToken: AppKitNativeInputTraceBlockToken.make(nextTextHostBlockID),
                     syncDepth: syncGuard.currentDepth,
                     characterCoordinatesInvalidated: false
                 )
@@ -159,7 +159,7 @@ final class AppKitActiveInputController {
                     AppKitNativeInputTraceEvent(
                         category: .nativeSurfaceSync,
                         phase: .during,
-                        blockID: nextTextHostBlockID?.rawValue,
+                        blockToken: AppKitNativeInputTraceBlockToken.make(nextTextHostBlockID),
                         syncDepth: syncGuard.currentDepth,
                         characterCoordinatesInvalidated: false
                     )
@@ -185,7 +185,7 @@ final class AppKitActiveInputController {
                 AppKitNativeInputTraceEvent(
                     category: .nativeSurfaceSync,
                     phase: .after,
-                    blockID: activeTextHostBlockID?.rawValue,
+                    blockToken: AppKitNativeInputTraceBlockToken.make(activeTextHostBlockID),
                     syncDepth: syncGuard.currentDepth,
                     characterCoordinatesInvalidated: false
                 )
@@ -302,7 +302,7 @@ final class AppKitActiveInputController {
                     callback: .unmarkText,
                     outcome: .accepted,
                     reason: .callbackHasNoSyncGuard,
-                    blockID: activeTextHostBlockID?.rawValue,
+                    blockToken: AppKitNativeInputTraceBlockToken.make(activeTextHostBlockID),
                     syncDepth: syncGuard.currentDepth
                 )
             )
@@ -710,7 +710,7 @@ extension AppKitActiveInputController {
                     category: .editorEvent,
                     phase: .emitted,
                     editorEvent: AppKitNativeInputTraceEvent.EditorEventName(inputEvent),
-                    blockID: activeTextHostBlockID?.rawValue
+                    blockToken: AppKitNativeInputTraceBlockToken.make(activeTextHostBlockID)
                 )
             )
         #endif
@@ -722,7 +722,7 @@ extension AppKitActiveInputController {
                     phase: .result,
                     outcome: update == nil ? .refused : .handled,
                     editorEvent: AppKitNativeInputTraceEvent.EditorEventName(inputEvent),
-                    blockID: activeTextHostBlockID?.rawValue,
+                    blockToken: AppKitNativeInputTraceBlockToken.make(activeTextHostBlockID),
                     committedRevision: update?.committedDocumentRevision?.rawValue
                 )
             )
@@ -754,7 +754,7 @@ extension AppKitActiveInputController {
                     callback: callback,
                     outcome: accepted ? .accepted : .rejected,
                     reason: reason,
-                    blockID: activeTextHostBlockID?.rawValue,
+                    blockToken: AppKitNativeInputTraceBlockToken.make(activeTextHostBlockID),
                     syncDepth: syncGuard.currentDepth
                 )
             )

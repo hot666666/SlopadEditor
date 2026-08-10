@@ -1211,7 +1211,9 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
                     category: .firstRect,
                     phase: .before,
                     requestedRange: AppKitNativeInputTraceRange(range),
-                    blockID: activeInputController.activeBlockID?.rawValue,
+                    blockToken: AppKitNativeInputTraceBlockToken.make(
+                        activeInputController.activeBlockID
+                    ),
                     inputContextAvailable: editorCanvasView.inputContext != nil,
                     inputSourceID: editorCanvasView.inputContext?.selectedKeyboardInputSource
                 )
@@ -1229,7 +1231,9 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
                         requestedRange: AppKitNativeInputTraceRange(range),
                         resultRect: AppKitNativeInputTraceRect(.zero),
                         resultAvailable: false,
-                        blockID: activeInputController.activeBlockID?.rawValue,
+                        blockToken: AppKitNativeInputTraceBlockToken.make(
+                            activeInputController.activeBlockID
+                        ),
                         inputContextAvailable: editorCanvasView.inputContext != nil,
                         inputSourceID: editorCanvasView.inputContext?.selectedKeyboardInputSource
                     )
@@ -1247,7 +1251,9 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
                     requestedRange: AppKitNativeInputTraceRange(range),
                     resultRect: AppKitNativeInputTraceRect(result),
                     resultAvailable: true,
-                    blockID: activeTextInput.renderDescriptor.measureRequest.blockID.rawValue,
+                    blockToken: AppKitNativeInputTraceBlockToken.make(
+                        activeTextInput.renderDescriptor.measureRequest.blockID
+                    ),
                     inputContextAvailable: editorCanvasView.inputContext != nil,
                     inputSourceID: editorCanvasView.inputContext?.selectedKeyboardInputSource
                 )

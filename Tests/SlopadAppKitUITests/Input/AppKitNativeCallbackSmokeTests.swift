@@ -124,6 +124,88 @@ struct AppKitNativeCallbackSmokeTests {
             host.controller.snapshot?.visibleBlocks.first?.textRender.measureRequest.text == "A한"
         )
     }
+
+    #if DEBUG
+        @Test("mounted production callback은 direct trace wiring 순서를 보존한다")
+        func directCallbacksProduceOrderedProductionTrace() {
+            // Given: 설치된 IME가 아닌 canvas NSTextInputClient 직접 callback 증거다.
+            let blockID: BlockID = "trace-wiring"
+            let host = NativeCallbackTestHost(
+                blockID: blockID,
+                text: "A",
+                selection: .caret(blockID: blockID, offset: 1)
+            )
+            defer { host.close() }
+            var trace: [AppKitNativeInputTraceEvent] = []
+            host.controller.nativeInputTraceHandler = { trace.append($0) }
+            host.controller.setFocused(true)
+            trace.removeAll()
+
+            // When
+            host.controller.canvasView.setMarkedText(
+                "한",
+                selectedRange: NSRange(location: 1, length: 0),
+                replacementRange: NSRange(location: NSNotFound, length: 0)
+            )
+            host.controller.canvasView.insertText(
+                "한",
+                replacementRange: NSRange(location: NSNotFound, length: 0)
+            )
+
+            // Then
+            let records = trace.filter {
+                $0.category == .textCallback
+                    || $0.category == .activeInputGuard
+                    || $0.category == .editorEvent
+            }
+            #expect(
+                records.map(\.category)
+                    == [
+                        .textCallback,
+                        .activeInputGuard,
+                        .editorEvent,
+                        .editorEvent,
+                        .editorEvent,
+                        .editorEvent,
+                        .textCallback,
+                        .activeInputGuard,
+                        .editorEvent,
+                        .editorEvent,
+                        .editorEvent,
+                        .editorEvent,
+                    ]
+            )
+            #expect(
+                records.map(\.phase)
+                    == [
+                        .received,
+                        .result,
+                        .emitted,
+                        .result,
+                        .emitted,
+                        .result,
+                        .received,
+                        .result,
+                        .emitted,
+                        .result,
+                        .emitted,
+                        .result,
+                    ]
+            )
+            #expect(records[0].callback == .setMarkedText)
+            #expect(records[1].callback == .setMarkedText)
+            #expect(records[2].editorEvent == .beginComposition)
+            #expect(records[3].editorEvent == .beginComposition)
+            #expect(records[4].editorEvent == .activeTextSelectionChanged)
+            #expect(records[5].editorEvent == .activeTextSelectionChanged)
+            #expect(records[6].callback == .insertText)
+            #expect(records[7].callback == .insertText)
+            #expect(records[8].editorEvent == .cancelComposition)
+            #expect(records[9].editorEvent == .cancelComposition)
+            #expect(records[10].editorEvent == .replaceText)
+            #expect(records[11].editorEvent == .replaceText)
+        }
+    #endif
 }
 
 // MARK: - Native AppKit Host

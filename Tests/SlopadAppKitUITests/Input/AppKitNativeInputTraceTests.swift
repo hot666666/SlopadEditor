@@ -37,7 +37,9 @@
             )
             #expect(guardRecord.outcome == .accepted)
             #expect(guardRecord.reason == .forwarded)
-            #expect(guardRecord.blockID == owner.blockID.rawValue)
+            #expect(
+                guardRecord.blockToken == AppKitNativeInputTraceBlockToken.make(owner.blockID)
+            )
             #expect(guardRecord.syncDepth == 0)
 
             let beginRecords = trace.filter { $0.editorEvent == .beginComposition }
@@ -93,7 +95,7 @@
             )
             #expect(rejection.reason == .sessionSynchronization)
             #expect(rejection.syncDepth == 1)
-            #expect(rejection.blockID == nil)
+            #expect(rejection.blockToken == nil)
             #expect(owner.receivedEvents.isEmpty)
             #expect(inputController.activeText == "")
             let completedSync = try #require(
@@ -101,7 +103,9 @@
                     $0.category == .nativeSurfaceSync && $0.phase == .after
                 }
             )
-            #expect(completedSync.blockID == owner.blockID.rawValue)
+            #expect(
+                completedSync.blockToken == AppKitNativeInputTraceBlockToken.make(owner.blockID)
+            )
             #expect(completedSync.syncDepth == 0)
             #expect(completedSync.characterCoordinatesInvalidated == false)
         }
@@ -126,7 +130,10 @@
             let firstRectRecords = trace.filter { $0.category == .firstRect }
             #expect(firstRectRecords.map(\.phase) == [.before, .after])
             #expect(firstRectRecords.last?.resultAvailable == true)
-            #expect(firstRectRecords.last?.blockID == owner.blockID.rawValue)
+            #expect(
+                firstRectRecords.last?.blockToken
+                    == AppKitNativeInputTraceBlockToken.make(owner.blockID)
+            )
             #expect(firstRectRecords.last?.resultRect == AppKitNativeInputTraceRect(rect))
             #expect(actualRange == NSRange(location: 0, length: 0))
         }
@@ -143,6 +150,73 @@
             #expect(text.value == String(repeating: "한", count: 16))
             #expect(text.utf16Length == 20)
             #expect(text.truncated)
+        }
+
+        @Test("mounted canvas focus trace는 callback 시점의 adapter focus 상태를 기록한다")
+        func recordsMountedFocusTransitionState() throws {
+            // Given
+            _ = NSApplication.shared
+            let owner = NativeInputTraceRecordingOwner()
+            var trace: [AppKitNativeInputTraceEvent] = []
+            owner.controller.nativeInputTraceHandler = { trace.append($0) }
+            let window = AppKitTestWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 640, height: 240),
+                styleMask: [.borderless],
+                backing: .buffered,
+                defer: false
+            )
+            defer {
+                owner.controller.nativeInputTraceHandler = nil
+                window.orderOut(nil)
+                window.contentViewController = nil
+                window.close()
+            }
+            window.contentViewController = owner.controller
+            window.makeKeyAndOrderFront(nil)
+            owner.controller.view.frame = NSRect(x: 0, y: 0, width: 640, height: 240)
+            owner.controller.view.layoutSubtreeIfNeeded()
+            owner.controller.renderAndSyncSurface(makeFirstResponder: false)
+            window.makeFirstResponder(nil)
+            trace.removeAll()
+
+            // When
+            let became = window.makeFirstResponder(owner.controller.canvasView)
+            let resigned = window.makeFirstResponder(nil)
+
+            // Then
+            #expect(became)
+            #expect(resigned)
+            let focusRecords = trace.filter { $0.category == .focus }
+            #expect(focusRecords.map(\.phase) == [.became, .resigned])
+            #expect(focusRecords.map(\.outcome) == [.accepted, .accepted])
+            #expect(focusRecords.map(\.canvasHasKeyboardFocus) == [true, false])
+            #expect(focusRecords.allSatisfy { $0.canvasIsFirstResponder == nil })
+        }
+
+        @Test("content-derived multi-megabyte BlockID는 고정 길이 run-local token만 남긴다")
+        func boundsAndDoesNotDiscloseBlockID() throws {
+            // Given
+            let sensitivePrefix = "sensitive-content-derived-block-id:"
+            let rawBlockID = sensitivePrefix + String(repeating: "가", count: 1_100_000)
+            let blockID = BlockID(rawBlockID)
+
+            // When
+            let token = try #require(AppKitNativeInputTraceBlockToken.make(blockID))
+            let event = AppKitNativeInputTraceEvent(
+                category: .nativeSurfaceSync,
+                phase: .after,
+                blockToken: token
+            )
+            let encoded = try JSONEncoder().encode(event)
+            let json = try #require(String(data: encoded, encoding: .utf8))
+
+            // Then
+            #expect(token.count == AppKitNativeInputTraceBlockToken.characterCount)
+            #expect(token == AppKitNativeInputTraceBlockToken.make(blockID))
+            #expect(token.allSatisfy { $0.isHexDigit })
+            #expect(!json.contains(sensitivePrefix))
+            #expect(!json.contains("가"))
+            #expect(encoded.count < 512)
         }
     }
 

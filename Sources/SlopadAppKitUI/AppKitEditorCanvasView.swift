@@ -126,7 +126,7 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
                     category: .focus,
                     phase: .became,
                     outcome: accepted ? .accepted : .rejected,
-                    canvasIsFirstResponder: window?.firstResponder === self,
+                    canvasHasKeyboardFocus: hasKeyboardFocus,
                     inputContextAvailable: inputContext != nil,
                     inputSourceID: inputContext?.selectedKeyboardInputSource
                 )
@@ -148,7 +148,7 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
                     category: .focus,
                     phase: .resigned,
                     outcome: resigned ? .accepted : .rejected,
-                    canvasIsFirstResponder: window?.firstResponder === self,
+                    canvasHasKeyboardFocus: hasKeyboardFocus,
                     inputContextAvailable: inputContext != nil,
                     inputSourceID: inputContext?.selectedKeyboardInputSource
                 )

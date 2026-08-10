@@ -90,9 +90,10 @@
         package let requestedRange: AppKitNativeInputTraceRange?
         package let resultRect: AppKitNativeInputTraceRect?
         package let resultAvailable: Bool?
-        package let blockID: String?
+        package let blockToken: String?
         package let syncDepth: Int?
         package let committedRevision: UInt64?
+        package let canvasHasKeyboardFocus: Bool?
         package let canvasIsFirstResponder: Bool?
         package let inputContextAvailable: Bool?
         package let inputSourceID: String?
@@ -114,9 +115,10 @@
             requestedRange: AppKitNativeInputTraceRange? = nil,
             resultRect: AppKitNativeInputTraceRect? = nil,
             resultAvailable: Bool? = nil,
-            blockID: String? = nil,
+            blockToken: String? = nil,
             syncDepth: Int? = nil,
             committedRevision: UInt64? = nil,
+            canvasHasKeyboardFocus: Bool? = nil,
             canvasIsFirstResponder: Bool? = nil,
             inputContextAvailable: Bool? = nil,
             inputSourceID: String? = nil,
@@ -136,9 +138,10 @@
             self.requestedRange = requestedRange
             self.resultRect = resultRect
             self.resultAvailable = resultAvailable
-            self.blockID = blockID
+            self.blockToken = blockToken
             self.syncDepth = syncDepth
             self.committedRevision = committedRevision
+            self.canvasHasKeyboardFocus = canvasHasKeyboardFocus
             self.canvasIsFirstResponder = canvasIsFirstResponder
             self.inputContextAvailable = inputContextAvailable
             self.inputSourceID = inputSourceID
@@ -185,6 +188,20 @@
             y = rect.origin.y
             width = rect.size.width
             height = rect.size.height
+        }
+    }
+
+    // MARK: - Non-content Correlation
+
+    package enum AppKitNativeInputTraceBlockToken {
+        package static let characterCount = 16
+
+        package static func make(_ blockID: BlockID?) -> String? {
+            guard let blockID else { return nil }
+            var hasher = Hasher()
+            hasher.combine(blockID.rawValue)
+            let hexadecimal = String(UInt(bitPattern: hasher.finalize()), radix: 16)
+            return String(repeating: "0", count: characterCount - hexadecimal.count) + hexadecimal
         }
     }
 
