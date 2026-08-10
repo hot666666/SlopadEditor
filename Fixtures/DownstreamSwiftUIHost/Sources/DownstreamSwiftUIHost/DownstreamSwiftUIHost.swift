@@ -35,6 +35,7 @@ private struct DownstreamSwiftUIHost {
         let replacementBlockID: BlockID = "swiftui-replacement"
         let model = SlopadEditorModel()
         var committedChangeCount = 0
+        var callbackSnapshotRevisions: [UInt64] = []
         let initialDocument = SlopadDocument(
             id: "record-1",
             blocks: [
@@ -48,7 +49,15 @@ private struct DownstreamSwiftUIHost {
         func editor(document: SlopadDocument) -> SlopadEditor {
             SlopadEditor(model: model, document: document)
                 .editorStyle(AppKitEditorStyle())
-                .onCommittedChange { committedChangeCount += 1 }
+                .onCommittedChange {
+                    committedChangeCount += 1
+                    let snapshot = require(
+                        model.documentSnapshot,
+                        "Committed callback must observe its complete snapshot"
+                    )
+                    precondition(snapshot.revision == model.documentRevision)
+                    callbackSnapshotRevisions.append(snapshot.revision.rawValue)
+                }
                 .onUnhandledAction { $0 == .escape }
         }
 
@@ -75,15 +84,71 @@ private struct DownstreamSwiftUIHost {
             model.documentSnapshot?.blocks.first?.content.text == "Initial SwiftUI document"
         )
 
-        // A semantic action enters only through the public observable model after mount.
-        precondition(model.perform(.insertText(" edited")))
-        waitUntil("Committed SwiftUI edit was not observed") {
+        // A host-owned toolbar can send existing public actions without reading a public
+        // command-state projection. The formatting edit remains one transaction and one
+        // undo step through the same observable lifecycle surface.
+        precondition(model.perform(.selectAll))
+        precondition(model.perform(.toggleInlineStyle(.strong)))
+        waitUntil("SwiftUI formatting command was not observed") {
             committedChangeCount == 1 && model.documentRevision?.rawValue == 1
         }
+        precondition(callbackSnapshotRevisions == [1])
+        precondition(
+            model.documentSnapshot?.blocks.first?.content.marks == [
+                .init(kind: .strong, range: TextRange(0, 24))
+            ]
+        )
+        precondition(model.perform(.undo))
+        waitUntil("SwiftUI formatting undo was not observed") {
+            committedChangeCount == 2
+                && model.documentRevision?.rawValue == 2
+                && !model.canUndo
+                && model.canRedo
+        }
+        precondition(callbackSnapshotRevisions == [1, 2])
+        precondition(model.documentSnapshot?.blocks.first?.content.marks.isEmpty == true)
+
+        // A semantic action enters only through the public observable model after mount.
+        precondition(model.perform(.moveRight))
+        precondition(model.perform(.insertText(" edited")))
+        waitUntil("Committed SwiftUI edit was not observed") {
+            committedChangeCount == 3 && model.documentRevision?.rawValue == 3
+        }
+        precondition(callbackSnapshotRevisions == [1, 2, 3])
         precondition(
             model.documentSnapshot?.blocks.first?.content.text
                 == "Initial SwiftUI document edited"
         )
+
+        // Re-evaluating the same host document identity with stale input blocks must not
+        // replace the mounted Session, lose the edit, or reset its undo stack.
+        let stateBeforeSameIdentityUpdate = (
+            epoch: model.epoch,
+            revision: model.documentRevision,
+            blocks: model.documentSnapshot?.blocks,
+            canUndo: model.canUndo
+        )
+        let staleSameIdentityDocument = SlopadDocument(
+            id: "record-1",
+            blocks: [
+                EditorBlockInput(
+                    id: initialBlockID,
+                    content: BlockContent(text: "Stale host re-evaluation")
+                )
+            ]
+        )
+        hostingController?.rootView = HostRoot(
+            editor: editor(document: staleSameIdentityDocument),
+            model: model
+        )
+        hostingController?.view.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+        precondition(model.epoch == stateBeforeSameIdentityUpdate.epoch)
+        precondition(model.documentRevision == stateBeforeSameIdentityUpdate.revision)
+        precondition(model.documentSnapshot?.blocks == stateBeforeSameIdentityUpdate.blocks)
+        precondition(model.canUndo == stateBeforeSameIdentityUpdate.canUndo)
+        precondition(committedChangeCount == 3)
+        precondition(callbackSnapshotRevisions == [1, 2, 3])
 
         model.setFocused(true)
         waitUntil("SwiftUI focus did not reach the mounted editor") { model.isFocused }
@@ -103,7 +168,7 @@ private struct DownstreamSwiftUIHost {
             "Flush-before-read must leave a committed snapshot"
         )
         precondition(snapshotAfterFlush.epoch == initialEpoch)
-        precondition(snapshotAfterFlush.revision.rawValue == 1)
+        precondition(snapshotAfterFlush.revision.rawValue == 3)
 
         let replacementDocument = SlopadDocument(
             id: "record-2",
