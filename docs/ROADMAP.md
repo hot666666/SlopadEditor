@@ -17,7 +17,9 @@ implemented baseline includes the headless Session/model/layout split, the curat
 and SwiftUI host surfaces, coherent TextKit2 capabilities and bounded prepared-layout
 reuse, inline marks and parser-free typed shortcuts, slash-only block commands, committed
 document snapshots, reviewable atomic document patches, and fail-closed Markdown
-decode/encode. ADR 0014's non-IME cross-block text selection is implemented with
+decode/encode. The opt-in native archive also preserves canonical identities through a
+strict fail-closed V1 codec while keeping storage lifecycle host-owned. ADR 0014's non-IME
+cross-block text selection is implemented with
 gesture-origin mode latching, viewport-bounded presentation/damage, D1–D7 editing
 semantics, and a versioned structured clipboard plus literal plain-text fallback. Its
 decided live cross-block IME replacement policy is not implemented or product-verified.
@@ -38,17 +40,17 @@ These constraints remain in force unless replaced by an ADR:
   consumer proves an extension/preservation contract.
 - Structure and content remain one canonical block store; do not add a second key-set
   invariant without measured need such as lazy content loading.
-- Markdown typed-input rules and whole-document conversion remain separate. There is no
-  format plugin registry while only one codec exists.
+- Markdown typed-input rules and whole-document conversion remain separate. The two closed
+  whole-document codecs do not justify a format plugin registry.
 - Text backend cache identity follows the effective measurement request and style, not a
   model revision convention.
 - Caret/selection geometry is published through Session facts; AppKit UI does not bypass
   Session to ask the backend for editing meaning.
 - Markdown is not persistence state. Its semantic round-trip creates fresh `BlockID`s;
   [ADR 0015](../ADR/0015-version-native-archive-and-keep-storage-host-owned.md)'s native
-  archive contract requires canonical block identity preservation instead. Markdown
-  remains an explicit whole-document import/export format, not a reload format. The
-  archive contract is decided; its product/codec/fixture implementation remains P3 work.
+  archive preserves canonical block identity instead. Markdown remains an explicit
+  whole-document import/export format, not a reload format. Archive storage timing,
+  atomicity, conflict handling, retry, and recovery remain host-owned.
 - ADR 0012's ordinary-host contract is continuously gated by
   `bash scripts/verify-host-surface.sh`. It runs the one-product AppKit and SwiftUI public
   lifecycle fixtures on every pull request; format-consumer fixtures remain separate.
@@ -73,7 +75,7 @@ completion.
 - Keep both downstream host fixtures exercising mount → edit → observe → flush → replace
   → unmount without `@testable`, package access, or underlying-module bypass.
 - Keep those ordinary one-product lifecycle fixtures separate from opt-in format-consumer
-  fixtures. Markdown and the future archive codec each prove their own format boundary;
+  fixtures. Markdown and the native archive codec each prove their own format boundary;
   neither substitutes for the AppKit or SwiftUI lifecycle gate.
 
 Exit: an ordinary host can integrate, persist, focus, resize, and customize supported
@@ -125,35 +127,18 @@ Exit: the built-in floating toolbar and per-block todo checkbox reach supported 
 through Session, with one transaction/undo per command, exact checkbox-versus-gutter hit
 priority, and no public model internals.
 
-### P3 — Add explicit import/export UX and versioned native archive
+### P3 — Add explicit import/export UX
 
 - Build caller-owned Markdown import/export UX and failure handling on top of the existing
   fail-closed codec; it handles whole documents only and never becomes an implicit
   persistence or paste path.
-- Add `SlopadArchive` as an opt-in, pure `SlopadCoreModel`-only codec for the versioned
-  native persistence representation. Its archive contains canonical blocks and a format
-  version only—never selection, undo/history, operation journal, epoch/revision,
-  composition, layout, viewport, or TextKit state.
-- Implement [#78](https://github.com/hot666666/Slopad/issues/78) against ADR 0015's v1
-  UTF-8 JSON schema, raw-wire-before-normalization decode, typed fail-closed errors, and
-  shared selection-independent CoreModel canonical-input validator. The target uses Swift 6
-  `public import SlopadCoreModel` for declaration legality but exposes only the five curated,
-  type-identical archive aliases fixed by the ADR; it adds no CoreModel product, Engine
-  dependency, copied wrapper vocabulary, or blanket re-export.
 - The embedding app owns files, databases, cloud sync, autosave, conflict resolution,
   retry, and error UX. `SlopadArchive` owns neither storage nor lifecycle policy.
-- Under #78, add a codec-surface fixture target/source that depends on/imports only
-  Foundation plus `SlopadArchive` and constructs/round-trips the aliased vocabulary. Prove
-  lifecycle integration in a separate target/source that may additionally import exactly
-  one public UI facade and passes its type-identical `snapshot.blocks` directly to the
-  codec; neither probe imports raw Engine/CoreModel or package-only types. If one fixture
-  package contains both probes, keep their target dependencies and import audits distinct.
 - Add GFM table support only after the Core table vocabulary in
   [#50](https://github.com/hot666666/Slopad/issues/50) has a real owner and invariants.
 
 Exit: Markdown import/export behavior is explicit, diagnostics reach product UX, and the
-versioned archive round-trips canonical blocks/identity through its opt-in boundary while
-the host retains all storage policy.
+host retains all native archive storage policy.
 
 ### P4 — Design collapsed subtrees
 

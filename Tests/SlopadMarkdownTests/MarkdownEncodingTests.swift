@@ -39,6 +39,22 @@ struct MarkdownEncodingTests {
         #expect(encoded == encodedAgain)
     }
 
+    @Test("Markdown round trip은 native archive와 달리 source block ID를 보존하지 않는다")
+    func roundTripCreatesFreshIDsInsteadOfPreservingSourceIdentity() throws {
+        // Given
+        let source = [
+            block("source-root", kind: .quote, content: content("root")),
+            block("source-child", parent: "source-root", content: content("child")),
+        ]
+
+        // When
+        let decoded = try SlopadMarkdown.decode(SlopadMarkdown.encode(source))
+
+        // Then
+        #expect(Set(decoded.map(\.id)).isDisjoint(with: Set(source.map(\.id))))
+        expectSemanticEquality(decoded, source)
+    }
+
     @Test("다섯 inline mark와 교차 범위 및 code의 상위 mark를 의미적으로 보존한다")
     func nestedAndCrossingInlineMarksRoundTrip() throws {
         // Given

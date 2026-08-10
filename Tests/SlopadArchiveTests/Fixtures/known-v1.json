@@ -1,0 +1,33 @@
+{
+  "formatVersion": 1,
+  "blocks": [
+    {
+      "id": "title",
+      "parentID": null,
+      "kind": { "type": "heading", "level": 1 },
+      "content": {
+        "text": "Slopad",
+        "marks": [
+          {
+            "kind": { "type": "strong" },
+            "range": { "lowerBound": 0, "upperBound": 6 }
+          }
+        ]
+      }
+    },
+    {
+      "id": "task",
+      "parentID": "title",
+      "kind": { "type": "todo", "isChecked": true },
+      "content": {
+        "text": "archive",
+        "marks": [
+          {
+            "kind": { "type": "link", "destination": "https://example.com" },
+            "range": { "lowerBound": 0, "upperBound": 7 }
+          }
+        ]
+      }
+    }
+  ]
+}

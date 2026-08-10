@@ -17,6 +17,10 @@ let package = Package(
             targets: ["SlopadMarkdown"]
         ),
         .library(
+            name: "SlopadArchive",
+            targets: ["SlopadArchive"]
+        ),
+        .library(
             name: "SlopadAppKit",
             targets: ["SlopadAppKit"]
         ),
@@ -39,7 +43,7 @@ let package = Package(
         .executable(
             name: "SlopadUIBenchmarkApp",
             targets: ["SlopadUIBenchmarkApp"]
-        )
+        ),
     ],
     dependencies: [
         .package(
@@ -63,6 +67,10 @@ let package = Package(
                 "SlopadCoreModel",
                 .product(name: "Markdown", package: "swift-markdown"),
             ]
+        ),
+        .target(
+            name: "SlopadArchive",
+            dependencies: ["SlopadCoreModel"]
         ),
         .target(
             name: "SlopadDataStructure"
@@ -161,6 +169,14 @@ let package = Package(
             ]
         ),
         .testTarget(
+            name: "SlopadArchiveTests",
+            dependencies: [
+                "SlopadArchive",
+                "SlopadCoreModel",
+            ],
+            resources: [.copy("Fixtures")]
+        ),
+        .testTarget(
             name: "SlopadAppKitTextKitTests",
             dependencies: [
                 "SlopadCoreModel",
@@ -183,6 +199,6 @@ let package = Package(
                 "SlopadSwiftUI",
                 "SlopadAppKit",
             ]
-        )
+        ),
     ]
 )

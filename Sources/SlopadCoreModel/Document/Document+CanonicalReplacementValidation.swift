@@ -1,20 +1,23 @@
 // MARK: - Canonical Document Replacement Validation
 
-package enum CanonicalDocumentReplacementValidationError: Error, Hashable, Sendable {
+package enum CanonicalDocumentInputValidationError: Error, Hashable, Sendable {
     case emptyDocument
     case duplicateBlockID(BlockID)
     case invalidContent(blockID: BlockID)
     case missingParent(blockID: BlockID, parentID: BlockID)
     case cycleDetected(BlockID)
     case noncanonicalDepthFirstOrder
+}
+
+package enum CanonicalDocumentReplacementValidationError: Error, Hashable, Sendable {
+    case documentInput(CanonicalDocumentInputValidationError)
     case invalidSelection
 }
 
-extension Document {
-    package static func validateCanonicalReplacement(
-        blockInputs: [EditorBlockInput],
-        selection: EditorSelection
-    ) throws(CanonicalDocumentReplacementValidationError) {
+package enum CanonicalDocumentInput {
+    package static func validate(
+        _ blockInputs: [EditorBlockInput]
+    ) throws(CanonicalDocumentInputValidationError) {
         guard !blockInputs.isEmpty else {
             throw .emptyDocument
         }
@@ -74,6 +77,19 @@ extension Document {
 
         guard canonicalOrder == blockInputs.map(\.id) else {
             throw .noncanonicalDepthFirstOrder
+        }
+    }
+}
+
+extension Document {
+    package static func validateCanonicalReplacement(
+        blockInputs: [EditorBlockInput],
+        selection: EditorSelection
+    ) throws(CanonicalDocumentReplacementValidationError) {
+        do {
+            try CanonicalDocumentInput.validate(blockInputs)
+        } catch {
+            throw .documentInput(error)
         }
 
         let contentLengths = Dictionary(
