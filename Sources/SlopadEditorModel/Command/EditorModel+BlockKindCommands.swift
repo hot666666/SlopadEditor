@@ -28,9 +28,7 @@ extension EditorModel {
                 changed: &changed)
 
         default:
-            try setBlockKind(
-                blockID: blockID, kind: .todo(isChecked: false), operations: &operations,
-                changed: &changed)
+            throw .abort
         }
     }
 }

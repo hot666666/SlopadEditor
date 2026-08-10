@@ -18,8 +18,13 @@ extension EditorModel {
     @discardableResult
     package func undo() -> EditorHistoryStepResult? {
         guard let transaction = undoStack.popLast() else { return nil }
+        let previousSelection = selection
+        let previousStoredMarks = storedMarks
         state = transaction.before
         redoStack.append(transaction)
+        recordSelectionChange(from: previousSelection)
+        recordStoredMarksChange(from: previousStoredMarks)
+        recordCanonicalStructureChange(transaction.change.canonicalStructureChanged)
         assertDocumentValidInDebug()
         return EditorHistoryStepResult(documentChanged: transaction.change.documentChanged)
     }
@@ -27,9 +32,14 @@ extension EditorModel {
     @discardableResult
     package func redo() -> EditorHistoryStepResult? {
         guard let transaction = redoStack.popLast() else { return nil }
+        let previousSelection = selection
+        let previousStoredMarks = storedMarks
         state = transaction.after
         undoStack.append(transaction)
         trimUndoStackToBudget()
+        recordSelectionChange(from: previousSelection)
+        recordStoredMarksChange(from: previousStoredMarks)
+        recordCanonicalStructureChange(transaction.change.canonicalStructureChanged)
         assertDocumentValidInDebug()
         return EditorHistoryStepResult(documentChanged: transaction.change.documentChanged)
     }

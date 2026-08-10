@@ -31,6 +31,16 @@ extension Document {
         rootBlockIDs == other.rootBlockIDs && blocks == other.blocks
     }
 
+    package func hasSameCanonicalStructure(as other: Document) -> Bool {
+        guard rootBlockIDs == other.rootBlockIDs, blocks.count == other.blocks.count else {
+            return false
+        }
+        return blocks.allSatisfy { blockID, block in
+            guard let otherBlock = other.blocks[blockID] else { return false }
+            return block.parentID == otherBlock.parentID && block.childIDs == otherBlock.childIDs
+        }
+    }
+
     package var estimatedStorageBytes: Int {
         var total = rootBlockIDs.reduce(0) { $0 + $1.rawValue.utf8.count + 16 }
         for block in blocks.values {

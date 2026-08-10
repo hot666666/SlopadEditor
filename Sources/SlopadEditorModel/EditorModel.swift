@@ -18,6 +18,19 @@ package final class EditorModel {
     /// Runtime-owned bounded matcher. The patterns are injected as immutable data from the
     /// lightweight Markdown syntax target; the model keeps transaction semantics local.
     let inputRuleRunner: EditorInputRuleRunner
+    var cachedCanonicalBlockOrder: CanonicalBlockOrder?
+    var canonicalStructureRevision: UInt64
+    var canonicalBlockOrderRebuildCount: Int
+    private var selectionIdentityRevision: UInt64
+    private var storedMarksIdentityRevision: UInt64
+
+    package var selectionIdentity: EditorSelectionIdentity {
+        EditorSelectionIdentity(rawValue: selectionIdentityRevision)
+    }
+
+    package var storedMarksIdentity: EditorStoredMarksIdentity {
+        EditorStoredMarksIdentity(rawValue: storedMarksIdentityRevision)
+    }
 
     package convenience init(
         document: Document,
@@ -37,6 +50,11 @@ package final class EditorModel {
     ) {
         self.undoConfiguration = undoConfiguration
         self.inputRuleRunner = EditorInputRuleRunner(rules: MarkdownInputRules.all)
+        self.cachedCanonicalBlockOrder = nil
+        self.canonicalStructureRevision = 0
+        self.canonicalBlockOrderRebuildCount = 0
+        self.selectionIdentityRevision = 0
+        self.storedMarksIdentityRevision = 0
         if let selection {
             state = EditorState(document: document, selection: selection)
         } else if let firstID = document.rootBlockIDs.first {
@@ -54,5 +72,25 @@ package final class EditorModel {
         }
         self.undoStack = []
         self.redoStack = []
+    }
+
+    func recordSelectionChange(from previousSelection: EditorSelection) {
+        guard previousSelection != selection else { return }
+        precondition(selectionIdentityRevision < UInt64.max, "Selection identity exhausted")
+        selectionIdentityRevision += 1
+    }
+
+    func recordCanonicalStructureChange(_ changed: Bool) {
+        guard changed else { return }
+        precondition(canonicalStructureRevision < UInt64.max, "Structure revision exhausted")
+        canonicalStructureRevision += 1
+    }
+
+    func recordStoredMarksChange(
+        from previousStoredMarks: Set<BlockContent.InlineMark.Kind>
+    ) {
+        guard previousStoredMarks != storedMarks else { return }
+        precondition(storedMarksIdentityRevision < UInt64.max, "Stored marks identity exhausted")
+        storedMarksIdentityRevision += 1
     }
 }

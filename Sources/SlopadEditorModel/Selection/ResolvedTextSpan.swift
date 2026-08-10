@@ -6,7 +6,7 @@ import SlopadCoreModel
 ///
 /// The selection keeps its original direction. `start` and `end` are normalized only for
 /// mutation and projection, and `blockIDs` contains exactly the canonical DFS span rather
-/// than a flattened document coordinate or a whole-document order array.
+/// than introducing a flattened document coordinate into canonical state.
 package struct ResolvedTextSpan: Sendable {
     package let selection: TextSelection
     package let start: TextPosition
@@ -33,24 +33,30 @@ extension EditorModel {
             selection.anchor.offset >= 0,
             selection.anchor.offset <= anchorBlock.content.length,
             selection.focus.offset >= 0,
-            selection.focus.offset <= focusBlock.content.length,
-            let anchorPath = document.blockOrderPath(for: selection.anchor.blockID),
-            let focusPath = document.blockOrderPath(for: selection.focus.blockID)
+            selection.focus.offset <= focusBlock.content.length
         else {
             return nil
         }
 
+        let order = canonicalBlockOrder()
+        guard
+            let anchorRank = order.rankByBlockID[selection.anchor.blockID],
+            let focusRank = order.rankByBlockID[selection.focus.blockID]
+        else { return nil }
+
         let anchorComesFirst =
-            anchorPath == focusPath
+            anchorRank == focusRank
             ? selection.anchor.offset <= selection.focus.offset
-            : anchorPath.lexicographicallyPrecedes(focusPath)
+            : anchorRank < focusRank
         let start = anchorComesFirst ? selection.anchor : selection.focus
         let end = anchorComesFirst ? selection.focus : selection.anchor
 
-        guard let blockIDs = document.depthFirstBlockIDs(from: start.blockID, through: end.blockID)
-        else {
-            return nil
-        }
+        guard
+            let startRank = order.rankByBlockID[start.blockID],
+            let endRank = order.rankByBlockID[end.blockID],
+            startRank <= endRank
+        else { return nil }
+        let blockIDs = Array(order.blockIDs[startRank...endRank])
         let fragments = blockIDs.compactMap { blockID -> ResolvedTextFragment? in
             guard let block = document.block(blockID) else { return nil }
             let range: TextRange
@@ -74,4 +80,31 @@ extension EditorModel {
             fragments: fragments
         )
     }
+
+    private func canonicalBlockOrder() -> CanonicalBlockOrder {
+        if let cachedCanonicalBlockOrder,
+            cachedCanonicalBlockOrder.canonicalStructureRevision == canonicalStructureRevision
+        {
+            return cachedCanonicalBlockOrder
+        }
+        let blockIDs = document.editorBlockInputs.map(\.id)
+        let order = CanonicalBlockOrder(
+            canonicalStructureRevision: canonicalStructureRevision,
+            blockIDs: blockIDs,
+            rankByBlockID: Dictionary(
+                uniqueKeysWithValues: blockIDs.enumerated().map { ($0.element, $0.offset) }
+            )
+        )
+        cachedCanonicalBlockOrder = order
+        canonicalBlockOrderRebuildCount += 1
+        return order
+    }
+}
+
+// MARK: - Canonical Block Order
+
+struct CanonicalBlockOrder {
+    let canonicalStructureRevision: UInt64
+    let blockIDs: [BlockID]
+    let rankByBlockID: [BlockID: Int]
 }
