@@ -25,9 +25,8 @@ public enum EditorInputEvent: Hashable, Sendable {
         /// Applies `style` to the active text selection, or removes it when the selection
         /// already carries that style throughout.
         ///
-        /// Requires a non-empty text selection. A caret-only selection is refused, because
-        /// remembering a style for the next keystroke is editing state rather than a
-        /// document change.
+        /// A caret-only selection toggles the model-owned stored style for the next
+        /// insertion; a non-empty selection changes canonical inline marks.
         case toggleInlineStyle(BlockContent.InlineMark.Kind)
         /// Removes every inline mark from the active text selection.
         case clearInlineStyles

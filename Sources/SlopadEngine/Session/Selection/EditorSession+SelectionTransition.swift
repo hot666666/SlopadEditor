@@ -60,8 +60,7 @@ extension EditorSession {
 
     func handleSelectionChange(_ selection: EditorSelection) -> EditorUpdate {
         let previousSelection = activeEditorSelection
-        if
-            let composition,
+        if let composition,
             selection.isCompatibleWithComposition(blockID: composition.blockID),
             let textSelection = textSelection(from: selection),
             let normalized = normalizedCompositionSelection(textSelection, for: composition)
@@ -94,6 +93,7 @@ extension EditorSession {
         }
 
         compositionSelection = selection
+        recordCommandCompositionChange()
         textNavigationRuntimeContext = nil
         return makeEditorUpdate(
             invalidation: EditorUpdateInvalidation(),

@@ -1,7 +1,6 @@
-import Testing
-
 import SlopadCoreModel
 import SlopadEditorModel
+import Testing
 
 @Suite("EditorModel 블록 kind 명령")
 struct EditorModelBlockKindCommandTests {
@@ -43,20 +42,20 @@ struct EditorModelBlockKindCommandTests {
         #expect(editor.document.blocks[blockID]?.kind == expectedKind)
     }
 
-    @Test("문단 블록을 toggleTodo하면 unchecked todo로 변경된다")
-    func givenParagraph_whenToggleTodoRuns_thenBlockBecomesUncheckedTodo() {
+    @Test("todo가 아닌 블록의 toggleTodo는 적용되지 않는다")
+    func givenParagraph_whenToggleTodoRuns_thenCommandIsNotApplicable() {
         // Given
         let blockID: BlockID = "paragraph"
         let editor = EditorModel(
             document: .singleParagraph("Task", id: blockID),
             selection: .caret(blockID: blockID, offset: 0)
         )
-        let expectedKind = BlockKind.todo(isChecked: false)
 
         // When
-        _ = editor.apply(.toggleTodo(blockID: blockID))
+        let result = editor.apply(.toggleTodo(blockID: blockID))
 
         // Then
-        #expect(editor.document.blocks[blockID]?.kind == expectedKind)
+        #expect(!result.isApplied)
+        #expect(editor.document.blocks[blockID]?.kind == .paragraph)
     }
 }

@@ -40,6 +40,7 @@ extension EditorSession {
         }
         composition = newComposition
         compositionSelection = defaultCompositionSelection(for: newComposition)
+        recordCommandCompositionChange()
         textNavigationRuntimeContext = nil
         let layoutInvalidation = BlockLayoutInvalidation(
             blockIDs: blockIDs,
@@ -119,6 +120,7 @@ extension EditorSession {
     ) -> EditorUpdateInvalidation {
         composition = nil
         compositionSelection = nil
+        recordCommandCompositionChange()
         textNavigationRuntimeContext = nil
         let blockIDs: Set<BlockID> = [currentComposition.blockID]
         let layoutInvalidation = BlockLayoutInvalidation(

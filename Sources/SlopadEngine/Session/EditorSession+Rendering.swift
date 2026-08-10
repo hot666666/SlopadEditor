@@ -30,6 +30,7 @@ extension EditorSession {
             history: historyState,
             activeTextInput: activeTextInput,
             selectionPresentation: selectionPresentation,
+            commandState: commandState(),
             slashCommand: slashCommandPresentation(activeTextInput: activeTextInput),
             blockDragState: blockDrag.map {
                 EditorBlockDragState(dropIndicator: $0.dropIndicator)

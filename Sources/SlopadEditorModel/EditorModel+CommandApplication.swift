@@ -26,8 +26,9 @@ extension EditorModel {
             }
 
             let documentChanged = !beforeState.document.hasSameCanonicalContent(as: document)
-            guard documentChanged || beforeState.selection != selection
-                || beforeState.storedMarks != state.storedMarks || !operations.isEmpty
+            guard
+                documentChanged || beforeState.selection != selection
+                    || beforeState.storedMarks != state.storedMarks || !operations.isEmpty
             else {
                 return .notApplicable
             }
@@ -37,6 +38,9 @@ extension EditorModel {
                 after: state,
                 change: EditorChange(
                     documentChanged: documentChanged,
+                    canonicalStructureChanged: operations.contains {
+                        $0.changesCanonicalStructure
+                    },
                     changedBlockIDs: changed,
                     operations: operations
                 )
@@ -44,6 +48,9 @@ extension EditorModel {
             undoStack.append(transaction)
             trimUndoStackToBudget()
             redoStack.removeAll()
+            recordSelectionChange(from: beforeState.selection)
+            recordStoredMarksChange(from: beforeState.storedMarks)
+            recordCanonicalStructureChange(transaction.change.canonicalStructureChanged)
             assertDocumentValidInDebug()
             let outcome = EditorCommandOutcome(
                 selectionBefore: transaction.selectionBefore,

@@ -21,7 +21,8 @@ public enum AppKitEditorAction: Hashable, Sendable {
     case indent
     case outdent
     /// Applies an inline style to the selected text, or removes it when the selection
-    /// already carries that style throughout. Requires a non-empty text selection.
+    /// already carries that style throughout. At a caret, toggles the model-owned style
+    /// stored for the next insertion.
     case toggleInlineStyle(BlockContent.InlineMark.Kind)
     /// Removes every inline mark from the selected text.
     case clearInlineStyles

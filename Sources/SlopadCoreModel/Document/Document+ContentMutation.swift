@@ -34,15 +34,4 @@ extension Document {
         return .success(())
     }
 
-    package mutating func toggleTodo(blockID: BlockID) -> Result<
-        Void, DocumentMutationResult.Failure
-    > {
-        guard let block = blocks[blockID] else { return .failure(.missingBlock(blockID)) }
-        switch block.kind {
-        case .todo(let isChecked):
-            return setBlockKind(blockID: blockID, kind: .todo(isChecked: !isChecked))
-        default:
-            return setBlockKind(blockID: blockID, kind: .todo(isChecked: false))
-        }
-    }
 }

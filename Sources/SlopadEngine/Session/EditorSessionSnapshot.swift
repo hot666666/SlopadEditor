@@ -11,6 +11,7 @@ public struct EditorSessionSnapshot: Sendable {
     public let history: EditorHistoryState
     public let activeTextInput: EditorSessionActiveTextInputDescriptor?
     package let selectionPresentation: EditorSelectionPresentation
+    package let commandState: EditorCommandState
     /// Runtime-only `/` command interpretation for the current caret, if any.
     package let slashCommand: EditorSlashCommandPresentation?
     public let blockDragState: EditorBlockDragState?
@@ -25,6 +26,7 @@ public struct EditorSessionSnapshot: Sendable {
         history: EditorHistoryState,
         activeTextInput: EditorSessionActiveTextInputDescriptor? = nil,
         selectionPresentation: EditorSelectionPresentation = .empty,
+        commandState: EditorCommandState,
         slashCommand: EditorSlashCommandPresentation? = nil,
         blockDragState: EditorBlockDragState? = nil,
         blockSelectionRectangleState: EditorBlockSelectionRectangleState? = nil
@@ -37,6 +39,7 @@ public struct EditorSessionSnapshot: Sendable {
         self.history = history
         self.activeTextInput = activeTextInput
         self.selectionPresentation = selectionPresentation
+        self.commandState = commandState
         self.slashCommand = slashCommand
         self.blockDragState = blockDragState
         self.blockSelectionRectangleState = blockSelectionRectangleState

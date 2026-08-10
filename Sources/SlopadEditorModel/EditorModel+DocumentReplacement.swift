@@ -34,6 +34,9 @@ extension EditorModel {
             revision: beforeDocument.revision
         )
         let documentChanged = !beforeDocument.hasSameCanonicalContent(as: candidateDocument)
+        let canonicalStructureChanged = !beforeDocument.hasSameCanonicalStructure(
+            as: candidateDocument
+        )
 
         guard documentChanged || beforeSelection != selectionAfter else {
             return .notApplicable
@@ -49,11 +52,13 @@ extension EditorModel {
         // must not attach itself to unrelated replacement content.
         state = EditorState(document: afterDocument, selection: selectionAfter)
 
-        let changedBlockIDs = documentChanged
+        let changedBlockIDs =
+            documentChanged
             ? Set(beforeDocument.blocks.keys).union(afterDocument.blocks.keys)
             : []
         let change = EditorChange(
             documentChanged: documentChanged,
+            canonicalStructureChanged: canonicalStructureChanged,
             changedBlockIDs: changedBlockIDs,
             operations: documentChanged ? [.replaceDocument] : []
         )
@@ -61,6 +66,9 @@ extension EditorModel {
         undoStack.append(transaction)
         trimUndoStackToBudget()
         redoStack.removeAll()
+        recordSelectionChange(from: beforeSelection)
+        recordStoredMarksChange(from: beforeState.storedMarks)
+        recordCanonicalStructureChange(canonicalStructureChanged)
         assertDocumentValidInDebug()
         let outcome = EditorCommandOutcome(selectionBefore: beforeSelection, change: change)
         return documentChanged ? .document(outcome) : .selectionOnly(outcome)
