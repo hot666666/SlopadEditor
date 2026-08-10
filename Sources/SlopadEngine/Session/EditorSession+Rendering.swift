@@ -19,7 +19,8 @@ extension EditorSession {
         let activeTextInput = makeActiveTextInput(in: visibleBlocks)
         let selectionPresentation = makeSelectionPresentation(
             in: visibleBlocks,
-            activeTextInput: activeTextInput
+            activeTextInput: activeTextInput,
+            viewport: viewport
         )
         return EditorSessionSnapshot(
             revision: revision,
@@ -57,9 +58,61 @@ extension EditorSession {
 
     private func makeSelectionPresentation(
         in visibleBlocks: [EditorRenderedBlock],
-        activeTextInput: EditorSessionActiveTextInputDescriptor?
+        activeTextInput: EditorSessionActiveTextInputDescriptor?,
+        viewport: EditorViewport
     ) -> EditorSelectionPresentation {
-        guard case .text(let selection) = activeEditorSelection,
+        invalidateBlockSelectionMembershipIfSelectionChanged()
+        switch activeEditorSelection {
+        case .text(let selection):
+            return makeTextSelectionPresentation(
+                selection,
+                in: visibleBlocks,
+                activeTextInput: activeTextInput,
+                viewport: viewport
+            )
+        case .blocks(let selection):
+            return makeBlockSelectionPresentation(
+                selection,
+                in: visibleBlocks,
+                viewport: viewport
+            )
+        case .caret where composition != nil:
+            return makeCompositionToolbarPresentation(
+                activeTextInput: activeTextInput,
+                viewport: viewport
+            )
+        case .inactive, .caret:
+            return .empty
+        }
+    }
+
+    private func makeCompositionToolbarPresentation(
+        activeTextInput: EditorSessionActiveTextInputDescriptor?,
+        viewport: EditorViewport
+    ) -> EditorSelectionPresentation {
+        guard
+            case .text(let canonicalSelection) = editorModel.selection,
+            let activeTextInput,
+            let caretRect = activeTextInput.caretRect?.intersection(viewport.visibleRect)
+        else { return .empty }
+        let visibleBlockID = activeTextInput.renderDescriptor.measureRequest.blockID
+        return EditorSelectionPresentation(
+            visibleTextSelections: [],
+            visibleBlockSelectionIDs: [],
+            visibleBounds: caretRect,
+            focusRect: caretRect,
+            isAnchorVisible: canonicalSelection.anchor.blockID == visibleBlockID,
+            isFocusVisible: canonicalSelection.focus.blockID == visibleBlockID
+        )
+    }
+
+    private func makeTextSelectionPresentation(
+        _ selection: TextSelection,
+        in visibleBlocks: [EditorRenderedBlock],
+        activeTextInput: EditorSessionActiveTextInputDescriptor?,
+        viewport: EditorViewport
+    ) -> EditorSelectionPresentation {
+        guard
             let anchorIndex = blockLayout.visibleOrderIndex(of: selection.anchor.blockID),
             let focusIndex = blockLayout.visibleOrderIndex(of: selection.focus.blockID)
         else {
@@ -122,7 +175,117 @@ extension EditorSession {
                 blockTintRect: blockTintRect
             )
         }
-        return EditorSelectionPresentation(visibleTextSelections: fragments)
+        let viewportRect = viewport.visibleRect
+        let visibleGeometry = fragments.flatMap { fragment in
+            fragment.rects + [fragment.blockTintRect].compactMap { $0 }
+        }.compactMap { $0.intersection(viewportRect) }
+        let focusFragment = fragments.first { $0.blockID == selection.focus.blockID }
+        let focusGeometry =
+            focusFragment.map { fragment in
+                fragment.rects + [fragment.blockTintRect].compactMap { $0 }
+            } ?? []
+        let visibleFocusGeometry = focusGeometry.compactMap { $0.intersection(viewportRect) }
+        let focusRect =
+            anchorComesFirst
+            ? visibleFocusGeometry.last
+            : visibleFocusGeometry.first
+        let visibleIDs = Set(visibleBlocks.map(\.id))
+        return EditorSelectionPresentation(
+            visibleTextSelections: fragments,
+            visibleBlockSelectionIDs: [],
+            visibleBounds: union(of: visibleGeometry),
+            focusRect: focusRect,
+            isAnchorVisible: visibleIDs.contains(selection.anchor.blockID),
+            isFocusVisible: visibleIDs.contains(selection.focus.blockID)
+        )
+    }
+
+    private func makeBlockSelectionPresentation(
+        _ selection: BlockSelection,
+        in visibleBlocks: [EditorRenderedBlock],
+        viewport: EditorViewport
+    ) -> EditorSelectionPresentation {
+        let selectedVisibleBlocks: [EditorRenderedBlock]
+        if let firstID = selection.blockIDs.first,
+            let lastID = selection.blockIDs.last,
+            let firstIndex = blockLayout.visibleOrderIndex(of: firstID),
+            let lastIndex = blockLayout.visibleOrderIndex(of: lastID),
+            abs(lastIndex - firstIndex) + 1 == selection.blockIDs.count
+        {
+            let lowerBound = min(firstIndex, lastIndex)
+            let upperBound = max(firstIndex, lastIndex)
+            selectedVisibleBlocks = visibleBlocks.filter { block in
+                guard let index = blockLayout.visibleOrderIndex(of: block.id) else { return false }
+                return index >= lowerBound && index <= upperBound
+            }
+        } else {
+            // Non-contiguous structural selections are uncommon command results such as
+            // pasted roots. Session retains one exact-selection membership index so stable
+            // viewport renders stay O(V) without rebuilding or revisiting the full span.
+            let selectedIDs = blockSelectionMembership(for: selection)
+            selectedVisibleBlocks = visibleBlocks.filter { selectedIDs.contains($0.id) }
+        }
+        let viewportRect = viewport.visibleRect
+        let visibleFrames = selectedVisibleBlocks.compactMap {
+            $0.frame.intersection(viewportRect)
+        }
+        let focusRect = selectedVisibleBlocks.first { $0.id == selection.focus }?.frame
+            .intersection(viewportRect)
+        let visibleIDs = Set(selectedVisibleBlocks.map(\.id))
+        return EditorSelectionPresentation(
+            visibleTextSelections: [],
+            visibleBlockSelectionIDs: visibleIDs,
+            visibleBounds: union(of: visibleFrames),
+            focusRect: focusRect,
+            isAnchorVisible: visibleIDs.contains(selection.anchor),
+            isFocusVisible: visibleIDs.contains(selection.focus)
+        )
+    }
+
+    private func blockSelectionMembership(
+        for selection: BlockSelection
+    ) -> Set<BlockID> {
+        let selectionIdentity = editorModel.selectionIdentity
+        if let cachedBlockSelectionMembership,
+            cachedBlockSelectionMembership.selectionIdentity == selectionIdentity
+        {
+            return cachedBlockSelectionMembership.blockIDs
+        }
+        let blockIDs = Set(selection.blockIDs)
+        cachedBlockSelectionMembership = BlockSelectionMembershipCache(
+            selectionIdentity: selectionIdentity,
+            blockIDs: blockIDs
+        )
+        blockSelectionMembershipRebuildCount += 1
+        blockSelectionMembershipVisitedIDCount += selection.blockIDs.count
+        #if SLOPAD_BENCHMARK_INSTRUMENTATION
+            benchmarkMetrics.blockSelectionMembershipRebuildCount += 1
+            benchmarkMetrics.blockSelectionMembershipVisitedIDCount += selection.blockIDs.count
+        #endif
+        return blockIDs
+    }
+
+    private func invalidateBlockSelectionMembershipIfSelectionChanged() {
+        guard let cachedBlockSelectionMembership else { return }
+        guard cachedBlockSelectionMembership.selectionIdentity != editorModel.selectionIdentity
+        else { return }
+        self.cachedBlockSelectionMembership = nil
+    }
+
+    private func union(of rects: [EditorRect]) -> EditorRect? {
+        guard let first = rects.first else { return nil }
+        return rects.dropFirst().reduce(first) { result, rect in
+            let minX = min(result.minX, rect.minX)
+            let minY = min(result.minY, rect.minY)
+            let maxX = max(result.maxX, rect.maxX)
+            let maxY = max(result.maxY, rect.maxY)
+            return EditorRect(
+                x: minX,
+                y: minY,
+                width: maxX - minX,
+                height: maxY - minY
+            )
+        }
     }
 
     private func makeActiveTextInput(
@@ -240,6 +403,11 @@ extension EditorSession {
             height: localRect.height
         )
     }
+}
+
+struct BlockSelectionMembershipCache {
+    let selectionIdentity: EditorSelectionIdentity
+    let blockIDs: Set<BlockID>
 }
 
 extension BlockKind {

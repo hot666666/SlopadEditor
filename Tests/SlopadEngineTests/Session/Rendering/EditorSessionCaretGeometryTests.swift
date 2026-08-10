@@ -162,6 +162,159 @@ struct EditorSessionCaretGeometryTests {
         #expect(rects.allSatisfy { $0.height > 0 })
     }
 
+    @Test("TN toolbar 기하는 visible fragment만 합치고 화면 밖 endpoint를 표시한다")
+    func givenLongCrossBlockSelection_whenRenderingMiddleViewport_thenBoundsStayVisibleOnly() {
+        // Given
+        let blockIDs = (0..<100).map { BlockID("block-\($0)") }
+        let session = EditorSession(
+            blocks: blockIDs.map {
+                EditorBlockInput(id: $0, content: .init(text: "visible text"))
+            },
+            selection: .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: blockIDs[0], offset: 1),
+                    focus: TextPosition(blockID: blockIDs[99], offset: 5)
+                )
+            ),
+            textLayouter: DeterministicBlockTextLayouter()
+        )
+        _ = session.render(in: EditorViewport(width: 240, scrollY: 0, height: 1_000))
+
+        // When
+        let viewport = EditorViewport(width: 240, scrollY: 1_000, height: 120)
+        let presentation = session.render(in: viewport).selectionPresentation
+
+        // Then
+        let bounds = presentation.visibleBounds
+        #expect(bounds != nil)
+        #expect((bounds?.minY ?? 0) >= viewport.scrollY)
+        #expect((bounds?.maxY ?? 0) <= viewport.scrollY + viewport.height)
+        #expect(presentation.focusRect == nil)
+        #expect(!presentation.isAnchorVisible)
+        #expect(!presentation.isFocusVisible)
+        #expect(presentation.visibleTextSelections.count < blockIDs.count)
+    }
+
+    @Test("separator-only TN은 logical selection이어도 toolbar anchor 기하를 만들지 않는다")
+    func givenSeparatorOnlyTextSelection_whenRendering_thenNoUsableToolbarGeometryExists() {
+        // Given
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let session = EditorSession(
+            blocks: [
+                EditorBlockInput(id: a, content: .init(text: "A")),
+                EditorBlockInput(id: b, content: .init(text: "B")),
+            ],
+            selection: .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: a, offset: 1),
+                    focus: TextPosition(blockID: b, offset: 0)
+                )
+            ),
+            textLayouter: DeterministicBlockTextLayouter()
+        )
+
+        // When
+        let presentation = session.render(in: viewport).selectionPresentation
+
+        // Then
+        #expect(
+            presentation.visibleTextSelections.map(\.range) == [
+                TextRange.point(1), TextRange.point(0),
+            ])
+        #expect(presentation.visibleBounds == nil)
+        #expect(presentation.focusRect == nil)
+        #expect(presentation.isAnchorVisible)
+        #expect(presentation.isFocusVisible)
+    }
+
+    @Test("BlockSelection toolbar 기하는 visible selected frame과 focus frame만 싣는다")
+    func givenBlockSelection_whenRendering_thenVisibleFramesAndFocusAreProjected() throws {
+        // Given
+        let a: BlockID = "a"
+        let b: BlockID = "b"
+        let c: BlockID = "c"
+        let session = EditorSession(
+            blocks: [a, b, c].map {
+                EditorBlockInput(id: $0, content: .init(text: "block"))
+            },
+            selection: .blocks(
+                BlockSelection(blockIDs: [a, b, c], anchor: a, focus: c)
+            ),
+            textLayouter: DeterministicBlockTextLayouter()
+        )
+
+        // When
+        let presentation = session.render(in: viewport).selectionPresentation
+
+        // Then
+        #expect(presentation.visibleBlockSelectionIDs == Set([a, b, c]))
+        #expect(presentation.visibleBounds != nil)
+        #expect(presentation.focusRect != nil)
+        #expect(presentation.isAnchorVisible)
+        #expect(presentation.isFocusVisible)
+    }
+
+    @Test("비연속 10k BlockSelection의 stable scroll은 membership을 한 번만 만든다")
+    func reusesNoncontiguousBlockSelectionMembershipAcrossStableScroll() {
+        // Given
+        let blockCount = 10_000
+        let blocks = (0..<blockCount).map { index in
+            EditorBlockInput(
+                id: BlockID("block-\(index)"),
+                content: .init(text: "Block \(index)")
+            )
+        }
+        let selectedIDs = stride(from: 0, to: blockCount, by: 2).map {
+            BlockID("block-\($0)")
+        }
+        let session = EditorSession(
+            blocks: blocks,
+            selection: .blocks(BlockSelection(blockIDs: selectedIDs)),
+            textLayouter: DeterministicBlockTextLayouter()
+        )
+
+        // When
+        for frame in 0..<64 {
+            _ = session.render(
+                in: EditorViewport(
+                    width: 240,
+                    scrollY: Double(frame * 1_000),
+                    height: 400
+                )
+            )
+        }
+
+        // Then
+        #expect(session.blockSelectionMembershipRebuildCount == 1)
+        #expect(session.blockSelectionMembershipVisitedIDCount == selectedIDs.count)
+        #expect(session.cachedBlockSelectionMembership?.blockIDs.count == selectedIDs.count)
+
+        // When: owner가 발행한 exact selection identity가 바뀐다.
+        let replacementIDs = stride(from: 0, to: blockCount, by: 3).map {
+            BlockID("block-\($0)")
+        }
+        session.editorModel.replaceSelection(
+            .blocks(BlockSelection(blockIDs: replacementIDs))
+        )
+        _ = session.render(in: EditorViewport(width: 240, scrollY: 0, height: 400))
+
+        // Then: 이전 set을 누적하지 않고 새 identity의 membership 하나로 교체한다.
+        #expect(session.blockSelectionMembershipRebuildCount == 2)
+        #expect(
+            session.blockSelectionMembershipVisitedIDCount
+                == selectedIDs.count + replacementIDs.count
+        )
+        #expect(session.cachedBlockSelectionMembership?.blockIDs.count == replacementIDs.count)
+
+        // When: 다른 exact selection mode로 전환한다.
+        session.editorModel.replaceSelection(.caret(blockID: "block-0", offset: 0))
+        _ = session.render(in: EditorViewport(width: 240, scrollY: 0, height: 400))
+
+        // Then
+        #expect(session.cachedBlockSelectionMembership == nil)
+    }
+
     // MARK: - Support
 
     private let viewport = EditorViewport(width: 240, scrollY: 0, height: 400)

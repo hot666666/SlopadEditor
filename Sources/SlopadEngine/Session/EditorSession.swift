@@ -81,6 +81,10 @@ public final class EditorSession {
     var cachedCommandState: (key: CommandStateCacheKey, value: EditorCommandState)?
     /// Owner-local proof hook used by focused cache regressions.
     var commandStateRichProjectionCount: Int
+    var cachedBlockSelectionMembership: BlockSelectionMembershipCache?
+    /// Owner-local proof hooks for stable-render membership regressions.
+    var blockSelectionMembershipRebuildCount: Int
+    var blockSelectionMembershipVisitedIDCount: Int
 
     var composition: TextComposition?
     var compositionSelection: TextSelection?
@@ -119,6 +123,9 @@ public final class EditorSession {
         self.textBackend = textLayouter
         self.cachedCommandState = nil
         self.commandStateRichProjectionCount = 0
+        self.cachedBlockSelectionMembership = nil
+        self.blockSelectionMembershipRebuildCount = 0
+        self.blockSelectionMembershipVisitedIDCount = 0
         self.composition = nil
         self.compositionSelection = nil
         self.commandCompositionIdentityRevision = 0

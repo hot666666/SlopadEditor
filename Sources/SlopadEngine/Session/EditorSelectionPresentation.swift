@@ -11,6 +11,20 @@ package struct EditorVisibleTextSelection: Sendable {
 
 package struct EditorSelectionPresentation: Sendable {
     package let visibleTextSelections: [EditorVisibleTextSelection]
+    package let visibleBlockSelectionIDs: Set<BlockID>
+    /// Union of only the visible, viewport-clipped selection geometry.
+    package let visibleBounds: EditorRect?
+    /// Visible geometry nearest the directional focus endpoint.
+    package let focusRect: EditorRect?
+    package let isAnchorVisible: Bool
+    package let isFocusVisible: Bool
 
-    package static let empty = EditorSelectionPresentation(visibleTextSelections: [])
+    package static let empty = EditorSelectionPresentation(
+        visibleTextSelections: [],
+        visibleBlockSelectionIDs: [],
+        visibleBounds: nil,
+        focusRect: nil,
+        isAnchorVisible: false,
+        isFocusVisible: false
+    )
 }
