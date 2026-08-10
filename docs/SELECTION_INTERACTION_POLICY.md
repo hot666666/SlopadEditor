@@ -547,19 +547,19 @@ uses prepared visible-order ranks instead of that full-span traversal.
 - Clipboard copy writes `com.hot666666.slopad.clipboard.v1` and `.string`. Structured
   paste validates version/shape/size at the edge, mints fresh IDs, preserves relative
   subtrees and marks, and applies one model transaction.
-- Recorded focused runs pass: `SlopadEngineTests` 440 tests and `SlopadAppKitUITests` 90
-  tests. The AppKit target itself is still intermittently affected by the teardown runner
-  failure described below, so this is recorded passing evidence rather than a claim that
-  every rerun is stable. The deterministic UI benchmark covers forward/reverse text
-  selection at 100, 1,000, and 10,000 blocks with empty blocks mixed in.
+- [#72](https://github.com/hot666666/Slopad/issues/72) isolated the signal 11 to test-fixture
+  ownership: AppKit's `isReleasedWhenClosed` default conflicted with Swift ARC ownership.
+  With test windows using ARC-only ownership, the fixed minimal regression passed locally
+  in 20/20 fresh processes and the combined 656-test suite passed in 5/5 fresh processes.
+  The deterministic UI benchmark covers forward/reverse text selection at 100, 1,000, and
+  10,000 blocks with empty blocks mixed in.
 - Installed input-method events currently do not reach the composition consumer in
   `SlopadDebugApp`. Repairing and proving **Apple built-in Korean 2-set** delivery is future
-  work, followed by implementation and product verification of the decided live replacement
-  policy. The [#76 native composition termination table](https://github.com/hot666666/Slopad/issues/76)
-  is its required callback-by-callback criterion. The repository-wide Swift Testing
-  helper can still terminate with an AppKit `NSWindow` teardown signal 11, most often
-  when AppKit and SwiftUI suites share one process and occasionally in a focused AppKit
-  rerun.
+  work in [#71](https://github.com/hot666666/Slopad/issues/71), followed by implementation
+  and product verification of the decided live replacement policy. The
+  [#76 native composition termination table](https://github.com/hot666666/Slopad/issues/76)
+  is its required callback-by-callback criterion; both issues remain open. #72's bounded
+  local test stability is not installed-IME, native product input, visual, or device proof.
 - The production `SlopadDebugApp` state harness passes all 18 scenarios, including the
   real cross-block text drag and viewport-derived down/up reveal boundaries.
 - Caret review disposition: no change. Direct product use confirmed that AppKit's native
