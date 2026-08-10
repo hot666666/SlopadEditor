@@ -182,6 +182,31 @@ The ordinary AppKit host surface is admitted by intent:
 It guards document identity, filters committed changes, bridges focus, and flushes
 composition before persistence without re-exporting the controller.
 
+The built-in floating formatting toolbar and todo checkbox remain AppKit adapter chrome.
+They consume package-only Session command/selection projections and send typed actions back
+through Session/model transactions. Existing programmatic host actions use the same
+Session resolver, but command availability, mixed state, selection presentation, checkbox
+hit geometry, and toolbar placement are not public host state. Epic #67 has no concrete
+host-owned toolbar consumer that passes ADR 0012's three-part exposure test, so adding such
+state is explicitly outside its scope; a future consumer requires its own boundary review.
+The continuous host gate type-checks each excluded symbol from a separate external consumer
+source after positive facade lookup succeeds, so it measures compiler visibility rather
+than declaration spelling. What each probe pins depends on the symbol's access level, and
+the two claims are not interchangeable.
+
+Package and internal symbols — the command state, selection projections, floating toolbar,
+todo checkbox, and block layout — are probed through their own declaring module. They stay
+unreachable however an external consumer imports, which is the claim that matters for
+symbols whose exposure would widen the host contract.
+
+Symbols that are public in another module are probed only through the facade, and that
+pins only that the facade does not re-export them. SwiftPM gives a downstream target a
+single import path covering every built module, so a host that declared only the
+`SlopadAppKit` product can still write `import SlopadAppKitTextKit` and reach
+`TextKitTextSystem`; `--explicit-target-dependency-import-check error` does not prevent
+this across packages. Such a host has imported a module it never declared, which review
+catches, but the compiler does not.
+
 ## Markdown Boundaries
 
 Markdown has two deliberately separate entry points:

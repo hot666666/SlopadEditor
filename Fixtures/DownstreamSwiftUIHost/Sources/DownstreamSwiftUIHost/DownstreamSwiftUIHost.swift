@@ -2,15 +2,29 @@ import AppKit
 import SlopadSwiftUI
 import SwiftUI
 
+/// Counts host body evaluations so a lifecycle step can wait for SwiftUI's update pass to
+/// actually run before asserting that the mounted Session was left alone. A fixed sleep
+/// would let every such assertion pass vacuously on a loaded machine.
+@MainActor
+private final class BodyEvaluationCounter {
+    private(set) var count = 0
+
+    func record() {
+        count += 1
+    }
+}
+
 @MainActor
 private struct HostRoot: View {
     let editor: SlopadEditor?
     let model: SlopadEditorModel
+    let bodyEvaluations: BodyEvaluationCounter
 
     @FocusState private var isEditing: Bool
 
     @ViewBuilder
     var body: some View {
+        let _ = bodyEvaluations.record()
         if let editor {
             editor
                 .focused($isEditing)
@@ -36,6 +50,7 @@ private struct DownstreamSwiftUIHost {
         let model = SlopadEditorModel()
         var committedChangeCount = 0
         var callbackSnapshotRevisions: [UInt64] = []
+        let bodyEvaluations = BodyEvaluationCounter()
         let initialDocument = SlopadDocument(
             id: "record-1",
             blocks: [
@@ -62,7 +77,11 @@ private struct DownstreamSwiftUIHost {
         }
 
         var hostingController: NSHostingController<HostRoot>? = NSHostingController(
-            rootView: HostRoot(editor: editor(document: initialDocument), model: model)
+            rootView: HostRoot(
+                editor: editor(document: initialDocument),
+                model: model,
+                bodyEvaluations: bodyEvaluations
+            )
         )
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 640, height: 320),
@@ -137,12 +156,19 @@ private struct DownstreamSwiftUIHost {
                 )
             ]
         )
+        let evaluationsBeforeSameIdentityUpdate = bodyEvaluations.count
         hostingController?.rootView = HostRoot(
             editor: editor(document: staleSameIdentityDocument),
-            model: model
+            model: model,
+            bodyEvaluations: bodyEvaluations
         )
         hostingController?.view.layoutSubtreeIfNeeded()
-        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+        // Wait for the update pass to actually run. The assertions below are all negative,
+        // so without a positive signal that SwiftUI re-evaluated the host, a slow machine
+        // would satisfy every one of them by never having updated at all.
+        waitUntil("SwiftUI did not re-evaluate the host for the same document identity") {
+            bodyEvaluations.count > evaluationsBeforeSameIdentityUpdate
+        }
         precondition(model.epoch == stateBeforeSameIdentityUpdate.epoch)
         precondition(model.documentRevision == stateBeforeSameIdentityUpdate.revision)
         precondition(model.documentSnapshot?.blocks == stateBeforeSameIdentityUpdate.blocks)
@@ -181,7 +207,8 @@ private struct DownstreamSwiftUIHost {
         )
         hostingController?.rootView = HostRoot(
             editor: editor(document: replacementDocument),
-            model: model
+            model: model,
+            bodyEvaluations: bodyEvaluations
         )
         hostingController?.view.layoutSubtreeIfNeeded()
         waitUntil("SwiftUI document identity did not replace the mounted Session") {
@@ -196,7 +223,11 @@ private struct DownstreamSwiftUIHost {
         // Removing the representable from the host tree must invoke dismantling, so the
         // public model can no longer read a stale controller.
         model.setFocused(false)
-        hostingController?.rootView = HostRoot(editor: nil, model: model)
+        hostingController?.rootView = HostRoot(
+            editor: nil,
+            model: model,
+            bodyEvaluations: bodyEvaluations
+        )
         hostingController?.view.layoutSubtreeIfNeeded()
         waitUntil("SwiftUI editor did not detach during teardown") {
             model.documentSnapshot == nil

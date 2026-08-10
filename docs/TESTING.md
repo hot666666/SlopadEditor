@@ -24,9 +24,18 @@ bash scripts/verify-host-surface.sh
 0012 gate on every pull request. It builds and runs both ordinary one-product lifecycle
 fixtures: `DownstreamAppKitHost` through `SlopadAppKit` alone and
 `DownstreamSwiftUIHost` through `SlopadSwiftUI` alone. Each mounts a literal window/view,
-performs a public semantic edit, observes the committed snapshot, flushes composition
-before reading, replaces the document with epoch/identity/content checks, exercises
-focus/resize, and tears down deterministically.
+performs public semantic and formatting edits with a one-step formatting undo, observes the
+committed snapshot, flushes composition before reading, replaces the document with
+epoch/identity/content checks, exercises focus/resize, and tears down deterministically.
+Before execution, the script also audits each fixture's exact product/import boundary and
+then reads the actual downstream SwiftPM compile command metadata. Positive external
+type-check probes first prove that intended AppKit and SwiftUI facade symbols resolve.
+Separate negative sources then require compiler access failures for each command-state,
+selection-presentation, toolbar, checkbox, layout, TextKit, and SwiftUI raw-controller
+symbol through the facade, and — for the package and internal symbols — again through their
+own declaring module, which pins that they stay unreachable however a host imports.
+One symbol per source prevents an earlier unresolved name from masking a later
+leak.
 
 This proves public lifecycle behavior and downstream source compatibility. It is not a
 visual, native key/pointer callback, installed-IME, candidate-window, physical-device, or
