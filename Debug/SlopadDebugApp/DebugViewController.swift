@@ -54,6 +54,14 @@ final class DebugViewController: NSViewController {
         editorViewController.hasActiveNativeMarkedText
     }
 
+    var isFloatingFormattingToolbarPresented: Bool {
+        editorViewController.isFloatingFormattingToolbarPresented
+    }
+
+    var floatingFormattingToolbarFrame: NSRect? {
+        editorViewController.floatingFormattingToolbarFrame
+    }
+
     // MARK: - Init
 
     init(
@@ -147,6 +155,26 @@ final class DebugViewController: NSViewController {
 
     func handleMouseUp(documentPoint: CGPoint) {
         editorViewController.handleMouseUp(documentPoint: documentPoint)
+    }
+
+    func performFloatingFormattingToolbarItem(
+        _ item: AppKitFloatingFormattingToolbar.Item
+    ) {
+        editorViewController.performFloatingFormattingToolbarItem(item)
+    }
+
+    func floatingFormattingToolbarItemState(
+        _ item: AppKitFloatingFormattingToolbar.Item
+    ) -> AppKitFloatingFormattingToolbar.ItemState? {
+        editorViewController.floatingFormattingToolbarItemState(item)
+    }
+
+    func todoCheckboxHitRect(blockID: BlockID) -> CGRect? {
+        editorViewController.todoCheckboxHitRect(blockID: blockID)
+    }
+
+    func todoState(blockID: BlockID) -> EditorToggleState {
+        editorViewController.todoState(blockID: blockID)
     }
 
     func handleNativeCommand(_ commandSelector: Selector) -> Bool {
@@ -255,7 +283,8 @@ final class DebugViewController: NSViewController {
     }
 
     private func handleSnapshotChanged(_ nextSnapshot: EditorSessionSnapshot) {
-        debugHUDRevisionComparison = nextSnapshot.revision.comparison(from: previousSnapshot?.revision)
+        debugHUDRevisionComparison = nextSnapshot.revision.comparison(
+            from: previousSnapshot?.revision)
         previousSnapshot = nextSnapshot
     }
 }

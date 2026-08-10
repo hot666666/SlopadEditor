@@ -147,7 +147,7 @@ extension EditorSession {
         }
 
         return EditorCommandState(
-            selectionMode: commandSelectionMode(for: selection),
+            selectionMode: commandSelectionMode(for: resolutionSelection),
             detail: .rich,
             inlineStyleAvailability: hasInlineTarget
                 ? compositionAvailability : .unavailable,

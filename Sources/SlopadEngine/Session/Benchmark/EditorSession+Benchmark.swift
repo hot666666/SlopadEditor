@@ -19,6 +19,8 @@ import SlopadEditorModel
         package func resetCommandStateBenchmarkMetrics() {
             benchmarkMetrics.commandStateRichProjectionCount = 0
             benchmarkMetrics.commandStateVisitedBlockCount = 0
+            benchmarkMetrics.blockSelectionMembershipRebuildCount = 0
+            benchmarkMetrics.blockSelectionMembershipVisitedIDCount = 0
         }
 
     }
@@ -39,5 +41,7 @@ import SlopadEditorModel
         package var heightIndexUpdateHeightCount: Int = 0
         package var commandStateRichProjectionCount: Int = 0
         package var commandStateVisitedBlockCount: Int = 0
+        package var blockSelectionMembershipRebuildCount: Int = 0
+        package var blockSelectionMembershipVisitedIDCount: Int = 0
     }
 #endif

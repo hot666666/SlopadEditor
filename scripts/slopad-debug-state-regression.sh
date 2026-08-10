@@ -18,6 +18,9 @@ fi
 
 SCENARIOS=(
   click-todo
+  todo-checkbox-control
+  floating-toolbar-text
+  floating-toolbar-block
   text-drag-selection
   text-drag-cross-block
   double-click-word-selection

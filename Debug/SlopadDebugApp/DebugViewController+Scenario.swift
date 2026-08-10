@@ -83,6 +83,26 @@ extension DebugViewController {
             click(blockID: DebugSeedFixture.intro, x: CGFloat(editorStyle.gutterWidth + 96))
             click(blockID: DebugSeedFixture.todo, x: CGFloat(editorStyle.gutterWidth + 96))
 
+        case "todo-checkbox-control":
+            focus(blockID: DebugSeedFixture.intro, offset: 0)
+            renderAndSyncSurface(makeFirstResponder: true)
+            clickTodoCheckbox(blockID: DebugSeedFixture.todo)
+
+        case "floating-toolbar-text":
+            dragTextSelection(
+                in: DebugSeedFixture.intro,
+                fromTextX: 4,
+                toTextX: 260
+            )
+
+        case "floating-toolbar-block":
+            dragBlockSelection(
+                from: DebugSeedFixture.intro,
+                to: DebugSeedFixture.todo,
+                x: CGFloat(editorStyle.gutterWidth) * 0.5
+            )
+            performFloatingFormattingToolbarItem(.strong)
+
         case "ime-composition":
             click(blockID: DebugSeedFixture.intro, x: CGFloat(editorStyle.gutterWidth + 96))
             simulateComposition(text: "조합중")
@@ -241,6 +261,54 @@ extension DebugViewController {
                 blockID: DebugSeedFixture.todo,
                 expectedText: DebugSeedFixture.todoText,
                 scenario: scenario
+            )
+
+        case "todo-checkbox-control":
+            try require(
+                todoState(blockID: DebugSeedFixture.todo) == .on,
+                "\(scenario): exact checkbox pointer did not toggle todo"
+            )
+            guard case .caret(let position) = snapshot?.selection else {
+                throw DebugScenarioAssertionError(
+                    message: "\(scenario): checkbox changed the text selection mode"
+                )
+            }
+            try require(
+                position.blockID == DebugSeedFixture.intro,
+                "\(scenario): checkbox moved canonical selection"
+            )
+
+        case "floating-toolbar-text":
+            try require(
+                isFloatingFormattingToolbarPresented && floatingFormattingToolbarFrame != nil,
+                "\(scenario): stable text selection did not show the floating toolbar"
+            )
+            try require(
+                floatingFormattingToolbarItemState(.strong)?.value == .off,
+                "\(scenario): text toolbar strong state was not off"
+            )
+            try assertNonEmptyActiveTextSelection(
+                blockID: DebugSeedFixture.intro,
+                scenario: scenario
+            )
+
+        case "floating-toolbar-block":
+            try require(
+                isFloatingFormattingToolbarPresented && floatingFormattingToolbarFrame != nil,
+                "\(scenario): stable block selection did not show the floating toolbar"
+            )
+            try require(
+                floatingFormattingToolbarItemState(.strong)?.value == .on,
+                "\(scenario): toolbar action did not project strong on"
+            )
+            guard case .blocks(let selection) = snapshot?.selection else {
+                throw DebugScenarioAssertionError(
+                    message: "\(scenario): toolbar action left BlockSelection mode"
+                )
+            }
+            try require(
+                selection.blockIDs == [DebugSeedFixture.intro, DebugSeedFixture.todo],
+                "\(scenario): toolbar action changed selected block IDs"
             )
 
         case "click-tail":
@@ -727,6 +795,14 @@ extension DebugViewController {
                 y: CGFloat(rendered.frame.y + rendered.frame.height * 0.5)
             )
         )
+    }
+
+    private func clickTodoCheckbox(blockID: BlockID) {
+        renderAndSyncSurface(makeFirstResponder: false)
+        guard let rect = todoCheckboxHitRect(blockID: blockID) else { return }
+        let point = CGPoint(x: rect.midX, y: rect.midY)
+        handleMouseDown(documentPoint: point)
+        handleMouseUp(documentPoint: point)
     }
 
     private func dragBlockSelection(from anchorID: BlockID, to focusID: BlockID, x: CGFloat) {
