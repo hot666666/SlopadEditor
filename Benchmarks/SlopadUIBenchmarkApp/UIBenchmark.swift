@@ -44,6 +44,8 @@ private enum UIBenchmarkScenario: String {
     case coldFirstLayout = "cold-first-layout"
     case textSelectionDrag = "text-selection-drag"
     case crossBlockSelectionDrag = "cross-block-selection-drag"
+    case commandStateDuringDrag = "command-state-during-drag"
+    case commandStateStableScroll = "command-state-stable-scroll"
 
     init(argument: String) {
         self = UIBenchmarkScenario(rawValue: argument) ?? .scroll
@@ -58,6 +60,8 @@ private enum UIBenchmarkScenario: String {
             .forwardReverseScroll, .widthResize, .pressureRecovery, .longActiveParagraph,
             .coldFirstLayout, .textSelectionDrag, .crossBlockSelectionDrag, .mixed:
             return false
+        case .commandStateDuringDrag, .commandStateStableScroll:
+            return false
         }
     }
 
@@ -70,6 +74,8 @@ private enum UIBenchmarkScenario: String {
             .repeatedViewport, .forwardReverseScroll, .widthResize, .pressureRecovery,
             .longActiveParagraph, .textSelectionDrag, .crossBlockSelectionDrag, .mixed:
             return false
+        case .commandStateDuringDrag, .commandStateStableScroll:
+            return false
         }
     }
 }
@@ -80,6 +86,10 @@ private enum UIBenchmarkValidationError: Error {
     case viewportWidthDidNotResize(Double)
     case textSelectionDragGeometryUnavailable(BlockID)
     case textSelectionDragDidNotProduceTextSelection
+    case commandStateDragProducedRichState
+    case commandStateStableProducedLightweightState
+    case commandStateStableSelectionCount(expected: Int, actual: Int)
+    case commandStateDragVisitedFullSpan
     case forwardReverseScrollExceededLocalSpan(actual: Double, limit: Double)
     case forwardReverseScrollStepTooLarge(actual: Double, limit: Double)
     case forwardReverseScrollHadNoReversePathHits
@@ -177,7 +187,8 @@ enum UIBenchmarkFixture {
         targetIndex: Int,
         activeTextLength: Int?
     ) -> String {
-        if scenario == .crossBlockSelectionDrag,
+        if scenario == .crossBlockSelectionDrag || scenario == .commandStateDuringDrag
+            || scenario == .commandStateStableScroll,
             index > 0,
             index < blockCount - 1,
             index.isMultiple(of: 13)
@@ -388,6 +399,14 @@ final class UIBenchmarkHost {
         )
     }
 
+    func queryCommandState() -> EditorCommandState {
+        editorViewController.commandState
+    }
+
+    func finishCommandStateDrag() {
+        _ = handleNativeInputEvent(.pointer(.endTextSelection))
+    }
+
     fileprivate func resetUIBenchmarkDocument(
         blockCount: Int,
         scenario: UIBenchmarkScenario,
@@ -467,6 +486,10 @@ final class UIBenchmarkRecorder {
             currentSample?.heightIndexMoveCount = metrics.heightIndexMoveCount
             currentSample?.heightIndexUpdateHeightCount =
                 metrics.heightIndexUpdateHeightCount
+            currentSample?.commandStateRichProjectionCount =
+                metrics.commandStateRichProjectionCount
+            currentSample?.commandStateVisitedBlockCount =
+                metrics.commandStateVisitedBlockCount
         }
     #endif
 
@@ -628,6 +651,8 @@ final class UIBenchmarkRecorder {
         "heightIndexRemoveCount",
         "heightIndexMoveCount",
         "heightIndexUpdateHeightCount",
+        "commandStateRichProjectionCount",
+        "commandStateVisitedBlockCount",
         "preparedLayoutLookupCount",
         "preparedLayoutHitCount",
         "preparedLayoutCapacityEvictionCount",
@@ -690,6 +715,8 @@ struct UIBenchmarkFrameSample {
     var heightIndexRemoveCount: Int = 0
     var heightIndexMoveCount: Int = 0
     var heightIndexUpdateHeightCount: Int = 0
+    var commandStateRichProjectionCount: Int = 0
+    var commandStateVisitedBlockCount: Int = 0
     var preparedLayoutLookupCount: Int = 0
     var preparedLayoutHitCount: Int = 0
     var preparedLayoutCapacityEvictionCount: Int = 0
@@ -751,6 +778,8 @@ struct UIBenchmarkFrameSample {
             String(heightIndexRemoveCount),
             String(heightIndexMoveCount),
             String(heightIndexUpdateHeightCount),
+            String(commandStateRichProjectionCount),
+            String(commandStateVisitedBlockCount),
             String(preparedLayoutLookupCount),
             String(preparedLayoutHitCount),
             String(preparedLayoutCapacityEvictionCount),
@@ -863,6 +892,10 @@ enum UIBenchmarkRunner {
             }
             setScrollY(scrollY, viewController: viewController)
 
+            #if SLOPAD_BENCHMARK_INSTRUMENTATION
+                viewController.session.resetCommandStateBenchmarkMetrics()
+            #endif
+
             recorder.beginFrame(index: frame, scrollY: scrollY)
             let frameStart = DispatchTime.now().uptimeNanoseconds
 
@@ -932,6 +965,10 @@ enum UIBenchmarkRunner {
             samples: recorder.samples
         )
 
+        if scenario == .commandStateDuringDrag {
+            viewController.finishCommandStateDrag()
+        }
+
         let csv = recorder.csv(blockCount: options.blockCount, scenario: options.scenario)
         try write(csv, to: options.outputPath)
         fputs(
@@ -952,6 +989,15 @@ enum UIBenchmarkRunner {
             .subtreeDelete, .subtreeReorder, .styleChange, .unicodeNavigation,
             .longActiveParagraph, .textSelectionDrag, .crossBlockSelectionDrag, .mixed:
             break
+        case .commandStateDuringDrag:
+            beginCommandStateDrag(options: options, viewController: viewController)
+            return
+        case .commandStateStableScroll:
+            prepareStableCommandStateSelection(
+                options: options,
+                viewController: viewController
+            )
+            return
         }
         let target = targetBlockID(blockCount: options.blockCount)
         centerBlock(target, viewController: viewController)
@@ -979,6 +1025,9 @@ enum UIBenchmarkRunner {
         case .crossBlockSelectionDrag:
             centerBlock(UIBenchmarkFixture.blockID(0), viewController: viewController)
 
+        case .commandStateDuringDrag, .commandStateStableScroll:
+            break
+
         case .scroll, .repeatedViewport, .forwardReverseScroll, .widthResize,
             .pressureRecovery, .coldFirstLayout:
             break
@@ -992,12 +1041,14 @@ enum UIBenchmarkRunner {
         viewController: UIBenchmarkHost
     ) -> Double {
         switch scenario {
-        case .scroll, .mixed, .forwardReverseScroll:
+        case .scroll, .mixed, .forwardReverseScroll, .commandStateStableScroll:
             break
         case .nativeInsert, .composition, .heightExpansion, .blockSelection, .blockReorder,
             .subtreeDelete, .subtreeReorder, .styleChange, .unicodeNavigation,
             .repeatedViewport, .widthResize, .pressureRecovery, .longActiveParagraph,
             .coldFirstLayout, .textSelectionDrag, .crossBlockSelectionDrag:
+            return Double(viewController.scrollView.contentView.bounds.origin.y)
+        case .commandStateDuringDrag:
             return Double(viewController.scrollView.contentView.bounds.origin.y)
         }
 
@@ -1066,6 +1117,34 @@ enum UIBenchmarkRunner {
             return frame.isMultiple(of: 2)
                 ? "crossBlockSelectionForward"
                 : "crossBlockSelectionReverse"
+
+        case .commandStateDuringDrag:
+            try updateCommandStateDrag(
+                frame: frame,
+                frameCount: max(1, options.frameCount),
+                options: options,
+                viewController: viewController
+            )
+            return "commandStateDuringDrag"
+
+        case .commandStateStableScroll:
+            let selectedBlockCount: Int
+            if case .blocks(let selection) = viewController.snapshot?.selection {
+                selectedBlockCount = selection.blockIDs.count
+            } else {
+                selectedBlockCount = 0
+            }
+            guard selectedBlockCount == options.blockCount else {
+                throw UIBenchmarkValidationError.commandStateStableSelectionCount(
+                    expected: options.blockCount,
+                    actual: selectedBlockCount
+                )
+            }
+            let state = viewController.queryCommandState()
+            guard state.detail == .rich else {
+                throw UIBenchmarkValidationError.commandStateStableProducedLightweightState
+            }
+            return "commandStateStableScroll"
 
         case .nativeInsert:
             insertText(frame: frame, options: options, viewController: viewController)
@@ -1246,6 +1325,91 @@ enum UIBenchmarkRunner {
         }
     }
 
+    private static func prepareStableCommandStateSelection(
+        options: UIBenchmarkOptions,
+        viewController: UIBenchmarkHost
+    ) {
+        let firstID = UIBenchmarkFixture.blockID(0)
+        let lastID = UIBenchmarkFixture.blockID(max(0, options.blockCount - 1))
+        centerBlock(firstID, viewController: viewController)
+        guard
+            let anchor = hitResult(
+                blockID: firstID,
+                region: .gutter,
+                viewController: viewController
+            )
+        else { return }
+
+        centerBlock(lastID, viewController: viewController)
+        guard
+            let focus = hitResult(
+                blockID: lastID,
+                region: .gutter,
+                viewController: viewController
+            ),
+            viewController.handleNativeInputEvent(
+                .pointer(.selectBlockRange(anchor: anchor, focus: focus))
+            ) != nil
+        else { return }
+
+        viewController.renderAndSyncSurface(makeFirstResponder: false)
+        _ = viewController.queryCommandState()
+    }
+
+    private static func beginCommandStateDrag(
+        options: UIBenchmarkOptions,
+        viewController: UIBenchmarkHost
+    ) {
+        let startID = UIBenchmarkFixture.blockID(0)
+        let textOriginX =
+            viewController.editorStyle.gutterWidth
+            + viewController.editorStyle.contentHorizontalPadding
+        centerBlock(startID, viewController: viewController)
+        guard
+            let start = blockPoint(
+                blockID: startID,
+                x: textOriginX + 8,
+                yFraction: 0.5,
+                viewController: viewController
+            )
+        else { return }
+        viewController.handleMouseDown(documentPoint: start)
+    }
+
+    private static func updateCommandStateDrag(
+        frame: Int,
+        frameCount: Int,
+        options: UIBenchmarkOptions,
+        viewController: UIBenchmarkHost
+    ) throws {
+        let denominator = max(1, frameCount - 1)
+        let progress = Double(frame) / Double(denominator)
+        let targetIndex = min(
+            options.blockCount - 1,
+            max(1, Int((Double(options.blockCount - 1) * progress).rounded()))
+        )
+        let targetID = UIBenchmarkFixture.blockID(targetIndex)
+        let textOriginX =
+            viewController.editorStyle.gutterWidth
+            + viewController.editorStyle.contentHorizontalPadding
+        centerBlock(targetID, viewController: viewController)
+        guard
+            let point = blockPoint(
+                blockID: targetID,
+                x: textOriginX + 32,
+                yFraction: 0.5,
+                viewController: viewController
+            )
+        else {
+            throw UIBenchmarkValidationError.textSelectionDragGeometryUnavailable(targetID)
+        }
+        viewController.handleMouseDragged(documentPoint: point)
+        let state = viewController.queryCommandState()
+        guard state.detail == .lightweight else {
+            throw UIBenchmarkValidationError.commandStateDragProducedRichState
+        }
+    }
+
     private static func validateForwardReverseScrollPosition(
         _ scrollY: Double,
         previousScrollY: Double,
@@ -1298,6 +1462,16 @@ enum UIBenchmarkRunner {
                     })
                 else {
                     throw UIBenchmarkValidationError.sameHeadControlDidNotCaptureDisplayPrepare
+                }
+            }
+            if scenario == .commandStateDuringDrag || scenario == .commandStateStableScroll {
+                guard
+                    samples.allSatisfy({
+                        $0.commandStateRichProjectionCount == 0
+                            && $0.commandStateVisitedBlockCount == 0
+                    })
+                else {
+                    throw UIBenchmarkValidationError.commandStateDragVisitedFullSpan
                 }
             }
         #endif
