@@ -95,18 +95,17 @@ The archive contract is deliberately narrower than `EditorDocumentSnapshot`: ver
 canonical blocks only. It excludes selection, undo/history, operation journal,
 epoch/revision, composition, layout, viewport, and TextKit state.
 
-### Two gates, not one
+### One continuous gate, two ordinary hosts
 
 `Fixtures/DownstreamSwiftUIHost` is the intended companion to
-`Fixtures/DownstreamAppKitHost`. Today, [`docs/TESTING.md`](../docs/TESTING.md)'s
-conditional gates remain authoritative; neither fixture is yet the always-run baseline.
-[#69](https://github.com/hot666666/Slopad/issues/69) must establish both as the Epic #67
-baseline before dependent implementation PRs. After that work lands, they become the
-continuous ADR 0012 gate on every host-surface PR. Each builds with one product dependency,
-no `@testable`, and no package-only state, so a capability that stops being public breaks a
-build rather than being discovered by whoever integrates next. A fixture that compiles while
-avoiding the difficult path is not a gate, so each one exercises the full mount → edit →
-observe → flush → replace → unmount sequence.
+`Fixtures/DownstreamAppKitHost`. [Issue #69](https://github.com/hot666666/Slopad/issues/69)
+established `bash scripts/verify-host-surface.sh` as their canonical continuous ADR 0012
+gate; CI runs that command on every pull request. Each host builds with one product dependency, no
+`@testable`, and no package-only state, so a capability that stops being public breaks at
+the downstream boundary rather than being discovered by whoever integrates next. A fixture
+that compiles while avoiding the difficult path is not a gate, so each executable performs
+the full mount → edit → observe → flush → replace → unmount sequence and fails fast on a
+contract mismatch.
 
 Those ordinary lifecycle fixtures are not format fixtures. `DownstreamMarkdownHost` is a
 separate opt-in format-consumer gate; a corresponding archive consumer belongs in its own
