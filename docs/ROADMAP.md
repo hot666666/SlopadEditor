@@ -55,8 +55,11 @@ bounded tracking issue.
 
 ### P0 — Continuous ADR 0012 host-surface gate
 
-This is a continuous gate on every PR, not a separate feature to complete. Any PR that
-changes a host surface must satisfy its applicable facade and fixture boundary.
+This is the target continuous gate, not a separate feature to complete. Today,
+[`Testing`](TESTING.md)'s conditional gates remain authoritative. [#69](https://github.com/hot666666/Slopad/issues/69)
+must establish both ordinary AppKit and SwiftUI lifecycle fixtures as the always-run
+Epic #67 baseline before dependent implementation PRs; after #69, every host-surface PR
+uses that continuous gate.
 
 - Keep `SlopadAppKit` as the ordinary one-product/one-import path and `SlopadSwiftUI` as
   the declarative lifecycle surface.
