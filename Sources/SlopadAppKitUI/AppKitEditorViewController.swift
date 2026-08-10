@@ -518,6 +518,45 @@ public final class AppKitEditorViewController: NSViewController {
         return update
     }
 
+    /// Package-only built-in chrome query. Hosts do not receive command-state policy.
+    package var commandState: EditorCommandState {
+        snapshot?.commandState ?? session.commandState()
+    }
+
+    /// Synchronized package action used by built-in adapter chrome.
+    @discardableResult
+    package func perform(
+        _ action: EditorCommandAction,
+        makeFirstResponder: Bool = true,
+        scrollSelectionIntoView: Bool = true
+    ) -> EditorUpdate? {
+        _ = commitActiveComposition()
+        guard let update = session.apply(action) else { return nil }
+        onUpdate?(update)
+        renderAndSyncSurface(
+            makeFirstResponder: makeFirstResponder,
+            scrollSelectionIntoView: scrollSelectionIntoView
+        )
+        return update
+    }
+
+    package func todoState(blockID: BlockID) -> EditorToggleState {
+        session.todoState(blockID: blockID)
+    }
+
+    /// The exact clicked block is preserved across the adapter boundary.
+    @discardableResult
+    package func toggleTodo(blockID: BlockID) -> EditorUpdate? {
+        _ = commitActiveComposition()
+        guard let update = session.toggleTodo(blockID: blockID) else { return nil }
+        onUpdate?(update)
+        renderAndSyncSurface(
+            makeFirstResponder: view.window?.firstResponder === editorCanvasView,
+            scrollSelectionIntoView: false
+        )
+        return update
+    }
+
     /// Applies one canonical full-document post-image and synchronizes the AppKit surface.
     ///
     /// The source must still match the controller's Session instance, committed document

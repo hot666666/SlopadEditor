@@ -78,9 +78,13 @@ public final class EditorSession {
     /// Last resolved caret/selection geometry, reused across surface convergence renders.
     var cachedCaretGeometry:
         (key: CaretGeometryKey, caretRect: EditorRect?, selectionRects: [EditorRect])?
+    var cachedCommandState: (key: CommandStateCacheKey, value: EditorCommandState)?
+    /// Owner-local proof hook used by focused cache regressions.
+    var commandStateRichProjectionCount: Int
 
     var composition: TextComposition?
     var compositionSelection: TextSelection?
+    private var commandCompositionIdentityRevision: UInt64
     var blockDrag: (blockIDs: [BlockID], dropTarget: BlockDropTarget?, dropIndicator: EditorRect?)?
     var blockSelectionRectangle: (anchor: EditorPoint, current: EditorPoint)?
     var blockSelectionDragAnchor: BlockHitTestResult?
@@ -113,8 +117,11 @@ public final class EditorSession {
         self.editorModel = EditorModel(document: document, selection: selection)
         self.blockLayout = BlockLayout()
         self.textBackend = textLayouter
+        self.cachedCommandState = nil
+        self.commandStateRichProjectionCount = 0
         self.composition = nil
         self.compositionSelection = nil
+        self.commandCompositionIdentityRevision = 0
         self.blockDrag = nil
         self.blockSelectionRectangle = nil
         self.blockSelectionDragAnchor = nil
@@ -161,6 +168,18 @@ public final class EditorSession {
 
     func recordCompositionRevision(_ revision: Int) {
         compositionRevisionCounter = max(compositionRevisionCounter, revision)
+    }
+
+    var commandCompositionIdentity: UInt64? {
+        composition == nil ? nil : commandCompositionIdentityRevision
+    }
+
+    func recordCommandCompositionChange() {
+        precondition(
+            commandCompositionIdentityRevision < UInt64.max,
+            "Command composition identity exhausted"
+        )
+        commandCompositionIdentityRevision += 1
     }
 
     // MARK: - Committed Document Change
