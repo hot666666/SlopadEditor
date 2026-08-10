@@ -27,6 +27,9 @@ SCENARIOS=(
   drag-reorder
   click-tail
   click-todo
+  todo-checkbox-control
+  floating-toolbar-text
+  floating-toolbar-block
   ime-composition
   ime-marked-callback
   ime-unmark-callback

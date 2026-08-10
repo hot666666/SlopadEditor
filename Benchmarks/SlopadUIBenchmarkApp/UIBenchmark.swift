@@ -47,6 +47,9 @@ private enum UIBenchmarkScenario: String {
     case commandStateDuringDrag = "command-state-during-drag"
     case commandStateDuringBlockDrag = "command-state-during-block-drag"
     case commandStateStableScroll = "command-state-stable-scroll"
+    case floatingToolbarStableScroll = "floating-toolbar-stable-scroll"
+    case noncontiguousBlockSelectionStableScroll =
+        "noncontiguous-block-selection-stable-scroll"
 
     init(argument: String) {
         self = UIBenchmarkScenario(rawValue: argument) ?? .scroll
@@ -61,7 +64,8 @@ private enum UIBenchmarkScenario: String {
             .forwardReverseScroll, .widthResize, .pressureRecovery, .longActiveParagraph,
             .coldFirstLayout, .textSelectionDrag, .crossBlockSelectionDrag, .mixed:
             return false
-        case .commandStateDuringDrag, .commandStateDuringBlockDrag, .commandStateStableScroll:
+        case .commandStateDuringDrag, .commandStateDuringBlockDrag, .commandStateStableScroll,
+            .floatingToolbarStableScroll, .noncontiguousBlockSelectionStableScroll:
             return false
         }
     }
@@ -75,7 +79,8 @@ private enum UIBenchmarkScenario: String {
             .repeatedViewport, .forwardReverseScroll, .widthResize, .pressureRecovery,
             .longActiveParagraph, .textSelectionDrag, .crossBlockSelectionDrag, .mixed:
             return false
-        case .commandStateDuringDrag, .commandStateDuringBlockDrag, .commandStateStableScroll:
+        case .commandStateDuringDrag, .commandStateDuringBlockDrag, .commandStateStableScroll,
+            .floatingToolbarStableScroll, .noncontiguousBlockSelectionStableScroll:
             return false
         }
     }
@@ -91,7 +96,15 @@ private enum UIBenchmarkValidationError: Error {
     case commandStateBlockDragDidNotBegin
     case commandStateStableProducedLightweightState
     case commandStateStableSelectionCount(expected: Int, actual: Int)
+    case floatingToolbarNotPresented
     case commandStateDragVisitedFullSpan
+    case blockSelectionMembershipRebuiltDuringStableScroll
+    case noncontiguousBlockSelectionSetupMismatch(expected: Int, actual: Int)
+    case noncontiguousBlockSelectionMembershipWarmupMismatch(
+        expectedVisited: Int,
+        actualRebuilds: Int,
+        actualVisited: Int
+    )
     case forwardReverseScrollExceededLocalSpan(actual: Double, limit: Double)
     case forwardReverseScrollStepTooLarge(actual: Double, limit: Double)
     case forwardReverseScrollHadNoReversePathHits
@@ -190,7 +203,9 @@ enum UIBenchmarkFixture {
         activeTextLength: Int?
     ) -> String {
         if scenario == .crossBlockSelectionDrag || scenario == .commandStateDuringDrag
-            || scenario == .commandStateDuringBlockDrag || scenario == .commandStateStableScroll,
+            || scenario == .commandStateDuringBlockDrag || scenario == .commandStateStableScroll
+            || scenario == .floatingToolbarStableScroll
+            || scenario == .noncontiguousBlockSelectionStableScroll,
             index > 0,
             index < blockCount - 1,
             index.isMultiple(of: 13)
@@ -405,6 +420,10 @@ final class UIBenchmarkHost {
         editorViewController.commandState
     }
 
+    var isFloatingFormattingToolbarPresented: Bool {
+        editorViewController.isFloatingFormattingToolbarPresented
+    }
+
     func finishCommandStateDrag() {
         _ = handleNativeInputEvent(.pointer(.endTextSelection))
     }
@@ -435,6 +454,28 @@ final class UIBenchmarkHost {
             blocks: fixture.blocks,
             selection: .caret(blockID: fixture.firstBlockID, offset: 0)
         )
+    }
+
+    fileprivate func installNoncontiguousBlockSelection(
+        blockCount: Int,
+        scenario: UIBenchmarkScenario,
+        subtreeNodeCount: Int?,
+        activeTextLength: Int?
+    ) -> [BlockID] {
+        let fixture = UIBenchmarkFixture.makeBlocks(
+            count: blockCount,
+            scenario: scenario,
+            subtreeNodeCount: subtreeNodeCount,
+            activeTextLength: activeTextLength
+        )
+        let selectedIDs = stride(from: 0, to: max(2, blockCount), by: 2).map {
+            UIBenchmarkFixture.blockID($0)
+        }
+        resetDocument(
+            blocks: fixture.blocks,
+            selection: .blocks(BlockSelection(blockIDs: selectedIDs))
+        )
+        return selectedIDs
     }
 }
 
@@ -502,6 +543,10 @@ final class UIBenchmarkRecorder {
                 metrics.commandStateRichProjectionCount
             currentSample?.commandStateVisitedBlockCount =
                 metrics.commandStateVisitedBlockCount
+            currentSample?.blockSelectionMembershipRebuildCount =
+                metrics.blockSelectionMembershipRebuildCount
+            currentSample?.blockSelectionMembershipVisitedIDCount =
+                metrics.blockSelectionMembershipVisitedIDCount
         }
     #endif
 
@@ -665,6 +710,8 @@ final class UIBenchmarkRecorder {
         "heightIndexUpdateHeightCount",
         "commandStateRichProjectionCount",
         "commandStateVisitedBlockCount",
+        "blockSelectionMembershipRebuildCount",
+        "blockSelectionMembershipVisitedIDCount",
         "preparedLayoutLookupCount",
         "preparedLayoutHitCount",
         "preparedLayoutCapacityEvictionCount",
@@ -729,6 +776,8 @@ struct UIBenchmarkFrameSample {
     var heightIndexUpdateHeightCount: Int = 0
     var commandStateRichProjectionCount: Int = 0
     var commandStateVisitedBlockCount: Int = 0
+    var blockSelectionMembershipRebuildCount: Int = 0
+    var blockSelectionMembershipVisitedIDCount: Int = 0
     var preparedLayoutLookupCount: Int = 0
     var preparedLayoutHitCount: Int = 0
     var preparedLayoutCapacityEvictionCount: Int = 0
@@ -792,6 +841,8 @@ struct UIBenchmarkFrameSample {
             String(heightIndexUpdateHeightCount),
             String(commandStateRichProjectionCount),
             String(commandStateVisitedBlockCount),
+            String(blockSelectionMembershipRebuildCount),
+            String(blockSelectionMembershipVisitedIDCount),
             String(preparedLayoutLookupCount),
             String(preparedLayoutHitCount),
             String(preparedLayoutCapacityEvictionCount),
@@ -867,12 +918,24 @@ enum UIBenchmarkRunner {
 
         let scenario = UIBenchmarkScenario(argument: options.scenario)
         if scenario != .coldFirstLayout {
-            viewController.renderAndSyncSurface(makeFirstResponder: false)
+            if scenario == .noncontiguousBlockSelectionStableScroll {
+                try prepare(
+                    scenario: scenario,
+                    options: options,
+                    viewController: viewController
+                )
+            } else {
+                viewController.renderAndSyncSurface(makeFirstResponder: false)
+                if !scenario.requiresFreshDocumentPerFrame {
+                    try prepare(
+                        scenario: scenario,
+                        options: options,
+                        viewController: viewController
+                    )
+                }
+            }
             viewController.scrollView.documentView?.displayIfNeeded()
             window.displayIfNeeded()
-            if !scenario.requiresFreshDocumentPerFrame {
-                prepare(scenario: scenario, options: options, viewController: viewController)
-            }
         }
 
         let frameCount = max(1, options.frameCount)
@@ -886,7 +949,7 @@ enum UIBenchmarkRunner {
                     subtreeNodeCount: options.subtreeNodeCount,
                     activeTextLength: options.activeTextLength
                 )
-                prepare(scenario: scenario, options: options, viewController: viewController)
+                try prepare(scenario: scenario, options: options, viewController: viewController)
             }
             let scrollY = scrollY(
                 forFrame: frame,
@@ -902,14 +965,13 @@ enum UIBenchmarkRunner {
                 )
                 previousForwardReverseScrollY = scrollY
             }
-            setScrollY(scrollY, viewController: viewController)
-
             #if SLOPAD_BENCHMARK_INSTRUMENTATION
                 viewController.session.resetCommandStateBenchmarkMetrics()
             #endif
 
             recorder.beginFrame(index: frame, scrollY: scrollY)
             let frameStart = DispatchTime.now().uptimeNanoseconds
+            setScrollY(scrollY, viewController: viewController)
 
             let operationStart = DispatchTime.now().uptimeNanoseconds
             let operation = try performOperation(
@@ -994,7 +1056,7 @@ enum UIBenchmarkRunner {
         scenario: UIBenchmarkScenario,
         options: UIBenchmarkOptions,
         viewController: UIBenchmarkHost
-    ) {
+    ) throws {
         switch scenario {
         case .scroll, .repeatedViewport, .forwardReverseScroll, .widthResize,
             .pressureRecovery, .coldFirstLayout:
@@ -1014,6 +1076,50 @@ enum UIBenchmarkRunner {
                 options: options,
                 viewController: viewController
             )
+            return
+        case .floatingToolbarStableScroll:
+            prepareStableCommandStateSelection(
+                options: options,
+                viewController: viewController
+            )
+            return
+        case .noncontiguousBlockSelectionStableScroll:
+            let selectedIDs = viewController.installNoncontiguousBlockSelection(
+                blockCount: options.blockCount,
+                scenario: scenario,
+                subtreeNodeCount: options.subtreeNodeCount,
+                activeTextLength: options.activeTextLength
+            )
+            viewController.renderAndSyncSurface(makeFirstResponder: false)
+            _ = viewController.queryCommandState()
+            guard case .blocks(let selection) = viewController.snapshot?.selection,
+                selection.blockIDs == selectedIDs
+            else {
+                let actualCount: Int
+                if case .blocks(let selection) = viewController.snapshot?.selection {
+                    actualCount = selection.blockIDs.count
+                } else {
+                    actualCount = 0
+                }
+                throw UIBenchmarkValidationError.noncontiguousBlockSelectionSetupMismatch(
+                    expected: selectedIDs.count,
+                    actual: actualCount
+                )
+            }
+            #if SLOPAD_BENCHMARK_INSTRUMENTATION
+                let metrics = viewController.session.lastBenchmarkMetrics
+                guard metrics.blockSelectionMembershipRebuildCount == 1,
+                    metrics.blockSelectionMembershipVisitedIDCount == selectedIDs.count
+                else {
+                    throw
+                        UIBenchmarkValidationError
+                        .noncontiguousBlockSelectionMembershipWarmupMismatch(
+                            expectedVisited: selectedIDs.count,
+                            actualRebuilds: metrics.blockSelectionMembershipRebuildCount,
+                            actualVisited: metrics.blockSelectionMembershipVisitedIDCount
+                        )
+                }
+            #endif
             return
         }
         let target = targetBlockID(blockCount: options.blockCount)
@@ -1042,7 +1148,8 @@ enum UIBenchmarkRunner {
         case .crossBlockSelectionDrag:
             centerBlock(UIBenchmarkFixture.blockID(0), viewController: viewController)
 
-        case .commandStateDuringDrag, .commandStateDuringBlockDrag, .commandStateStableScroll:
+        case .commandStateDuringDrag, .commandStateDuringBlockDrag, .commandStateStableScroll,
+            .floatingToolbarStableScroll, .noncontiguousBlockSelectionStableScroll:
             break
 
         case .scroll, .repeatedViewport, .forwardReverseScroll, .widthResize,
@@ -1058,7 +1165,8 @@ enum UIBenchmarkRunner {
         viewController: UIBenchmarkHost
     ) -> Double {
         switch scenario {
-        case .scroll, .mixed, .forwardReverseScroll, .commandStateStableScroll:
+        case .scroll, .mixed, .forwardReverseScroll, .commandStateStableScroll,
+            .floatingToolbarStableScroll, .noncontiguousBlockSelectionStableScroll:
             break
         case .nativeInsert, .composition, .heightExpansion, .blockSelection, .blockReorder,
             .subtreeDelete, .subtreeReorder, .styleChange, .unicodeNavigation,
@@ -1171,6 +1279,34 @@ enum UIBenchmarkRunner {
                 throw UIBenchmarkValidationError.commandStateStableProducedLightweightState
             }
             return "commandStateStableScroll"
+
+        case .floatingToolbarStableScroll:
+            guard viewController.isFloatingFormattingToolbarPresented else {
+                throw UIBenchmarkValidationError.floatingToolbarNotPresented
+            }
+            let state = viewController.queryCommandState()
+            guard state.detail == .rich else {
+                throw UIBenchmarkValidationError.commandStateStableProducedLightweightState
+            }
+            return "floatingToolbarStableScroll"
+
+        case .noncontiguousBlockSelectionStableScroll:
+            guard case .blocks(let selection) = viewController.snapshot?.selection else {
+                throw UIBenchmarkValidationError.noncontiguousBlockSelectionSetupMismatch(
+                    expected: max(1, options.blockCount / 2),
+                    actual: 0
+                )
+            }
+            let expectedIDs = stride(from: 0, to: max(2, options.blockCount), by: 2).map {
+                UIBenchmarkFixture.blockID($0)
+            }
+            guard selection.blockIDs == expectedIDs else {
+                throw UIBenchmarkValidationError.noncontiguousBlockSelectionSetupMismatch(
+                    expected: expectedIDs.count,
+                    actual: selection.blockIDs.count
+                )
+            }
+            return "noncontiguousBlockSelectionStableScroll"
 
         case .nativeInsert:
             insertText(frame: frame, options: options, viewController: viewController)
@@ -1543,6 +1679,8 @@ enum UIBenchmarkRunner {
             }
             if scenario == .commandStateDuringDrag || scenario == .commandStateDuringBlockDrag
                 || scenario == .commandStateStableScroll
+                || scenario == .floatingToolbarStableScroll
+                || scenario == .noncontiguousBlockSelectionStableScroll
             {
                 guard
                     samples.allSatisfy({
@@ -1551,6 +1689,17 @@ enum UIBenchmarkRunner {
                     })
                 else {
                     throw UIBenchmarkValidationError.commandStateDragVisitedFullSpan
+                }
+            }
+            if scenario == .noncontiguousBlockSelectionStableScroll {
+                guard
+                    samples.allSatisfy({
+                        $0.blockSelectionMembershipRebuildCount == 0
+                            && $0.blockSelectionMembershipVisitedIDCount == 0
+                    })
+                else {
+                    throw UIBenchmarkValidationError
+                        .blockSelectionMembershipRebuiltDuringStableScroll
                 }
             }
         #endif
