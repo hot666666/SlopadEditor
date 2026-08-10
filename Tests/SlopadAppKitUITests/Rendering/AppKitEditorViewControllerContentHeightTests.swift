@@ -158,7 +158,7 @@ private func makeController(blockCount: Int) -> AppKitEditorViewController {
 
 @MainActor
 private func attach(_ controller: AppKitEditorViewController) {
-    let window = NSWindow(
+    let window = AppKitTestWindow(
         contentRect: NSRect(x: 0, y: 0, width: 320, height: 240),
         styleMask: [.borderless],
         backing: .buffered,

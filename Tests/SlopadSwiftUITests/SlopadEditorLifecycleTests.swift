@@ -262,7 +262,7 @@ private final class MountedEditor {
         )
         // A real mount lays the editor out, which is what gives the native input surface an
         // active block to compose into.
-        window = NSWindow(
+        window = SwiftUITestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 240),
             styleMask: [.borderless],
             backing: .buffered,

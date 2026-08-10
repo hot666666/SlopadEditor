@@ -195,7 +195,7 @@ private final class StyleFocusView: NSView {
 
 @MainActor
 private func makeWindow(controller: AppKitEditorViewController) -> NSWindow {
-    let window = NSWindow(
+    let window = AppKitTestWindow(
         contentRect: NSRect(x: 0, y: 0, width: 320, height: 140),
         styleMask: [.borderless],
         backing: .buffered,

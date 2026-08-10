@@ -105,7 +105,7 @@ private final class ClearSelectionContext {
             blocks: [EditorBlockInput(id: "block", content: BlockContent(text: "Selected"))],
             selection: .caret(blockID: "block", offset: 1)
         )
-        window = NSWindow(
+        window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 240),
             styleMask: [.borderless],
             backing: .buffered,

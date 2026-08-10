@@ -106,7 +106,7 @@ private final class SlashContext {
             blocks: [EditorBlockInput(id: blockID, content: BlockContent(text: ""))],
             selection: .caret(blockID: blockID, offset: 0)
         )
-        window = NSWindow(
+        window = AppKitTestWindow(
             contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.borderless],
             backing: .buffered,

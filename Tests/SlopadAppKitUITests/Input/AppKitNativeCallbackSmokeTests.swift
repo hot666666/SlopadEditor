@@ -142,7 +142,7 @@ private final class NativeCallbackTestHost {
             selection: selection,
             focusOnAppear: false
         )
-        window = NSWindow(
+        window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 640, height: 240),
             styleMask: [.borderless],
             backing: .buffered,

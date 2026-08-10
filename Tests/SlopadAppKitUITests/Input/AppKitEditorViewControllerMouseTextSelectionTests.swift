@@ -21,7 +21,7 @@ struct AppKitEditorViewControllerMouseTextSelectionTests {
             selection: .caret(blockID: blockID, offset: 0),
             focusOnAppear: false
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 640, height: 240),
             styleMask: [.borderless],
             backing: .buffered,
@@ -82,7 +82,7 @@ struct AppKitEditorViewControllerMouseTextSelectionTests {
             selection: .inactive,
             focusOnAppear: false
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 640, height: 300),
             styleMask: [.borderless],
             backing: .buffered,
@@ -210,7 +210,7 @@ struct AppKitEditorViewControllerMouseTextSelectionTests {
             selection: .inactive,
             focusOnAppear: false
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 640, height: 300),
             styleMask: [.borderless],
             backing: .buffered,

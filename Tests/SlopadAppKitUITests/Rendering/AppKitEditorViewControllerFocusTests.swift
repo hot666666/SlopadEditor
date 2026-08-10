@@ -157,7 +157,7 @@ private final class FocusableProbeView: NSView {
 
 @MainActor
 private func makeWindow() -> NSWindow {
-    NSWindow(
+    AppKitTestWindow(
         contentRect: NSRect(x: 0, y: 0, width: 320, height: 240),
         styleMask: [.borderless],
         backing: .buffered,
