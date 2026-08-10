@@ -45,7 +45,7 @@ struct AppKitEditorViewControllerScrollingTests {
             },
             selection: .caret(blockID: blockIDs[0], offset: 0)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,
@@ -95,7 +95,7 @@ struct AppKitEditorViewControllerScrollingTests {
             },
             selection: .caret(blockID: blockIDs[0], offset: 0)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,
@@ -192,7 +192,7 @@ struct AppKitEditorViewControllerScrollingTests {
             },
             selection: .caret(blockID: blockIDs[0], offset: 2)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,
@@ -239,7 +239,7 @@ struct AppKitEditorViewControllerScrollingTests {
             },
             selection: .caret(blockID: blockIDs[0], offset: 2)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,

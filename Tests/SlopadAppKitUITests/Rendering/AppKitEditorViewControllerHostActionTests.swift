@@ -168,7 +168,7 @@ private final class HostActionFocusView: NSView {
 
 @MainActor
 private func makeHostActionWindow(controller: AppKitEditorViewController) -> NSWindow {
-    let window = NSWindow(
+    let window = AppKitTestWindow(
         contentRect: NSRect(x: 0, y: 0, width: 320, height: 140),
         styleMask: [.borderless],
         backing: .buffered,

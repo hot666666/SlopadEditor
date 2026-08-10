@@ -20,7 +20,7 @@ struct AppKitEditorViewControllerSurfaceSyncTests {
             ],
             selection: .caret(blockID: blockID, offset: 2)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,
@@ -94,7 +94,7 @@ struct AppKitEditorViewControllerSurfaceSyncTests {
             ],
             selection: .caret(blockID: blockID, offset: 2)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,
@@ -145,7 +145,7 @@ struct AppKitEditorViewControllerSurfaceSyncTests {
             ],
             selection: .caret(blockID: blockID, offset: 2)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,
@@ -277,7 +277,7 @@ struct AppKitEditorViewControllerSurfaceSyncTests {
         ]
         let selection = EditorSelection.caret(blockID: blockID, offset: 4)
         let controller = AppKitEditorViewController(blocks: blocks, selection: selection)
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,
@@ -322,7 +322,7 @@ struct AppKitEditorViewControllerSurfaceSyncTests {
             ],
             selection: .caret(blockID: oldBlockID, offset: 0)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,
@@ -371,7 +371,7 @@ struct AppKitEditorViewControllerSurfaceSyncTests {
             },
             selection: .caret(blockID: blockIDs[99], offset: 0)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,
@@ -426,7 +426,7 @@ struct AppKitEditorViewControllerSurfaceSyncTests {
             ],
             selection: .caret(blockID: oldBlockID, offset: 0)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,
@@ -533,7 +533,7 @@ private final class SurfaceSyncActionOnResignView: NSView {
 }
 
 @MainActor
-private final class SurfaceSyncFocusTrackingWindow: NSWindow {
+private final class SurfaceSyncFocusTrackingWindow: AppKitTestWindow {
     weak var trackedResponder: NSResponder?
     private(set) var trackedFocusRequestCount = 0
 

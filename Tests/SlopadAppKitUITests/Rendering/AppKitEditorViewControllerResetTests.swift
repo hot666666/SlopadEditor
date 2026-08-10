@@ -48,7 +48,7 @@ struct AppKitEditorViewControllerResetTests {
             ],
             selection: .caret(blockID: oldBlockID, offset: 0)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,
@@ -117,7 +117,7 @@ struct AppKitEditorViewControllerResetTests {
             },
             selection: .caret(blockID: oldBlockIDs[0], offset: 0)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,
@@ -173,7 +173,7 @@ struct AppKitEditorViewControllerResetTests {
             },
             selection: .caret(blockID: oldBlockIDs[0], offset: 0)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,
@@ -217,7 +217,7 @@ struct AppKitEditorViewControllerResetTests {
             blocks: [EditorBlockInput(id: oldBlockID, content: BlockContent(text: "Old"))],
             selection: .caret(blockID: oldBlockID, offset: 0)
         )
-        let window = NSWindow(
+        let window = AppKitTestWindow(
             contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
             styleMask: [.borderless],
             backing: .buffered,

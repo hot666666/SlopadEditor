@@ -95,12 +95,6 @@ internals, or development hooks.
   public `documentSnapshot` remains the last published committed document and revision
   until close publishes a changed document. Autosave therefore persists the prior snapshot;
   an explicit save first commits composition.
-- Resolve or isolate the Swift Testing helper's AppKit `NSWindow` teardown signal 11. A
-  440-test focused Engine run and a 90-test focused AppKit run are recorded passing, but
-  the AppKit target can still fail intermittently during teardown and the combined suite
-  fails more often. Keep the passing owner runs as bounded evidence, not a stability
-  claim, until the runner issue is closed.
-
 Exit: the implemented non-IME D1–D7 behavior has recorded manual visual evidence, Apple's
 built-in Korean 2-set delivery reaches the consumer, the decided live replacement lifecycle
 is implemented and product-verified, and the canonical repository-wide test entrypoint exits
