@@ -45,8 +45,10 @@ These constraints remain in force unless replaced by an ADR:
 - Caret/selection geometry is published through Session facts; AppKit UI does not bypass
   Session to ask the backend for editing meaning.
 - Markdown is not persistence state. Its semantic round-trip creates fresh `BlockID`s;
-  P3's native archive preserves canonical block identity instead. Markdown remains an
-  explicit whole-document import/export format, not a reload format.
+  [ADR 0015](../ADR/0015-version-native-archive-and-keep-storage-host-owned.md)'s native
+  archive contract requires canonical block identity preservation instead. Markdown
+  remains an explicit whole-document import/export format, not a reload format. The
+  archive contract is decided; its product/codec/fixture implementation remains P3 work.
 - ADR 0012's ordinary-host contract is continuously gated by
   `bash scripts/verify-host-surface.sh`. It runs the one-product AppKit and SwiftUI public
   lifecycle fixtures on every pull request; format-consumer fixtures remain separate.
@@ -132,6 +134,9 @@ priority, and no public model internals.
   native persistence representation. Its archive contains canonical blocks and a format
   version only—never selection, undo/history, operation journal, epoch/revision,
   composition, layout, viewport, or TextKit state.
+- Implement [#78](https://github.com/hot666666/Slopad/issues/78) against ADR 0015's v1
+  UTF-8 JSON schema, raw-wire-before-normalization decode, typed fail-closed errors, and
+  shared selection-independent CoreModel canonical-input validator.
 - The embedding app owns files, databases, cloud sync, autosave, conflict resolution,
   retry, and error UX. `SlopadArchive` owns neither storage nor lifecycle policy.
 - Add a dedicated opt-in archive format-consumer fixture when the codec exists; keep it
@@ -185,8 +190,8 @@ platform-hosted tests and fixtures.
   ADR 0012 host-surface test before widening them.
 - A partial text-renderer hook would split measurement, geometry, and drawing. Full text
   replacement requires a coherent adapter/backend pair.
-- Structured paste, collapsed state, or Markdown persistence can each accidentally become
-  a second canonical model if ownership is not decided first.
+- Structured paste, collapsed state, or using Markdown as persistence can each
+  accidentally become a second canonical model if ownership is not decided first.
 - Full-rebuild layout remains the correctness baseline; large documents still require
   measured incremental and viewport-driven strategies.
 - Snapshot undo/redo is simple and correct but may need a measured memory strategy for

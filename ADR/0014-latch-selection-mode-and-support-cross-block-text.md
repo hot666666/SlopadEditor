@@ -99,8 +99,11 @@ That future live group may update transaction-local canonical editing content, b
 not expose provisional marked text through the public persistence surface.
 `documentSnapshot` remains the last published committed document and revision until close
 atomically publishes a changed document; autosave during composition therefore stores that
-prior snapshot, while an explicit save first flushes composition. The exact native callback
-termination table—first/subsequent `setMarkedText`, `insertText`, `unmarkText`, Escape,
+prior snapshot, while an explicit save first flushes composition. The native archive in
+[ADR 0015](0015-version-native-archive-and-keep-storage-host-owned.md) consumes only that
+committed snapshot's blocks and never stores composition or Session revision. The exact
+native callback termination table—first/subsequent `setMarkedText`, `insertText`,
+`unmarkText`, Escape,
 undo/redo, synchronized commands, focus loss, and explicit flush—is the implementation
 criterion in [#76](https://github.com/hot666666/Slopad/issues/76). It is implemented only
 after real installed-IME delivery, including Apple's built-in Korean 2-set, is proven in

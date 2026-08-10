@@ -35,6 +35,11 @@ The production targets form these direct dependency layers:
 | Contracts | `SlopadCoreModel` | Public vocabulary and genuine package cross-target contracts |
 | Storage | `SlopadDataStructure` | Editor-independent data structures |
 
+[ADR 0015](../ADR/0015-version-native-archive-and-keep-storage-host-owned.md) also fixes
+the future `SlopadArchive` boundary: an opt-in synchronous pure codec depending only on
+`SlopadCoreModel`. It is not yet a Package.swift product, so it is not listed as a current
+production target above.
+
 The dependency graph enforces four important absences:
 
 - `SlopadEditorModel` and `SlopadBlockLayout` do not import each other;
@@ -43,6 +48,8 @@ The dependency graph enforces four important absences:
   `BlockTextLayoutProtocol` capabilities defined in `SlopadCoreModel`.
 - `SlopadMarkdown` does not import the engine. A caller explicitly decides when decoded
   block inputs enter a document transaction.
+- The future `SlopadArchive` likewise does not import the engine or a storage provider. It
+  transforms canonical block inputs to/from `Data`; the host owns persistence lifecycle.
 - `SlopadAppKit` and `SlopadSwiftUI` add no second controller, Session, document, or cache.
 
 Debug apps, benchmarks, tests, and downstream fixtures are outer-edge consumers. They
@@ -88,9 +95,10 @@ replacement policy in ADR 0014 remain unfinished product work.
 | Block selection/drag | AppKit gutter/body routing → Session runtime preview → layout drop/reveal geometry → model move transaction on successful drop | Preview is runtime state; only the final valid drop mutates the tree |
 | Slash command | Model typed-`/` rule → Session query/source runtime → snapshot anchor/catalog → AppKit overlay → Session CAS apply → one model transaction | Query/menu state is not canonical; `/query` deletion and kind change form one undo step |
 | Rendering/scroll | AppKit viewport → `EditorSession.render` → block visibility/layout → coherent text backend facts → render snapshot → AppKit surface sync | Only visible projection is rendered; it is not a persistence source |
-| Persistence | model semantic change → Session committed revision → host callback → on-demand `documentSnapshot` | Revision is Session-local and signals when to read; it is not a storage revision |
+| Persistence | model semantic change → Session committed revision → host callback → on-demand `documentSnapshot` → host debounce → future archive encode → host storage | Snapshot blocks are the source; epoch/revision only reject stale in-process work and are never stored |
 | Reviewed replacement | context snapshot → external review → complete patch → Session epoch/revision/selection CAS → model validation/replacement → layout/runtime invalidation | A changed post-image is one transaction; stale, invalid, or composing sources fail without partial mutation |
 | Markdown import/export | caller → `SlopadMarkdown` → fresh `[EditorBlockInput]` or deterministic text → optional Session patch | Codec AST never crosses its target and no conversion is implicit |
+| Native archive reload (planned) | host bytes → `SlopadArchive` raw wire validation → canonical input validation → `[EditorBlockInput]` → explicit host Session lifecycle | Identity/order/content survive; malformed or unsupported archives return no partial blocks |
 
 ### Synchronized AppKit actions
 
@@ -151,6 +159,7 @@ complete adapter/backend pair so geometry and drawing stay coherent.
 | SwiftUI app | `SlopadSwiftUI` | mount/unmount, document identity, bindings, persistence timing | controller bypass or a second runtime |
 | Complete custom platform adapter | `SlopadEngine` plus its own backend | native callback translation, drawing, focus, scroll coherence | direct model/layout coupling |
 | Markdown caller | `SlopadMarkdown` and optionally `SlopadEngine` | explicit import/export timing and failure UX | parser AST retention or partial success |
+| Native archive caller (planned) | `SlopadArchive` and optionally `SlopadEngine` | file/DB/cloud lifecycle, debounce, atomic write, conflict/retry/error UX | Session state, storage providers, or a second canonical document owner |
 | Debug/benchmark/fixture | development targets | scenarios, measurements, public compile proof | production ownership |
 
 The ordinary AppKit host surface is admitted by intent:
@@ -189,6 +198,29 @@ The codec is not a plugin registry, persistence choice, or paste fallback. Calle
 when to import/export and how to present unsupported input. See
 [ADR 0013](../ADR/0013-markdown-format-boundary.md).
 
+## Native Archive Boundary (decided, not implemented)
+
+`SlopadArchive` v1 is a separate opt-in `SlopadCoreModel`-only codec over UTF-8 JSON
+`Data`. Its envelope contains `formatVersion` and the complete canonical preorder blocks
+only. It preserves IDs, parent/root/sibling order, kinds, text, and inline marks; it excludes
+selection, history, operation journal, external reference payloads, epoch/revision,
+composition, layout, viewport, and TextKit state.
+
+Decode is fail-closed. Archive-owned raw wire DTOs are checked before constructing
+normalizing `BlockContent` values. A package-only strict CoreModel content constructor
+rejects any mark list that would clamp/drop/merge/reorder; then a selection-independent
+CoreModel validator checks empty/duplicate/parent/cycle/content/preorder invariants.
+Malformed data, unsupported future/past versions, and canonical invariant failures return
+no blocks. Encoding validates the same invariant and returns no bytes on failure. The
+semantic result is deterministic; JSON byte identity is not promised.
+
+The host observes a committed revision, coalesces notifications, reads the latest snapshot
+on the Session executor, and may encode its immutable blocks away from that executor. It
+uses epoch/revision only to discard a stale in-process result before its own atomic save;
+those tokens are neither archive fields nor storage revisions. A separately stored reference
+may reattach by stable `BlockID`, but selection and undo/history do not restore. See
+[ADR 0015](../ADR/0015-version-native-archive-and-keep-storage-host-owned.md).
+
 ## Access and Consumer Rules
 
 - `public` means a supported host contract.
@@ -225,3 +257,7 @@ The most relevant durable decisions are:
 - [ADR 0011](../ADR/0011-reviewable-atomic-document-transactions.md) — reviewed patches
 - [ADR 0012](../ADR/0012-host-embedding-contract.md) — host surface admission
 - [ADR 0013](../ADR/0013-markdown-format-boundary.md) — Markdown isolation
+- [ADR 0014](../ADR/0014-latch-selection-mode-and-support-cross-block-text.md) — committed
+  composition publication
+- [ADR 0015](../ADR/0015-version-native-archive-and-keep-storage-host-owned.md) — native
+  archive and host-owned storage lifecycle
