@@ -9,8 +9,7 @@ Accepted
 Decision tracking: [issue #75](https://github.com/hot666666/Slopad/issues/75) owns this ADR
 and its fixed contract. Implementation tracking:
 [issue #78](https://github.com/hot666666/Slopad/issues/78) owns the `SlopadArchive`
-product/target, codec, CoreModel validation seams, and downstream fixture. None of those
-implementation artifacts exists yet.
+product/target, codec, CoreModel validation seams, and downstream fixture.
 
 ## Context
 
@@ -179,6 +178,17 @@ The v1 mark `kind.type` cases are `strong`, `emphasis`, `code`, `strikethrough`,
 half-open grapheme offsets into `content.text`, matching `TextRange` rather than UTF-8 or
 UTF-16 offsets.
 
+V1 also has internal admission budgets: at most 16 MiB of archive bytes, 150,000 parsed
+JSON values, 100,000 total array elements, 100,000 total object members, 8 MiB of total
+decoded UTF-8 string content, and nesting depth 128. These are format-safety limits that
+bound allocation and parser work, not latency targets or universal document-size advice.
+The values leave structural headroom over the 10,000-block smoke document (roughly 80,000
+values and 70,000 members). The decoder checks cumulative budgets before collection or
+string growth and reports excess as `malformedData`; the encoder preflights the same tree
+budgets before Core canonical validation, without building document maps or projection
+arrays. It refuses to return bytes using the locked `invalidContent` invariant for the first
+block that would exceed the representable V1 budget.
+
 The encoder may choose JSON whitespace, object-key ordering, slash escaping, and other
 representation details. Those bytes are not an interoperability or hashing contract.
 Semantic determinism means repeated encoding of the same canonical input describes the
@@ -303,14 +313,20 @@ The intended debounced autosave path is:
    `documentSnapshot` on the Session-owning executor.
 4. The host transfers the immutable `Sendable` `snapshot.blocks` value to its chosen
    background executor and calls the synchronous pure encoder there.
-5. Before saving encoded bytes, the host applies a latest-only guard. If a newer
-   epoch/revision was observed while encoding, it discards the stale result and schedules
-   or keeps the newer save. One host save coordinator serializes writes and rechecks the
-   token immediately before committing bytes.
+5. Snapshot capture synchronously registers its storage token in one host-owned admission
+   authority before posting background work. Final admission, the atomic replacement, and
+   publication of the persisted token are one throwing operation protected by that same
+   authority; a failed or stale operation cannot publish success. A newer capture that races
+   an admitted filesystem replacement waits for that indivisible commit, then registers
+   synchronously and invalidates the older persisted authority before its background task
+   enters the actor mailbox. Holding this gate during a filesystem rename can delay capture
+   registration, so hosts should prepare bytes and temporary files before admission and keep
+   the protected operation to the final atomic store boundary.
 6. The host performs its own atomic file/DB/cloud write, retry, storage-revision update,
    conflict handling, and user-visible recovery. A newer revision observed after a write
-   begins keeps the document dirty and queues the newer save; completion of the older write
-   cannot mark the newer revision persisted.
+   begins keeps the document dirty and queues the newer save. When a persistence outcome is
+   delivered, the Session-owning executor rechecks the exact current token, document ID, and
+   generation, so completion of an older write cannot mark the newer revision persisted.
 
 Epoch/revision prevents an older in-flight encode from overwriting a newer in-process
 snapshot. It is never placed in the archive and is not a persistent or database revision.
@@ -349,12 +365,12 @@ layer acquires command, invariant, selection, or history ownership.
   normalization.
 - Encoding may run away from the Session executor after the host captures immutable blocks;
   I/O and stale-write suppression remain host policy.
-- Issue #78 must add an archive codec-surface fixture target/source whose only package
+- `Fixtures/DownstreamArchiveHost` includes an archive codec-surface target/source whose only package
   product dependency is `SlopadArchive` and whose source imports only Foundation and
   `SlopadArchive`. It constructs the aliased block/kind/content/range/mark vocabulary and
   round-trips it through the codec, proving that no raw CoreModel or Engine import is
   needed.
-- Issue #78 must prove host lifecycle integration separately. That fixture target/source may
+- The same fixture proves host lifecycle integration separately. Its lifecycle target/source may
   additionally import exactly one public UI facade plus `SlopadArchive`, passes the
   facade's type-identical `snapshot.blocks` directly to the codec, and never imports raw
   `SlopadEngine`, `SlopadCoreModel`, or package-only types. If both probes live in one

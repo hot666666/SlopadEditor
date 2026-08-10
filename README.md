@@ -64,6 +64,7 @@ swift run SlopadDebugApp
 | `SlopadAppKit` | Curated ordinary-host API | Runtime state |
 | `SlopadSwiftUI` | SwiftUI mounting, identity, focus, observation, lifecycle flush | A second controller or Session |
 | `SlopadMarkdown` | Explicit stateless whole-document decode/encode | Canonical storage, editor runtime |
+| `SlopadArchive` | Versioned native archive encode/decode over canonical blocks | Storage lifecycle, editor runtime |
 
 The compiler-enforced graph is in [`Package.swift`](Package.swift). The
 [interactive responsibility map](docs/slopad-architecture-map.html) shows module
@@ -126,6 +127,30 @@ Typed Markdown shortcuts are a different path. The internal parser-free
 `SlopadMarkdownInputRules` target supplies bounded prefix and inline pattern data, while
 `SlopadEditorModel` owns trigger gating, canonical application, and undo semantics.
 
+## Native Archive
+
+Identity-preserving native persistence conversion is a separate opt-in product:
+
+```swift
+.product(name: "SlopadArchive", package: "Slopad")
+```
+
+```swift
+import Foundation
+import SlopadArchive
+
+let data = try SlopadArchive.encode(snapshot.blocks)
+let blocks = try SlopadArchive.decode(data)
+```
+
+The synchronous codec preserves canonical block IDs, tree preorder, kinds, content, and
+inline marks. It validates strict UTF-8 JSON, applies bounded V1 wire-admission budgets,
+and fails closed with typed errors. These allocation-safety limits are not performance
+thresholds or general document-size guidance. The host
+still owns snapshot timing, files or databases, debounce, atomic writes, conflicts,
+retries, and recovery; archive data contains no selection, history, Session revision,
+composition, layout, viewport, TextKit, or storage metadata.
+
 ## Development Surfaces
 
 - `SlopadDebugApp` — reference AppKit host for input, focus, selection, IME, scrolling,
@@ -137,6 +162,8 @@ Typed Markdown shortcuts are a different path. The internal parser-free
   `bash scripts/verify-host-surface.sh`.
 - `Fixtures/DownstreamMarkdownHost` — separate opt-in Markdown format-consumer fixture,
   not an ordinary host lifecycle substitute.
+- `Fixtures/DownstreamArchiveHost` — isolated codec-surface and AppKit lifecycle probes;
+  run both with `bash scripts/verify-archive-surface.sh`.
 
 ## Documentation
 

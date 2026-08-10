@@ -43,6 +43,15 @@ installed input-method delivery require their dedicated AppKit/UI evidence.
 | Package or target graph | `swift package dump-package` |
 | Public SwiftUI host surface | `bash scripts/verify-host-surface.sh`; `swift build --product SlopadSwiftUI --quiet` |
 | Markdown format boundary | build the downstream Markdown fixture; verify supported round trips and typed failure diagnostics through the public codec boundary |
+| Native archive boundary | `bash scripts/verify-archive-surface.sh`; `swift build --product SlopadArchive --quiet`; run focused Archive/Core validation tests and the opt-in large-document lifecycle smoke when snapshot/encode cost is relevant |
+
+The Archive unit suite checks every V1 wire safety budget at its exact boundary and at
+boundary plus one. The AppKit lifecycle probe deterministically suspends an old save before
+replacement, proves a newer real capture's synchronous registration is serialized behind
+the lock-held atomic commit without sleeps or polling, withholds the newer actor submission,
+and verifies the old result cannot clear the newer dirty state. It also verifies failed
+final commit operation publishes neither bytes nor a persisted token before the newer save
+wins.
 
 For a focused repair, rerun the focused regression and only the broader gate that the
 repair invalidated. Do not relabel a unit test as visual, device, remote CI, or benchmark
