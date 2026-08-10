@@ -30,6 +30,7 @@ extension EditorSession {
     }
 
     package func todoState(blockID: BlockID) -> EditorToggleState {
+        guard blockDrag == nil else { return .unavailable }
         guard let block = editorModel.document.block(blockID) else { return .unavailable }
         switch block.kind {
         case .todo(let isChecked):
@@ -57,7 +58,7 @@ extension EditorSession {
     package func apply(_ action: EditorCommandAction) -> EditorUpdate? {
         // Session-level package actions do not implicitly mutate composition. The AppKit
         // synchronized action boundary may commit first, then calls back into this resolver.
-        guard composition == nil else { return nil }
+        guard composition == nil, blockDrag == nil else { return nil }
         guard let targets = editorModel.resolveCommandTargets() else { return nil }
 
         switch action {
@@ -96,7 +97,8 @@ extension EditorSession {
     }
 
     private var hasLiveSelectionGesture: Bool {
-        textSelectionDragAnchor != nil
+        blockDrag != nil
+            || textSelectionDragAnchor != nil
             || textSelectionPendingOrigin != nil
             || blockSelectionDragAnchor != nil
             || blockSelectionRectangle != nil

@@ -319,6 +319,71 @@ struct EditorSessionCommandStateTests {
         #expect(cleared.clearInlineStylesAvailability == .unavailable)
     }
 
+    @Test("실제 block reorder drag 중에는 lightweight fact만 제공하고 package action을 거절한다")
+    func givenActiveBlockDrag_whenQueryingAndApplying_thenFactsDeferUntilDragEnds() throws {
+        // Given
+        let a: BlockID = "a"
+        let todo: BlockID = "todo"
+        let c: BlockID = "c"
+        let layouter = SpyBlockTextLayouter()
+        layouter.measurementsByBlockID = [
+            a: BlockMeasurement(height: 10),
+            todo: BlockMeasurement(height: 10),
+            c: BlockMeasurement(height: 10),
+        ]
+        let session = EditorSession(
+            document: makeFlatDocument([
+                Block(id: a, content: .init(text: "A")),
+                Block(id: todo, kind: .todo(isChecked: false), content: .init(text: "T")),
+                Block(id: c, content: .init(text: "C")),
+            ]),
+            selection: .blocks(BlockSelection(blockIDs: [todo])),
+            textLayouter: layouter
+        )
+        let viewport = EditorViewport(width: 240, scrollY: 0, height: 100)
+        let stable = session.commandState()
+        let projectionCount = session.commandStateRichProjectionCount
+        _ = try #require(
+            session.handleInput(
+                .pointer(
+                    .beginBlockDrag(
+                        documentPoint: EditorPoint(x: 0, y: 15),
+                        viewport: viewport
+                    )
+                )
+            )
+        )
+
+        // When
+        let dragging = session.commandState()
+        let kindUpdate = session.apply(.setBlockKind(.quote))
+        let todoUpdate = session.toggleTodo(blockID: todo)
+        let todoDuringDrag = session.todoState(blockID: todo)
+        _ = try #require(
+            session.handleInput(
+                .pointer(
+                    .endBlockDrag(
+                        documentPoint: EditorPoint(x: 0, y: 15),
+                        viewport: viewport
+                    )
+                )
+            )
+        )
+        let ended = session.commandState()
+
+        // Then
+        #expect(stable.detail == .rich)
+        #expect(dragging.detail == .lightweight)
+        #expect(session.commandStateRichProjectionCount == projectionCount)
+        #expect(kindUpdate == nil)
+        #expect(todoUpdate == nil)
+        #expect(todoDuringDrag == .unavailable)
+        #expect(ended.detail == .rich)
+        #expect(ended.blockKind == .value(.todo(isChecked: false)))
+        #expect(session.todoState(blockID: todo) == .off)
+        #expect(session.document.block(todo)?.kind == .todo(isChecked: false))
+    }
+
     @Test("available query와 apply는 같은 resolver를 사용하고 same-kind no-op도 일치한다")
     func givenStableTarget_whenQueryingAndApplying_thenAvailabilityMatchesApplication() throws {
         // Given
