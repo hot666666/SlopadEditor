@@ -27,6 +27,13 @@ Hosts may transfer `Sendable` input values, `EditorUpdate` values, and
 actor-owned editor keeps the Session inside that actor instead of transferring the mutable
 Session itself.
 
+For persistence, the host reads the committed `EditorDocumentSnapshot` on that same owner
+executor, then may transfer its immutable `blocks` to another executor for the synchronous
+pure codec defined by
+[ADR 0015](0015-version-native-archive-and-keep-storage-host-owned.md). Epoch/revision may
+guard against a stale in-process encode, but neither token nor the Session crosses into the
+archive or becomes a storage revision.
+
 The headless engine is not globally `MainActor`-isolated. Platform adapters choose their
 own executor; the default AppKit adapter uses `MainActor`.
 
@@ -39,3 +46,5 @@ own executor; the default AppKit adapter uses `MainActor`.
 - A future platform adapter must choose one executor for each Session and keep all Session
   calls serialized there.
 - Snapshot and update values remain the cross-isolation read/projection boundary.
+- Off-owner archive encoding starts only after the host captures the immutable committed
+  blocks on the Session owner executor; storage I/O remains outside Session.

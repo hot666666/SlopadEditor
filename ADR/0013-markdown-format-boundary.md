@@ -191,12 +191,17 @@ state.
 
 The persistence source of truth is now decided: a versioned native archive, not Markdown.
 Markdown remains explicit whole-document import/export and therefore keeps its fresh-ID and
-syntax-normalization contract. The planned `SlopadArchive` is an opt-in pure codec depending
-only on `SlopadCoreModel`; it encodes a format version and canonical blocks, including their
+syntax-normalization contract.
+[ADR 0015](0015-version-native-archive-and-keep-storage-host-owned.md) defines
+`SlopadArchive` as an opt-in pure codec whose target depends only on `SlopadCoreModel`; its
+public facade exposes only the ADR's curated, type-identical archive aliases, not a
+CoreModel product. It encodes a format version and canonical blocks, including their
 identities, but never selection, undo/history, operation journal, epoch/revision,
 composition, layout, viewport, or TextKit state. The embedding app owns files, databases,
 cloud sync, autosave, conflicts, retries, and error UX. This ADR supplies the Markdown
-identity facts that native-archive persistence must not weaken.
+identity facts that native-archive persistence must not weaken. The archive product remains
+unimplemented;
+[issue #78](https://github.com/hot666666/Slopad/issues/78) tracks that implementation.
 
 ## Consequences
 

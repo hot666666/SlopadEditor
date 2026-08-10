@@ -22,3 +22,4 @@ the decisions that led to it.
 - [0012 - Decide the host embedding surface by a three-part test](0012-host-embedding-contract.md)
 - [0013 - Depend on swift-markdown behind a format target, and guarantee semantic round-trip only](0013-markdown-format-boundary.md)
 - [0014 - Latch selection mode at gesture origin and support cross-block text](0014-latch-selection-mode-and-support-cross-block-text.md)
+- [0015 - Version the native archive and keep storage lifecycle host-owned](0015-version-native-archive-and-keep-storage-host-owned.md)

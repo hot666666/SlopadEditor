@@ -46,6 +46,11 @@ The full snapshot never contains viewport, selection, scroll, layout, or live co
 state. It is a `Sendable` value; the mutable `EditorSession` remains confined to one
 executor.
 
+[ADR 0015](0015-version-native-archive-and-keep-storage-host-owned.md) defines the
+separate opt-in native archive codec over `snapshot.blocks`. It preserves canonical block
+identity but never serializes this snapshot's Session epoch/revision; storage lifecycle and
+storage revision remain host-owned.
+
 ## Consequences
 
 - A host can reconstruct the complete canonical document without `visibleBlocks`,
@@ -55,6 +60,8 @@ executor.
   snapshot.
 - A revision is not a database revision and is not meaningful across Session reset. Hosts
   retain their own document identity and storage revision.
+- A host may use epoch/revision to discard an older in-process encode, but never persists
+  either token in the native archive or treats it as a storage conflict revision.
 - A host that transfers update values to another executor must first obtain the matching
   snapshot on the Session owner executor. The engine does not retain historical snapshots
   for delayed revision lookup.
