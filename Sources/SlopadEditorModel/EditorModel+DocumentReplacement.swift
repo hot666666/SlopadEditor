@@ -78,17 +78,17 @@ extension EditorModel {
 extension EditorDocumentReplacementError {
     init(_ error: CanonicalDocumentReplacementValidationError) {
         switch error {
-        case .emptyDocument:
+        case .documentInput(.emptyDocument):
             self = .emptyDocument
-        case .duplicateBlockID(let blockID):
+        case .documentInput(.duplicateBlockID(let blockID)):
             self = .duplicateBlockID(blockID)
-        case .invalidContent(let blockID):
+        case .documentInput(.invalidContent(let blockID)):
             self = .invalidContent(blockID: blockID)
-        case .missingParent(let blockID, let parentID):
+        case .documentInput(.missingParent(let blockID, let parentID)):
             self = .missingParent(blockID: blockID, parentID: parentID)
-        case .cycleDetected(let blockID):
+        case .documentInput(.cycleDetected(let blockID)):
             self = .cycleDetected(blockID)
-        case .noncanonicalDepthFirstOrder:
+        case .documentInput(.noncanonicalDepthFirstOrder):
             self = .noncanonicalDepthFirstOrder
         case .invalidSelection:
             self = .invalidSelection

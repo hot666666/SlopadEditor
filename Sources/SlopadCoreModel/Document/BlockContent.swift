@@ -152,6 +152,18 @@ public struct BlockContent: Hashable, Codable, Sendable {
         self.init(text: text, marks: marks, revision: 0)
     }
 
+    package init(
+        validatingCanonicalText text: String,
+        marks: [InlineMark]
+    ) throws(CanonicalBlockContentValidationError) {
+        guard marks == BlockContent.normalizedMarks(marks, textLength: text.count) else {
+            throw .noncanonicalMarks
+        }
+        self.text = text
+        self.marks = marks
+        revision = 0
+    }
+
     public var length: Int {
         text.count
     }
@@ -273,4 +285,8 @@ public struct BlockContent: Hashable, Codable, Sendable {
         case text
         case marks
     }
+}
+
+package enum CanonicalBlockContentValidationError: Error, Hashable, Sendable {
+    case noncanonicalMarks
 }
