@@ -83,8 +83,10 @@ internals, or development hooks.
 - Exercise forward/reverse text and structural drags, empty-origin drag, autoscroll,
   Escape/Cmd-A, structured clipboard round trips, and caret/selection chrome manually in
   `SlopadDebugApp`.
-- Repair and prove **Apple's built-in Korean 2-set** installed-IME delivery so product
-  events reach the composition consumer. Direct `setMarkedText` tests prove only that
+- Make **Apple's built-in Korean 2-set** installed-IME delivery reproducible through the
+  opt-in DebugApp native-input trace. One 2026-08-10 diagnostic session observed a real
+  marked update reach the composition consumer; it did not prove commit/cancel lifecycle,
+  candidate-window behavior, or repeatability. Direct `setMarkedText` tests prove only the
   consumer's callback contract, not installed-input-method delivery.
 - Only after that real UI evidence exists, implement ADR 0014's decided live cross-block
   replacement through [#76](https://github.com/hot666666/Slopad/issues/76)'s native

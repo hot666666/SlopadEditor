@@ -62,6 +62,53 @@ that AppKit delivers, but it does not prove a physical keyboard, global event ro
 source selection, candidate-window UI, or a particular third-party IME. Exercise the same
 path in `SlopadDebugApp` when the claim depends on those system integrations.
 
+### Installed-input-method diagnostic trace
+
+For an actual Apple Korean 2-set session, build and launch the debug host with an exact
+checkout identity and the opt-in native-input trace:
+
+```sh
+test -z "$(git status --short)"
+SLOPAD_BUILD_STATE=clean SLOPAD_BUILD_SHA="$(git rev-parse HEAD)" \
+  swift run SlopadDebugApp --native-input-trace \
+  2> /tmp/slopad-native-input-trace.log
+rg '^SLOPAD_NATIVE_INPUT_TRACE ' /tmp/slopad-native-input-trace.log
+```
+
+`SLOPAD_BUILD_SHA` is a caller-declared checkout HEAD, not a binary identity discovered by
+the app. `sourceState=clean` is valid only after the clean-status command succeeds. When
+diagnosing an uncommitted build, pass `SLOPAD_BUILD_STATE=dirty` instead and treat
+`declaredHeadSHA` as its base commit, not as an exact identifier for the executable.
+
+The option is disabled by default. Its schema, sink, and event construction compile only in
+debug builds; release retains the semantics-neutral inlined owner forwarding helper but no
+trace branch or payload. Each prefixed JSON record carries OS and declared source
+provenance; native callback records also carry the public
+`NSTextInputContext.selectedKeyboardInputSource` identifier when AppKit exposes it. The
+trace distinguishes canvas focus, key routing and the before/after
+`interpretKeyEvents` boundary, text callbacks and ranges, ActiveInput guard outcomes,
+emitted Session event/results, native-surface block synchronization, and `firstRect`
+request/result availability. Surface-sync records explicitly report that this diagnostic
+did not call `invalidateCharacterCoordinates`; the trace does not change that behavior.
+
+No canonical document text or snapshot is written. Callback/key text is capped at 16
+characters with the full UTF-16 length and a truncation flag, so the log is still sensitive
+diagnostic output and should not be retained unnecessarily.
+
+A trace containing direct `setMarkedText` injection remains direct-callback evidence. An
+installed-IME claim additionally requires a real physical event and selected input source,
+followed by the system-delivered marked update and commit/cancel callbacks in the same
+recording. `firstRect` availability records the adapter's candidate anchor answer; it does
+not by itself prove that the candidate window appeared or was placed correctly. Record that
+UI observation separately. One observed marked update is delivery evidence, not proof of a
+complete installed-IME lifecycle or ADR 0014's future live replacement semantics.
+
+On 2026-08-10, OS UI automation sending a key-code sequence while Apple Korean 2-set was
+selected produced progressive `insertText` replacements (`ㅎ` → `하` → `한`) rather than
+`setMarkedText`. That recording is useful routing evidence only. The keys were synthetic,
+so it cannot satisfy the physical installed-IME completion criterion or establish a product
+contract for which callback sequence AppKit or the input method will use.
+
 ## Swift Testing AppKit window ownership
 
 Test windows must use the target-local `AppKitTestWindow` or `SwiftUITestWindow`. Swift

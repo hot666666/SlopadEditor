@@ -101,6 +101,12 @@ final class DebugViewController: NSViewController {
 
     // MARK: - Input
 
+    #if DEBUG
+        func enableNativeInputTrace(_ handler: @escaping AppKitNativeInputTraceHandler) {
+            editorViewController.nativeInputTraceHandler = handler
+        }
+    #endif
+
     func focus(blockID: BlockID, offset: Int) {
         _ = handleNativeInputEvent(
             .activeTextSelectionChanged(

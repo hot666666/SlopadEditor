@@ -75,9 +75,11 @@ owner boundary even when optimized.
 
 The IME row describes the callback contract implemented after an event reaches
 `NSTextInputClient`. Direct `setMarkedText` tests exercise that consumer, but installed
-input-method events currently do not reach it in product use. The current consumer keeps a
-Session overlay until commit; installed delivery and the live replacement policy in ADR
-0014 remain unimplemented product work.
+input-method delivery requires separate product-path evidence. A 2026-08-10 diagnostic
+session observed one Apple Korean 2-set marked update reach the consumer, but did not verify
+the complete commit/cancel lifecycle or candidate-window behavior. The current consumer
+keeps a Session overlay until commit; reproducible installed delivery and the live
+replacement policy in ADR 0014 remain unfinished product work.
 
 | Interaction | Producer-to-consumer path | Invariant |
 | --- | --- | --- |

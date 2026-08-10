@@ -221,8 +221,25 @@ public final class AppKitEditorViewController: NSViewController {
     private var textInputDecorationRenderer: AppKitTextInputDecorationRenderer {
         textSystem.textInputDecorationRenderer
     }
-    private lazy var editorCanvasView = AppKitEditorCanvasView(handler: self)
-    private lazy var activeInputController = AppKitActiveInputController(owner: self)
+    #if DEBUG
+        package var nativeInputTraceHandler: AppKitNativeInputTraceHandler?
+
+        private lazy var editorCanvasView = AppKitEditorCanvasView(
+            handler: self,
+            nativeInputTraceHandler: { [weak self] event in
+                self?.nativeInputTraceHandler?(event)
+            }
+        )
+        private lazy var activeInputController = AppKitActiveInputController(
+            owner: self,
+            nativeInputTraceHandler: { [weak self] event in
+                self?.nativeInputTraceHandler?(event)
+            }
+        )
+    #else
+        private lazy var editorCanvasView = AppKitEditorCanvasView(handler: self)
+        private lazy var activeInputController = AppKitActiveInputController(owner: self)
+    #endif
     private lazy var slashCommandOverlay: AppKitSlashCommandOverlay = {
         let overlay = AppKitSlashCommandOverlay(frame: .zero)
         overlay.onCommandRequested = { [weak self] command, source in
@@ -1188,12 +1205,55 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
     }
 
     func firstRectForNativeSurface(range: NSRange) -> NSRect {
+        #if DEBUG
+            nativeInputTraceHandler?(
+                AppKitNativeInputTraceEvent(
+                    category: .firstRect,
+                    phase: .before,
+                    requestedRange: AppKitNativeInputTraceRange(range),
+                    blockID: activeInputController.activeBlockID?.rawValue,
+                    inputContextAvailable: editorCanvasView.inputContext != nil,
+                    inputSourceID: editorCanvasView.inputContext?.selectedKeyboardInputSource
+                )
+            )
+        #endif
         guard
             let activeTextInput = snapshot?.activeTextInput,
             let caretRect = caretRect(for: activeTextInput)
-        else { return .zero }
+        else {
+            #if DEBUG
+                nativeInputTraceHandler?(
+                    AppKitNativeInputTraceEvent(
+                        category: .firstRect,
+                        phase: .after,
+                        requestedRange: AppKitNativeInputTraceRange(range),
+                        resultRect: AppKitNativeInputTraceRect(.zero),
+                        resultAvailable: false,
+                        blockID: activeInputController.activeBlockID?.rawValue,
+                        inputContextAvailable: editorCanvasView.inputContext != nil,
+                        inputSourceID: editorCanvasView.inputContext?.selectedKeyboardInputSource
+                    )
+                )
+            #endif
+            return .zero
+        }
         let windowRect = editorCanvasView.convert(caretRect, to: nil)
-        return view.window?.convertToScreen(windowRect) ?? windowRect
+        let result = view.window?.convertToScreen(windowRect) ?? windowRect
+        #if DEBUG
+            nativeInputTraceHandler?(
+                AppKitNativeInputTraceEvent(
+                    category: .firstRect,
+                    phase: .after,
+                    requestedRange: AppKitNativeInputTraceRange(range),
+                    resultRect: AppKitNativeInputTraceRect(result),
+                    resultAvailable: true,
+                    blockID: activeTextInput.renderDescriptor.measureRequest.blockID.rawValue,
+                    inputContextAvailable: editorCanvasView.inputContext != nil,
+                    inputSourceID: editorCanvasView.inputContext?.selectedKeyboardInputSource
+                )
+            )
+        #endif
+        return result
     }
 }
 

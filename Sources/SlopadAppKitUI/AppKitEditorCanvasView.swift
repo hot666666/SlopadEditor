@@ -42,6 +42,9 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
     // MARK: - State
 
     private weak var handler: (any AppKitEditorCanvasHandler)?
+    #if DEBUG
+        private let nativeInputTraceHandler: AppKitNativeInputTraceHandler?
+    #endif
     private let textInsertionIndicator = NSTextInsertionIndicator()
     private var hasKeyboardFocus = false
     private var hasInsertionPoint = false
@@ -56,14 +59,27 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
 
     // MARK: - Init
 
-    init(
-        handler: (any AppKitEditorCanvasHandler)? = nil,
-        frame: NSRect = NSRect(x: 0, y: 0, width: 860, height: 900)
-    ) {
-        self.handler = handler
-        super.init(frame: frame)
-        setupView()
-    }
+    #if DEBUG
+        init(
+            handler: (any AppKitEditorCanvasHandler)? = nil,
+            frame: NSRect = NSRect(x: 0, y: 0, width: 860, height: 900),
+            nativeInputTraceHandler: AppKitNativeInputTraceHandler? = nil
+        ) {
+            self.handler = handler
+            self.nativeInputTraceHandler = nativeInputTraceHandler
+            super.init(frame: frame)
+            setupView()
+        }
+    #else
+        init(
+            handler: (any AppKitEditorCanvasHandler)? = nil,
+            frame: NSRect = NSRect(x: 0, y: 0, width: 860, height: 900)
+        ) {
+            self.handler = handler
+            super.init(frame: frame)
+            setupView()
+        }
+    #endif
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
@@ -104,6 +120,18 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
             updateInsertionIndicatorDisplayMode()
             handler?.canvasFocusDidChange(true)
         }
+        #if DEBUG
+            trace(
+                AppKitNativeInputTraceEvent(
+                    category: .focus,
+                    phase: .became,
+                    outcome: accepted ? .accepted : .rejected,
+                    canvasIsFirstResponder: window?.firstResponder === self,
+                    inputContextAvailable: inputContext != nil,
+                    inputSourceID: inputContext?.selectedKeyboardInputSource
+                )
+            )
+        #endif
         return accepted
     }
 
@@ -114,6 +142,18 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
             updateInsertionIndicatorDisplayMode()
             handler?.canvasFocusDidChange(false)
         }
+        #if DEBUG
+            trace(
+                AppKitNativeInputTraceEvent(
+                    category: .focus,
+                    phase: .resigned,
+                    outcome: resigned ? .accepted : .rejected,
+                    canvasIsFirstResponder: window?.firstResponder === self,
+                    inputContextAvailable: inputContext != nil,
+                    inputSourceID: inputContext?.selectedKeyboardInputSource
+                )
+            )
+        #endif
         return resigned
     }
 
@@ -139,32 +179,90 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
     // MARK: - Keyboard
 
     override func keyDown(with event: NSEvent) {
+        #if DEBUG
+            trace(
+                AppKitNativeInputTraceEvent(
+                    category: .keyDown,
+                    phase: .received,
+                    text: event.characters.map(AppKitNativeInputTraceText.init),
+                    canvasIsFirstResponder: window?.firstResponder === self,
+                    inputContextAvailable: inputContext != nil,
+                    inputSourceID: inputContext?.selectedKeyboardInputSource
+                )
+            )
+        #endif
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let actionModifiers = modifiers.intersection([.command, .control, .option, .shift])
         if let commandSelector = AppKitKeyboardCommandMapper.commandSelector(
             for: event,
             modifiers: actionModifiers
         ) {
-            _ = handler?.handleNativeCommand(commandSelector)
+            let handled = handler?.handleNativeCommand(commandSelector)
+            #if DEBUG
+                traceKeyDownRoute(
+                    .nativeCommand,
+                    selector: commandSelector,
+                    handled: handled
+                )
+            #endif
             return
         }
 
         if AppKitKeyboardCommandMapper.isReturnKey(event), modifiers.contains(.shift) {
-            _ = handler?.handleNativeCommand(AppKitCommandSelectors.insertLineBreak)
+            let handled = handler?.handleNativeCommand(AppKitCommandSelectors.insertLineBreak)
+            #if DEBUG
+                traceKeyDownRoute(
+                    .shiftReturnCommand,
+                    selector: AppKitCommandSelectors.insertLineBreak,
+                    handled: handled
+                )
+            #endif
             return
         }
 
         let tabSystemModifiers = modifiers.intersection([.command, .control, .option])
         if AppKitKeyboardCommandMapper.isTabKey(event), tabSystemModifiers.isEmpty {
+            let commandSelector: Selector
             if modifiers.contains(.shift) {
-                _ = handler?.handleNativeCommand(AppKitCommandSelectors.insertBacktab)
+                commandSelector = AppKitCommandSelectors.insertBacktab
             } else {
-                _ = handler?.handleNativeCommand(AppKitCommandSelectors.insertTab)
+                commandSelector = AppKitCommandSelectors.insertTab
             }
+            let handled = handler?.handleNativeCommand(commandSelector)
+            #if DEBUG
+                traceKeyDownRoute(
+                    .tabCommand,
+                    selector: commandSelector,
+                    handled: handled
+                )
+            #endif
             return
         }
 
+        #if DEBUG
+            traceKeyDownRoute(.interpretKeyEvents, selector: nil, handled: nil)
+            trace(
+                AppKitNativeInputTraceEvent(
+                    category: .interpretKeyEvents,
+                    phase: .before,
+                    canvasIsFirstResponder: window?.firstResponder === self,
+                    inputContextAvailable: inputContext != nil,
+                    inputSourceID: inputContext?.selectedKeyboardInputSource
+                )
+            )
+        #endif
         interpretKeyEvents([event])
+        #if DEBUG
+            trace(
+                AppKitNativeInputTraceEvent(
+                    category: .interpretKeyEvents,
+                    phase: .after,
+                    canvasIsFirstResponder: window?.firstResponder === self,
+                    inputContextAvailable: inputContext != nil,
+                    inputSourceID: inputContext?.selectedKeyboardInputSource
+                )
+            )
+        #endif
     }
 
     override func doCommand(by selector: Selector) {
@@ -177,7 +275,29 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
     // MARK: - NSTextInputClient
 
     func insertText(_ string: Any, replacementRange: NSRange) {
-        guard let text = Self.plainText(from: string) else { return }
+        guard let text = Self.plainText(from: string) else {
+            #if DEBUG
+                traceTextCallback(
+                    .insertText,
+                    outcome: .rejected,
+                    reason: .unsupportedTextPayload,
+                    selectedRange: nil,
+                    replacementRange: replacementRange,
+                    text: nil
+                )
+            #endif
+            return
+        }
+        #if DEBUG
+            traceTextCallback(
+                .insertText,
+                outcome: .accepted,
+                reason: .forwarded,
+                selectedRange: nil,
+                replacementRange: replacementRange,
+                text: text
+            )
+        #endif
         handler?.insertTextFromNativeSurface(text, replacementRange: replacementRange)
     }
 
@@ -186,7 +306,29 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
         selectedRange: NSRange,
         replacementRange: NSRange
     ) {
-        guard let text = Self.plainText(from: string) else { return }
+        guard let text = Self.plainText(from: string) else {
+            #if DEBUG
+                traceTextCallback(
+                    .setMarkedText,
+                    outcome: .rejected,
+                    reason: .unsupportedTextPayload,
+                    selectedRange: selectedRange,
+                    replacementRange: replacementRange,
+                    text: nil
+                )
+            #endif
+            return
+        }
+        #if DEBUG
+            traceTextCallback(
+                .setMarkedText,
+                outcome: .accepted,
+                reason: .forwarded,
+                selectedRange: selectedRange,
+                replacementRange: replacementRange,
+                text: text
+            )
+        #endif
         handler?.setMarkedTextFromNativeSurface(
             text,
             selectedRange: selectedRange,
@@ -195,6 +337,16 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
     }
 
     func unmarkText() {
+        #if DEBUG
+            traceTextCallback(
+                .unmarkText,
+                outcome: .accepted,
+                reason: .forwarded,
+                selectedRange: nil,
+                replacementRange: nil,
+                text: nil
+            )
+        #endif
         handler?.unmarkTextFromNativeSurface()
     }
 
@@ -272,4 +424,55 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
         }
         return nil
     }
+
+    #if DEBUG
+        private func trace(_ event: @autoclosure () -> AppKitNativeInputTraceEvent) {
+            guard let nativeInputTraceHandler else { return }
+            nativeInputTraceHandler(event())
+        }
+
+        private func traceKeyDownRoute(
+            _ route: AppKitNativeInputTraceEvent.Route,
+            selector: Selector?,
+            handled: Bool?
+        ) {
+            trace(
+                AppKitNativeInputTraceEvent(
+                    category: .keyDown,
+                    phase: .routed,
+                    route: route,
+                    outcome: handled.map { $0 ? .handled : .refused },
+                    selector: selector.map(NSStringFromSelector),
+                    canvasIsFirstResponder: window?.firstResponder === self,
+                    inputContextAvailable: inputContext != nil,
+                    inputSourceID: inputContext?.selectedKeyboardInputSource
+                )
+            )
+        }
+
+        private func traceTextCallback(
+            _ callback: AppKitNativeInputTraceEvent.Callback,
+            outcome: AppKitNativeInputTraceEvent.Outcome,
+            reason: AppKitNativeInputTraceEvent.Reason,
+            selectedRange: NSRange?,
+            replacementRange: NSRange?,
+            text: String?
+        ) {
+            trace(
+                AppKitNativeInputTraceEvent(
+                    category: .textCallback,
+                    phase: .received,
+                    callback: callback,
+                    outcome: outcome,
+                    reason: reason,
+                    text: text.map(AppKitNativeInputTraceText.init),
+                    selectedRange: selectedRange.map(AppKitNativeInputTraceRange.init),
+                    replacementRange: replacementRange.map(AppKitNativeInputTraceRange.init),
+                    canvasIsFirstResponder: window?.firstResponder === self,
+                    inputContextAvailable: inputContext != nil,
+                    inputSourceID: inputContext?.selectedKeyboardInputSource
+                )
+            )
+        }
+    #endif
 }
