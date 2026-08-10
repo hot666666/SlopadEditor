@@ -33,27 +33,6 @@ public struct AppKitBlockChromeRenderContext {
     public let isActive: Bool
     public let isSelected: Bool
 
-    init(
-        blockID: BlockID,
-        kind: BlockKind,
-        markerKind: BlockMarkerKind,
-        depth: Int,
-        blockFrame: CGRect,
-        style: AppKitEditorStyle,
-        graphicsContext: CGContext,
-        isActive: Bool,
-        isSelected: Bool
-    ) {
-        self.blockID = blockID
-        self.kind = kind
-        self.markerKind = markerKind
-        self.depth = depth
-        self.blockFrame = blockFrame
-        self.style = style
-        self.graphicsContext = graphicsContext
-        self.isActive = isActive
-        self.isSelected = isSelected
-    }
 }
 
 // MARK: - AppKitDefaultBlockChromeRenderer
@@ -161,8 +140,10 @@ public struct AppKitDefaultBlockChromeRenderer: AppKitBlockChromeRenderer {
         switch markerKind {
         case .unorderedListItem:
             symbolName = "list.bullet"
-        case .todo(let checked):
-            symbolName = checked ? "checkmark.square" : "square"
+        case .todo:
+            // The built-in checkbox is a real adapter-owned control with exact hit
+            // semantics, so the decoration hook does not draw its interactive surface.
+            return
         case .none:
             symbolName = gutterSymbolName(for: kind)
         case .orderedListItem:

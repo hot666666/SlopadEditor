@@ -133,6 +133,14 @@ final class AppKitActiveInputController {
         markedRange ?? NSRange(location: NSNotFound, length: 0)
     }
 
+    var activeMarkedReplacementRange: NSRange? {
+        markedReplacementRange
+    }
+
+    var activeMarkedDocumentText: String? {
+        markedDocumentText
+    }
+
     var hasMarkedText: Bool {
         markedRange != nil
     }
@@ -462,10 +470,18 @@ final class AppKitActiveInputController {
             return pasteTextFromPasteboard()
 
         case AppKitCommandSelectors.undo:
-            return handleInputCommand(.undo, reportingUnhandled: .undo)
+            return handleInputCommand(
+                .undo,
+                reportingUnhandled: .undo,
+                preserveNativeSurface: hasMarkedText
+            )
 
         case AppKitCommandSelectors.redo:
-            return handleInputCommand(.redo, reportingUnhandled: .redo)
+            return handleInputCommand(
+                .redo,
+                reportingUnhandled: .redo,
+                preserveNativeSurface: hasMarkedText
+            )
 
         default:
             return false
@@ -504,7 +520,8 @@ final class AppKitActiveInputController {
     @discardableResult
     private func handleInputCommand(
         _ command: EditorInputEvent.Command,
-        reportingUnhandled action: AppKitEditorAction? = nil
+        reportingUnhandled action: AppKitEditorAction? = nil,
+        preserveNativeSurface: Bool = false
     ) -> Bool {
         guard emitEditorEvent(.command(command)) != nil else {
             guard let action, let owner else { return false }
@@ -512,7 +529,11 @@ final class AppKitActiveInputController {
             // chain — when the engine refused them, so that stays the default.
             return owner.reportUnhandledAction(action, defaultHandled: false)
         }
-        requestRender(makeFirstResponder: true, scrollSelectionIntoView: true)
+        requestRender(
+            makeFirstResponder: true,
+            preserveNativeSurface: preserveNativeSurface,
+            scrollSelectionIntoView: true
+        )
         return true
     }
 

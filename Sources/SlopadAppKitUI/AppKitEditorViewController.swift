@@ -150,6 +150,12 @@ public final class AppKitEditorViewController: NSViewController {
         }
     }
 
+    private struct TodoCheckboxGesture {
+        let blockID: BlockID
+        let hitRect: CGRect
+        var isInside: Bool
+    }
+
     // MARK: - Public State
 
     public var editorStyle: AppKitEditorStyle {
@@ -250,6 +256,19 @@ public final class AppKitEditorViewController: NSViewController {
         }
         return overlay
     }()
+    private lazy var floatingFormattingToolbar: AppKitFloatingFormattingToolbar = {
+        let toolbar = AppKitFloatingFormattingToolbar(frame: .zero)
+        toolbar.onActionRequested = { [weak self] action in
+            guard let self else { return }
+            let canvasWasFirstResponder = view.window?.firstResponder === editorCanvasView
+            _ = perform(
+                action,
+                makeFirstResponder: canvasWasFirstResponder,
+                scrollSelectionIntoView: false
+            )
+        }
+        return toolbar
+    }()
     lazy var dragAutoscrollController = AppKitDragAutoscrollController(
         visibleBounds: { [weak self] in
             self?.currentViewportBounds() ?? .zero
@@ -268,6 +287,8 @@ public final class AppKitEditorViewController: NSViewController {
     private var isSynchronizingSurface = false
     private var pendingSurfaceSyncRequest: SurfaceSyncRequest?
     private var activeSnapshotPublicationKey: SnapshotPublicationKey?
+    private var todoCheckboxGesture: TodoCheckboxGesture?
+    private var isPointerSelectionGestureActive = false
     private let focusOnAppear: Bool
     /// A `setFocused` call that arrived before the view had a window.
     private var pendingFocus: Bool?
@@ -461,6 +482,8 @@ public final class AppKitEditorViewController: NSViewController {
         selection: EditorSelection? = nil
     ) {
         dragAutoscrollController.stop()
+        todoCheckboxGesture = nil
+        isPointerSelectionGestureActive = false
         textSystem.setActivePreparedLayoutBlockID(nil)
         textSystem.removeAllPreparedLayouts()
         let replacementSession = EditorSession(
@@ -547,13 +570,20 @@ public final class AppKitEditorViewController: NSViewController {
     /// The exact clicked block is preserved across the adapter boundary.
     @discardableResult
     package func toggleTodo(blockID: BlockID) -> EditorUpdate? {
-        _ = commitActiveComposition()
         guard let update = session.toggleTodo(blockID: blockID) else { return nil }
         onUpdate?(update)
-        renderAndSyncSurface(
-            makeFirstResponder: view.window?.firstResponder === editorCanvasView,
-            scrollSelectionIntoView: false
-        )
+        let canvasWasFirstResponder = view.window?.firstResponder === editorCanvasView
+        if hasActiveNativeMarkedText {
+            renderCanvasPreservingNativeSurface(
+                makeFirstResponder: canvasWasFirstResponder,
+                nativeStateIsAuthoritative: true
+            )
+        } else {
+            renderAndSyncSurface(
+                makeFirstResponder: canvasWasFirstResponder,
+                scrollSelectionIntoView: false
+            )
+        }
         return update
     }
 
@@ -648,6 +678,14 @@ public final class AppKitEditorViewController: NSViewController {
         activeInputController.activeMarkedRange
     }
 
+    var activeNativeMarkedReplacementRange: NSRange? {
+        activeInputController.activeMarkedReplacementRange
+    }
+
+    var activeNativeMarkedDocumentText: String? {
+        activeInputController.activeMarkedDocumentText
+    }
+
     package var hasActiveNativeMarkedText: Bool {
         activeInputController.hasMarkedText
     }
@@ -681,6 +719,7 @@ public final class AppKitEditorViewController: NSViewController {
         scrollView.documentView = editorCanvasView
         view.addSubview(scrollView)
         view.addSubview(slashCommandOverlay)
+        view.addSubview(floatingFormattingToolbar)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(scrollViewContentBoundsDidChange(_:)),
@@ -868,6 +907,7 @@ public final class AppKitEditorViewController: NSViewController {
         synchronizeInsertionPoint(with: renderedSurface.snapshot)
         invalidateVisibleCanvas()
         synchronizeSlashCommandOverlay(with: renderedSurface.snapshot)
+        synchronizeFloatingFormattingToolbar(with: renderedSurface.snapshot)
         return renderedSurface
     }
 
@@ -1095,7 +1135,7 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
         dirtyRect.fill()
 
         guard let cgContext = NSGraphicsContext.current?.cgContext else { return }
-        let selectedBlockIDs = selectedBlockIDs(in: snapshot)
+        let selectedBlockIDs = snapshot.selectionPresentation.visibleBlockSelectionIDs
         let activeTextBlockID = activeChromeBlockID(in: snapshot)
         for rendered in snapshot.visibleBlocks {
             let isActive = rendered.id == activeTextBlockID
@@ -1118,6 +1158,15 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
                     )
                 )
             }
+            if case .todo(let isChecked) = rendered.kind {
+                AppKitTodoCheckboxControl.draw(
+                    isChecked: isChecked,
+                    blockFrame: blockFrame,
+                    style: editorStyle,
+                    isPressed: todoCheckboxGesture?.blockID == rendered.id
+                        && todoCheckboxGesture?.isInside == true
+                )
+            }
         }
 
         for rendered in snapshot.visibleBlocks {
@@ -1136,6 +1185,10 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
 
     package func handleMouseDown(documentPoint: CGPoint, clickCount: Int) {
         dragAutoscrollController.stop()
+        if beginTodoCheckboxGesture(at: documentPoint) {
+            return
+        }
+        isPointerSelectionGestureActive = true
         if clickCount >= 2 {
             handleMouseDoubleClick(documentPoint: documentPoint)
         } else {
@@ -1144,6 +1197,9 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
     }
 
     package func handleMouseDragged(documentPoint: CGPoint) {
+        if updateTodoCheckboxGesture(at: documentPoint) {
+            return
+        }
         if snapshot?.blockDragState != nil {
             guard applyDragUpdate(kind: .blockDrag, documentPoint: documentPoint) else { return }
             dragAutoscrollController.update(kind: .blockDrag, documentPoint: documentPoint)
@@ -1179,6 +1235,10 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
 
     package func handleMouseUp(documentPoint: CGPoint) {
         dragAutoscrollController.stop()
+        if endTodoCheckboxGesture(at: documentPoint) {
+            return
+        }
+        isPointerSelectionGestureActive = false
         let viewport = currentViewport()
         let point = EditorPoint(x: Double(documentPoint.x), y: Double(documentPoint.y))
         if snapshot?.blockDragState != nil {
@@ -1191,6 +1251,7 @@ extension AppKitEditorViewController: AppKitEditorCanvasHandler {
         } else {
             handleNativeInputEvent(.pointer(.endTextSelection))
             handleNativeInputEvent(.pointer(.endBlockSelection))
+            renderAndSyncSurface(makeFirstResponder: false)
         }
     }
 
@@ -1343,6 +1404,51 @@ extension AppKitEditorViewController {
     }
 }
 
+// MARK: - Floating Formatting Toolbar
+
+extension AppKitEditorViewController {
+    private func synchronizeFloatingFormattingToolbar(with snapshot: EditorSessionSnapshot) {
+        let presentation = snapshot.selectionPresentation
+        let documentAnchor =
+            isPointerSelectionGestureActive
+            ? nil
+            : presentation.focusRect ?? presentation.visibleBounds
+        let anchorInContainer = documentAnchor.map {
+            editorCanvasView.convert(CGRect(editorRect: $0), to: view)
+        }
+        floatingFormattingToolbar.synchronize(
+            commandState: snapshot.commandState,
+            presentation: presentation,
+            anchorInContainer: anchorInContainer,
+            containerBounds: view.bounds
+        )
+    }
+
+    package var isFloatingFormattingToolbarPresented: Bool {
+        !floatingFormattingToolbar.isHidden
+    }
+
+    package var floatingFormattingToolbarFrame: NSRect? {
+        isFloatingFormattingToolbarPresented ? floatingFormattingToolbar.frame : nil
+    }
+
+    package var floatingFormattingToolbarPlacement: AppKitFloatingFormattingToolbar.Placement? {
+        isFloatingFormattingToolbarPresented ? floatingFormattingToolbar.placement : nil
+    }
+
+    package func floatingFormattingToolbarItemState(
+        _ item: AppKitFloatingFormattingToolbar.Item
+    ) -> AppKitFloatingFormattingToolbar.ItemState? {
+        floatingFormattingToolbar.itemState(item)
+    }
+
+    package func performFloatingFormattingToolbarItem(
+        _ item: AppKitFloatingFormattingToolbar.Item
+    ) {
+        floatingFormattingToolbar.perform(item)
+    }
+}
+
 // MARK: - Native Input Owner
 
 extension AppKitEditorViewController: AppKitActiveInputOwner {
@@ -1387,6 +1493,63 @@ extension AppKitEditorViewController: AppKitActiveInputOwner {
 // MARK: - Pointer Handling
 
 extension AppKitEditorViewController {
+    package func todoCheckboxHitRect(blockID: BlockID) -> CGRect? {
+        guard
+            let rendered = snapshot?.visibleBlocks.first(where: { $0.id == blockID }),
+            case .todo = rendered.kind
+        else { return nil }
+        return AppKitTodoCheckboxControl.hitRect(
+            blockFrame: CGRect(editorRect: rendered.frame),
+            style: editorStyle
+        )
+    }
+
+    private func beginTodoCheckboxGesture(at documentPoint: CGPoint) -> Bool {
+        guard let hit = todoCheckboxHit(at: documentPoint) else { return false }
+        todoCheckboxGesture = TodoCheckboxGesture(
+            blockID: hit.blockID,
+            hitRect: hit.rect,
+            isInside: true
+        )
+        editorCanvasView.setNeedsDisplay(hit.rect.insetBy(dx: -4, dy: -4))
+        return true
+    }
+
+    private func updateTodoCheckboxGesture(at documentPoint: CGPoint) -> Bool {
+        guard var gesture = todoCheckboxGesture else { return false }
+        let isInside = gesture.hitRect.contains(documentPoint)
+        if gesture.isInside != isInside {
+            gesture.isInside = isInside
+            todoCheckboxGesture = gesture
+            editorCanvasView.setNeedsDisplay(gesture.hitRect.insetBy(dx: -4, dy: -4))
+        }
+        return true
+    }
+
+    private func endTodoCheckboxGesture(at documentPoint: CGPoint) -> Bool {
+        guard let gesture = todoCheckboxGesture else { return false }
+        todoCheckboxGesture = nil
+        editorCanvasView.setNeedsDisplay(gesture.hitRect.insetBy(dx: -4, dy: -4))
+        guard gesture.hitRect.contains(documentPoint) else { return true }
+        _ = toggleTodo(blockID: gesture.blockID)
+        return true
+    }
+
+    private func todoCheckboxHit(at documentPoint: CGPoint) -> (blockID: BlockID, rect: CGRect)? {
+        guard let snapshot else { return nil }
+        for rendered in snapshot.visibleBlocks {
+            guard case .todo = rendered.kind else { continue }
+            let rect = AppKitTodoCheckboxControl.hitRect(
+                blockFrame: CGRect(editorRect: rendered.frame),
+                style: editorStyle
+            )
+            if rect.contains(documentPoint) {
+                return (rendered.id, rect)
+            }
+        }
+        return nil
+    }
+
     @discardableResult
     private func applyDragUpdate(
         kind: AppKitDragAutoscrollKind,
