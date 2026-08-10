@@ -189,11 +189,14 @@ IDs". Neither is accurate. A selection or external reference captured before a M
 reload cannot be reused afterwards; undo remains safe because it restores the whole prior
 state.
 
-This ADR does not choose the persistence source of truth. Markdown-only persistence remains
-a possible later product decision only if it explicitly accepts identity discontinuity and
-syntax normalization. A native archive or hybrid/sidecar can preserve identity instead.
-The later persistence ADR chooses among those trade-offs; this one supplies the round-trip
-and identity facts it must not ignore.
+The persistence source of truth is now decided: a versioned native archive, not Markdown.
+Markdown remains explicit whole-document import/export and therefore keeps its fresh-ID and
+syntax-normalization contract. The planned `SlopadArchive` is an opt-in pure codec depending
+only on `SlopadCoreModel`; it encodes a format version and canonical blocks, including their
+identities, but never selection, undo/history, operation journal, epoch/revision,
+composition, layout, viewport, or TextKit state. The embedding app owns files, databases,
+cloud sync, autosave, conflicts, retries, and error UX. This ADR supplies the Markdown
+identity facts that native-archive persistence must not weaken.
 
 ## Consequences
 
@@ -204,6 +207,9 @@ and identity facts it must not ignore.
   current package graph.
 - Round-trip fixtures assert semantic equality with `BlockID`s excluded. A fixture asserting
   byte equality is testing something this ADR does not promise and should be rejected.
+- Markdown's dedicated opt-in format-consumer fixture remains separate from the future
+  archive format-consumer fixture and from the ordinary one-product AppKit/SwiftUI lifecycle
+  fixtures. No fixture may make Markdown a persistence fallback.
 - A selection captured before an import must not be reapplied after it. Undo needs no
   special handling: it restores whole states, identities included.
 - The adapter converts to core types before returning and does not retain the AST. An

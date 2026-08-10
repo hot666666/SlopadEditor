@@ -45,14 +45,21 @@ These constraints remain in force unless replaced by an ADR:
 - Caret/selection geometry is published through Session facts; AppKit UI does not bypass
   Session to ask the backend for editing meaning.
 - Markdown is not persistence state. Its semantic round-trip creates fresh `BlockID`s;
-  persistence identity needs a separate decision.
+  P3's native archive preserves canonical block identity instead. Markdown remains an
+  explicit whole-document import/export format, not a reload format.
 
 ## Priorities
 
 These are capability buckets, not permission to implement without an owner decision and a
 bounded tracking issue.
 
-### P0 — Harden the host integration contract
+### P0 — Continuous ADR 0012 host-surface gate
+
+This is the target continuous gate, not a separate feature to complete. Today,
+[`Testing`](TESTING.md)'s conditional gates remain authoritative. [#69](https://github.com/hot666666/Slopad/issues/69)
+must establish both ordinary AppKit and SwiftUI lifecycle fixtures as the always-run
+Epic #67 baseline before dependent implementation PRs; after #69, every host-surface PR
+uses that continuous gate.
 
 - Keep `SlopadAppKit` as the ordinary one-product/one-import path and `SlopadSwiftUI` as
   the declarative lifecycle surface.
@@ -60,6 +67,9 @@ bounded tracking issue.
   engine input contracts, or a complete custom-adapter requirement.
 - Keep both downstream host fixtures exercising mount → edit → observe → flush → replace
   → unmount without `@testable`, package access, or underlying-module bypass.
+- Keep those ordinary one-product lifecycle fixtures separate from opt-in format-consumer
+  fixtures. Markdown and the future archive codec each prove their own format boundary;
+  neither substitutes for the AppKit or SwiftUI lifecycle gate.
 
 Exit: an ordinary host can integrate, persist, focus, resize, and customize supported
 chrome without touching raw callbacks, viewport ownership, TextKit graphs, model/layout
@@ -70,50 +80,70 @@ internals, or development hooks.
 - Exercise forward/reverse text and structural drags, empty-origin drag, autoscroll,
   Escape/Cmd-A, structured clipboard round trips, and caret/selection chrome manually in
   `SlopadDebugApp`.
-- Repair installed Korean IME delivery so product events reach the existing composition
-  consumer. Direct `setMarkedText` tests prove only that consumer's callback contract, not
-  installed-input-method delivery.
-- After delivery is proven, implement ADR 0014's decided live cross-block IME replacement,
-  grouped history, commit/cancel, and candidate-window behavior against the real product
-  path. Do not infer product behavior from direct callback injection.
+- Repair and prove **Apple's built-in Korean 2-set** installed-IME delivery so product
+  events reach the composition consumer. Direct `setMarkedText` tests prove only that
+  consumer's callback contract, not installed-input-method delivery.
+- Only after that real UI evidence exists, implement ADR 0014's decided live cross-block
+  replacement through [#76](https://github.com/hot666666/Slopad/issues/76)'s native
+  callback close table: grouped history, exact cancel/redo restoration, candidate-window
+  behavior, and the one committed-revision rule. Do not infer product behavior from direct
+  callback injection.
+- During that future live composition, transaction-local editing content may change, but
+  public `documentSnapshot` remains the last published committed document and revision
+  until close publishes a changed document. Autosave therefore persists the prior snapshot;
+  an explicit save first commits composition.
 - Resolve or isolate the Swift Testing helper's AppKit `NSWindow` teardown signal 11. A
   440-test focused Engine run and a 90-test focused AppKit run are recorded passing, but
   the AppKit target can still fail intermittently during teardown and the combined suite
   fails more often. Keep the passing owner runs as bounded evidence, not a stability
   claim, until the runner issue is closed.
 
-Exit: the implemented non-IME D1–D7 behavior has recorded manual visual evidence, installed
-IME delivery reaches the consumer, the decided live replacement lifecycle is implemented
-and product-verified, and the canonical repository-wide test entrypoint exits successfully
-in one process.
+Exit: the implemented non-IME D1–D7 behavior has recorded manual visual evidence, Apple's
+built-in Korean 2-set delivery reaches the consumer, the decided live replacement lifecycle
+is implemented and product-verified, and the canonical repository-wide test entrypoint exits
+successfully in one process.
 
 ### P2 — Complete product command reachability
 
-- Add toolbar reachability and todo checkbox product chrome without moving mutation
-  semantics out of `EditorModel`/`EditorSession`.
-- Drive enablement, mixed inline/block values, and selection geometry from the shared
-  interaction projections defined by the selection policy; toolbar views must not switch
-  over `EditorSelection` or inspect TextKit directly.
+- Make the first product chrome a built-in AppKit floating toolbar and todo checkbox. It
+  must not move mutation semantics out of `EditorModel`/`EditorSession`.
+- `EditorSession` owns command availability and mixed state; the AppKit toolbar consumes
+  that projection and sends typed actions back through the same Session/model path. It must
+  not switch over `EditorSelection` or inspect TextKit directly.
+- A todo checkbox is an exact per-block Session action, not an inferred selection action.
+  AppKit first resolves the checkbox hit control; that hit dispatches the todo action and
+  never starts gutter selection or a block drag. Only non-control gutter hits use the
+  structural selection/drag path.
 - Give asynchronous link/comment/AI surfaces an opaque stale-selection source only when a
   concrete feature needs it; synchronous toolbar actions keep using the current selection.
 - Decide whether generalized suggestions need a public policy contract or remain separate
   adapter UI; the current slash runtime stays non-canonical.
 - Keep command selection and presentation distinct from command definition/application.
 
-Exit: product UI can reach supported block and inline commands through Session, with one
-transaction/undo per command and no public model internals.
+Exit: the built-in floating toolbar and per-block todo checkbox reach supported commands
+through Session, with one transaction/undo per command, exact checkbox-versus-gutter hit
+priority, and no public model internals.
 
-### P3 — Add import/export UX and choose persistence identity
+### P3 — Add explicit import/export UX and versioned native archive
 
 - Build caller-owned Markdown import/export UX and failure handling on top of the existing
-  fail-closed codec; do not add lossy fallback inside `SlopadMarkdown`.
-- Decide in a persistence ADR whether storage uses a native archive, Markdown plus a
-  sidecar, or accepts fresh identities on reload.
+  fail-closed codec; it handles whole documents only and never becomes an implicit
+  persistence or paste path.
+- Add `SlopadArchive` as an opt-in, pure `SlopadCoreModel`-only codec for the versioned
+  native persistence representation. Its archive contains canonical blocks and a format
+  version only—never selection, undo/history, operation journal, epoch/revision,
+  composition, layout, viewport, or TextKit state.
+- The embedding app owns files, databases, cloud sync, autosave, conflict resolution,
+  retry, and error UX. `SlopadArchive` owns neither storage nor lifecycle policy.
+- Add a dedicated opt-in archive format-consumer fixture when the codec exists; keep it
+  separate from the ordinary one-product AppKit/SwiftUI lifecycle fixtures and the Markdown
+  format-consumer fixture.
 - Add GFM table support only after the Core table vocabulary in
   [#50](https://github.com/hot666666/Slopad/issues/50) has a real owner and invariants.
 
-Exit: import/export behavior is explicit, diagnostics reach product UX, and persistence
-identity/selection/reference consequences are documented and tested.
+Exit: Markdown import/export behavior is explicit, diagnostics reach product UX, and the
+versioned archive round-trips canonical blocks/identity through its opt-in boundary while
+the host retains all storage policy.
 
 ### P4 — Design collapsed subtrees
 

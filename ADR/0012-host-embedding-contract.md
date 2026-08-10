@@ -69,9 +69,11 @@ that decision, which is what keeps it a notification rather than a hook.
 
 ### What the test excluded
 
-- **Markdown and every codec.** `[EditorBlockInput] ⇄ String` is a real duplicated need
-  across hosts, but it is a pure value transformation with no runtime owner. It fails test
-  1. It belongs in a separate `SlopadMarkdown` target depending only on `SlopadCoreModel`.
+- **Format codecs.** A codec is not an ordinary AppKit/SwiftUI lifecycle operation, so it
+  does not widen either facade. `SlopadMarkdown` is the existing opt-in whole-document
+  codec. The planned `SlopadArchive` is likewise an opt-in, pure codec depending only on
+  `SlopadCoreModel`; it has no Session, AppKit, storage, or lifecycle owner. A host still
+  owns when to call either codec and all file/DB/cloud/autosave/conflict/retry/error policy.
 - **Host-owned scrolling.** A genuine second layout mode changes viewport ownership, which
   is engine-adjacent. Documented instead; remains a roadmap item.
 - **Continuous caret navigation in `onUnhandledAction`.** "Move up at the first line" is a
@@ -82,21 +84,34 @@ that decision, which is what keeps it a notification rather than a hook.
 
 ### The document input invariant
 
-`[EditorBlockInput]` is the only document representation crossing the public host boundary.
-No `String`, storage format, or codec type appears in it. Decoding a stored format into
-blocks and encoding blocks back is the host's codec, on the host's side.
+`[EditorBlockInput]` is the only document representation crossing the public ordinary-host
+boundary. No `String`, storage format, or codec type appears in that surface. An opt-in
+format target may transform core block values outside the facade: `SlopadMarkdown` does so
+for whole-document Markdown, and the planned `SlopadArchive` will do so for the versioned
+native archive. Neither changes who owns storage.
 
-This is what keeps Slopad from acquiring a second canonical model by way of a convenience
-format, and it is checked by compilation: both downstream fixtures own their codec, and
-neither can obtain one from Slopad.
+This keeps Slopad from acquiring a second canonical model by way of a convenience format.
+The archive contract is deliberately narrower than `EditorDocumentSnapshot`: version plus
+canonical blocks only. It excludes selection, undo/history, operation journal,
+epoch/revision, composition, layout, viewport, and TextKit state.
 
 ### Two gates, not one
 
-`Fixtures/DownstreamSwiftUIHost` joins `Fixtures/DownstreamAppKitHost` as a required gate.
-Both build with one product dependency, no `@testable`, and no package-only state, so a
-capability that stops being public breaks a build rather than being discovered by whoever
-integrates next. A fixture that compiles while avoiding the difficult path is not a gate,
-so each one exercises the full mount → edit → observe → flush → replace → unmount sequence.
+`Fixtures/DownstreamSwiftUIHost` is the intended companion to
+`Fixtures/DownstreamAppKitHost`. Today, [`docs/TESTING.md`](../docs/TESTING.md)'s
+conditional gates remain authoritative; neither fixture is yet the always-run baseline.
+[#69](https://github.com/hot666666/Slopad/issues/69) must establish both as the Epic #67
+baseline before dependent implementation PRs. After that work lands, they become the
+continuous ADR 0012 gate on every host-surface PR. Each builds with one product dependency,
+no `@testable`, and no package-only state, so a capability that stops being public breaks a
+build rather than being discovered by whoever integrates next. A fixture that compiles while
+avoiding the difficult path is not a gate, so each one exercises the full mount → edit →
+observe → flush → replace → unmount sequence.
+
+Those ordinary lifecycle fixtures are not format fixtures. `DownstreamMarkdownHost` is a
+separate opt-in format-consumer gate; a corresponding archive consumer belongs in its own
+fixture when `SlopadArchive` exists. Neither format fixture proves the one-product lifecycle
+surface, and the lifecycle fixtures must not acquire a format product merely to persist.
 
 `SlopadSwiftUI` is layered on `SlopadAppKit` as its own target rather than folded into it,
 for the same reason `SlopadAppKit` is a curated umbrella and not a runtime owner. It does
@@ -111,8 +126,9 @@ from the public controller surface.
 
 `EditorDocumentSnapshot` drops `Codable`, which nothing used. Retaining it would have
 forced `EditorSessionEpoch` to be decodable, letting a host manufacture an epoch and
-defeating the staleness check the type exists for. Hosts persist `blocks`, which is
-`Codable`, through their own codec.
+defeating the staleness check the type exists for. A host reads its `blocks` and may pass
+them to an opt-in format codec, but the host—not the codec—persists the resulting bytes and
+owns their lifecycle.
 
 `EditorSessionEpoch` stays separate from `EditorDocumentSource` (ADR 0011) rather than
 reusing it. That token additionally pins revision and selection because a patch must not
