@@ -13,9 +13,10 @@ product-verified.
 Validation boundary: owner suites, direct native-callback contract tests, and the
 deterministic 100/1,000/10,000-block benchmark cover the implemented non-IME behavior.
 Direct `setMarkedText` calls prove how the existing callback consumer handles an overlay;
-they do not prove delivery from an installed input method. In current product use,
-installed-IME input does not reach the composition consumer, so routing, candidate-window
-behavior, and the decided live replacement policy remain future product work.
+they do not prove delivery from an installed input method. A 2026-08-10 diagnostic session
+observed one real Apple Korean 2-set marked update reach the composition consumer, but did
+not prove repeatable delivery, commit/cancel lifecycle, or candidate-window behavior. The
+decided live replacement policy remains future product work.
 
 ## Context
 
@@ -107,8 +108,9 @@ the product path.
 
 That future target is not the current implementation. Today Session keeps an effective-
 document composition overlay while composing and mutates canonical content once at commit.
-Installed-IME events do not currently reach this consumer in product use; direct
-`setMarkedText` tests exercise the callback contract only.
+One real Apple Korean 2-set marked update has reached this consumer in a diagnostic product
+session, but the installed lifecycle and candidate-window behavior are not yet verified;
+direct `setMarkedText` tests exercise the callback contract only.
 
 ### Block selection remains an explicit structural mode
 

@@ -51,6 +51,12 @@ final class AppKitActiveInputController {
             syncDepth == 0
         }
 
+        #if DEBUG
+            var currentDepth: Int {
+                syncDepth
+            }
+        #endif
+
         func performSessionSync<T>(_ body: () throws -> T) rethrows -> T {
             syncDepth += 1
             defer { syncDepth -= 1 }
@@ -73,6 +79,9 @@ final class AppKitActiveInputController {
     private weak var owner: (any AppKitActiveInputOwner)?
     private let pasteboard: any AppKitPasteboardAccess
     private let syncGuard = SyncGuard()
+    #if DEBUG
+        private let nativeInputTraceHandler: AppKitNativeInputTraceHandler?
+    #endif
 
     // MARK: - State
 
@@ -86,13 +95,25 @@ final class AppKitActiveInputController {
 
     // MARK: - Init
 
-    init(
-        owner: any AppKitActiveInputOwner,
-        pasteboard: any AppKitPasteboardAccess = NSPasteboard.general
-    ) {
-        self.owner = owner
-        self.pasteboard = pasteboard
-    }
+    #if DEBUG
+        init(
+            owner: any AppKitActiveInputOwner,
+            pasteboard: any AppKitPasteboardAccess = NSPasteboard.general,
+            nativeInputTraceHandler: AppKitNativeInputTraceHandler? = nil
+        ) {
+            self.owner = owner
+            self.pasteboard = pasteboard
+            self.nativeInputTraceHandler = nativeInputTraceHandler
+        }
+    #else
+        init(
+            owner: any AppKitActiveInputOwner,
+            pasteboard: any AppKitPasteboardAccess = NSPasteboard.general
+        ) {
+            self.owner = owner
+            self.pasteboard = pasteboard
+        }
+    #endif
 
     // MARK: - State Access
 
@@ -120,8 +141,30 @@ final class AppKitActiveInputController {
 
     func sync(activeTextInput: EditorSessionActiveTextInputDescriptor?) {
         let nextTextHostBlockID = activeTextInput?.renderDescriptor.measureRequest.blockID
+        #if DEBUG
+            trace(
+                AppKitNativeInputTraceEvent(
+                    category: .nativeSurfaceSync,
+                    phase: .before,
+                    blockToken: AppKitNativeInputTraceBlockToken.make(nextTextHostBlockID),
+                    syncDepth: syncGuard.currentDepth,
+                    characterCoordinatesInvalidated: false
+                )
+            )
+        #endif
         activeTextHostBlockID = nil
         syncGuard.performSessionSync {
+            #if DEBUG
+                trace(
+                    AppKitNativeInputTraceEvent(
+                        category: .nativeSurfaceSync,
+                        phase: .during,
+                        blockToken: AppKitNativeInputTraceBlockToken.make(nextTextHostBlockID),
+                        syncDepth: syncGuard.currentDepth,
+                        characterCoordinatesInvalidated: false
+                    )
+                )
+            #endif
             if let activeTextInput {
                 let request = activeTextInput.renderDescriptor.measureRequest
                 text = request.text
@@ -137,6 +180,17 @@ final class AppKitActiveInputController {
             markedDocumentText = nil
         }
         activeTextHostBlockID = nextTextHostBlockID
+        #if DEBUG
+            trace(
+                AppKitNativeInputTraceEvent(
+                    category: .nativeSurfaceSync,
+                    phase: .after,
+                    blockToken: AppKitNativeInputTraceBlockToken.make(activeTextHostBlockID),
+                    syncDepth: syncGuard.currentDepth,
+                    characterCoordinatesInvalidated: false
+                )
+            )
+        #endif
     }
 
     func hide() {
@@ -152,6 +206,9 @@ final class AppKitActiveInputController {
     // MARK: - Native Text Input
 
     func insertText(_ insertedText: String, replacementRange: NSRange) {
+        #if DEBUG
+            traceGuardOutcome(for: .insertText)
+        #endif
         guard syncGuard.shouldForwardNativeCallback, let activeTextHostBlockID else { return }
         let documentText =
             markedDocumentText
@@ -176,6 +233,9 @@ final class AppKitActiveInputController {
         selectedRange markedSelectedRange: NSRange,
         replacementRange: NSRange
     ) {
+        #if DEBUG
+            traceGuardOutcome(for: .setMarkedText)
+        #endif
         guard syncGuard.shouldForwardNativeCallback, let activeTextHostBlockID else { return }
         let isBeginningComposition = markedRange == nil
         let documentText =
@@ -218,9 +278,9 @@ final class AppKitActiveInputController {
                 replacementRange: replacementTextRange,
                 text: markedText
             )
-        owner?.handleNativeInputEvent(compositionEvent)
+        emitEditorEvent(compositionEvent)
         if let effectiveSelectedRange = selectedRange.slopadTextRange(in: text) {
-            let update = owner?.handleNativeInputEvent(
+            let update = emitEditorEvent(
                 .activeTextSelectionChanged(
                     blockID: activeTextHostBlockID,
                     selectedRange: effectiveSelectedRange
@@ -234,11 +294,24 @@ final class AppKitActiveInputController {
     }
 
     func unmarkText() {
+        #if DEBUG
+            trace(
+                AppKitNativeInputTraceEvent(
+                    category: .activeInputGuard,
+                    phase: .result,
+                    callback: .unmarkText,
+                    outcome: .accepted,
+                    reason: .callbackHasNoSyncGuard,
+                    blockToken: AppKitNativeInputTraceBlockToken.make(activeTextHostBlockID),
+                    syncDepth: syncGuard.currentDepth
+                )
+            )
+        #endif
         markedRange = nil
         markedReplacementRange = nil
         markedDocumentText = nil
         sessionSelectedRange = nil
-        owner?.handleNativeInputEvent(.commitComposition)
+        emitEditorEvent(.commitComposition)
         syncSelectionFromNativeSurface()
         requestRender(
             makeFirstResponder: true,
@@ -268,7 +341,7 @@ final class AppKitActiveInputController {
             self.markedReplacementRange = nil
             self.markedDocumentText = nil
         }
-        owner?.handleNativeInputEvent(
+        emitEditorEvent(
             .command(
                 .replaceText(
                     blockID: blockID,
@@ -279,7 +352,7 @@ final class AppKitActiveInputController {
         )
 
         if let preservedRange {
-            owner?.handleNativeInputEvent(
+            emitEditorEvent(
                 .activeTextSelectionChanged(
                     blockID: blockID,
                     selectedRange: preservedRange
@@ -308,7 +381,7 @@ final class AppKitActiveInputController {
             return handleSemanticAction(.deleteBackward)
 
         case AppKitCommandSelectors.deleteForward:
-            owner?.handleNativeInputEvent(.command(.deleteForward))
+            emitEditorEvent(.command(.deleteForward))
 
         case AppKitCommandSelectors.deleteToBeginningOfLine:
             return handleInputCommand(.deleteToTextStart, reportingUnhandled: .deleteToTextStart)
@@ -433,7 +506,7 @@ final class AppKitActiveInputController {
         _ command: EditorInputEvent.Command,
         reportingUnhandled action: AppKitEditorAction? = nil
     ) -> Bool {
-        guard owner?.handleNativeInputEvent(.command(command)) != nil else {
+        guard emitEditorEvent(.command(command)) != nil else {
             guard let action, let owner else { return false }
             // These selectors already returned false — and so fell through the responder
             // chain — when the engine refused them, so that stays the default.
@@ -453,7 +526,7 @@ final class AppKitActiveInputController {
     private func handleSemanticAction(_ action: AppKitEditorAction) -> Bool {
         guard let owner else { return false }
         guard
-            owner.handleNativeInputEvent(action.inputEvent(viewport: owner.currentViewport()))
+            emitEditorEvent(action.inputEvent(viewport: owner.currentViewport()))
                 != nil
         else {
             // These selectors reported the command as handled even when the engine refused
@@ -534,7 +607,7 @@ extension AppKitActiveInputController {
         markedReplacementRange = nil
         markedDocumentText = nil
 
-        owner?.handleNativeInputEvent(
+        emitEditorEvent(
             .command(
                 .replaceText(
                     blockID: blockID,
@@ -553,7 +626,7 @@ extension AppKitActiveInputController {
         let range =
             selectedRange.slopadTextRange(in: text) ?? SlopadEngine.TextRange.point(text.count)
         guard sessionSelectedRange != range else { return }
-        owner?.handleNativeInputEvent(
+        emitEditorEvent(
             .activeTextSelectionChanged(
                 blockID: activeTextHostBlockID,
                 selectedRange: range
@@ -563,7 +636,7 @@ extension AppKitActiveInputController {
     }
 
     private func clearComposition() {
-        owner?.handleNativeInputEvent(.cancelComposition)
+        emitEditorEvent(.cancelComposition)
         requestRender(makeFirstResponder: true, preserveNativeSurface: true)
     }
 
@@ -578,7 +651,7 @@ extension AppKitActiveInputController {
         case .outdent:
             command = .outdent
         }
-        owner?.handleNativeInputEvent(.command(command))
+        emitEditorEvent(.command(command))
         requestRender(makeFirstResponder: true, scrollSelectionIntoView: true)
     }
 
@@ -627,4 +700,64 @@ extension AppKitActiveInputController {
             )
         )
     }
+
+    @discardableResult
+    @inline(__always)
+    private func emitEditorEvent(_ inputEvent: EditorInputEvent) -> EditorUpdate? {
+        #if DEBUG
+            trace(
+                AppKitNativeInputTraceEvent(
+                    category: .editorEvent,
+                    phase: .emitted,
+                    editorEvent: AppKitNativeInputTraceEvent.EditorEventName(inputEvent),
+                    blockToken: AppKitNativeInputTraceBlockToken.make(activeTextHostBlockID)
+                )
+            )
+        #endif
+        let update = owner?.handleNativeInputEvent(inputEvent)
+        #if DEBUG
+            trace(
+                AppKitNativeInputTraceEvent(
+                    category: .editorEvent,
+                    phase: .result,
+                    outcome: update == nil ? .refused : .handled,
+                    editorEvent: AppKitNativeInputTraceEvent.EditorEventName(inputEvent),
+                    blockToken: AppKitNativeInputTraceBlockToken.make(activeTextHostBlockID),
+                    committedRevision: update?.committedDocumentRevision?.rawValue
+                )
+            )
+        #endif
+        return update
+    }
+
+    #if DEBUG
+        private func trace(_ event: @autoclosure () -> AppKitNativeInputTraceEvent) {
+            guard let nativeInputTraceHandler else { return }
+            nativeInputTraceHandler(event())
+        }
+
+        private func traceGuardOutcome(for callback: AppKitNativeInputTraceEvent.Callback) {
+            guard nativeInputTraceHandler != nil else { return }
+            let accepted = syncGuard.shouldForwardNativeCallback && activeTextHostBlockID != nil
+            let reason: AppKitNativeInputTraceEvent.Reason
+            if !syncGuard.shouldForwardNativeCallback {
+                reason = .sessionSynchronization
+            } else if activeTextHostBlockID == nil {
+                reason = .missingActiveTextHost
+            } else {
+                reason = .forwarded
+            }
+            trace(
+                AppKitNativeInputTraceEvent(
+                    category: .activeInputGuard,
+                    phase: .result,
+                    callback: callback,
+                    outcome: accepted ? .accepted : .rejected,
+                    reason: reason,
+                    blockToken: AppKitNativeInputTraceBlockToken.make(activeTextHostBlockID),
+                    syncDepth: syncGuard.currentDepth
+                )
+            )
+        }
+    #endif
 }

@@ -27,6 +27,7 @@ struct SlopadDebugApp {
     @MainActor
     private static func runScreenshotMode(options: DebugOptions) {
         let viewController = DebugViewController(scenario: options.scenario)
+        configureNativeInputTrace(for: viewController, options: options)
         let window = NSWindow(
             contentRect: NSRect(origin: .zero, size: defaultWindowSize),
             styleMask: [.titled, .closable, .resizable, .miniaturizable],
@@ -95,6 +96,19 @@ struct SlopadDebugApp {
         window.layoutIfNeeded()
         viewController.view.layoutSubtreeIfNeeded()
     }
+
+    @MainActor
+    fileprivate static func configureNativeInputTrace(
+        for viewController: DebugViewController,
+        options: DebugOptions
+    ) {
+        #if DEBUG
+            guard options.nativeInputTrace else { return }
+            let writer = DebugNativeInputTraceWriter()
+            writer.writeProvenance()
+            viewController.enableNativeInputTrace(writer.handler)
+        #endif
+    }
 }
 
 @MainActor
@@ -110,6 +124,7 @@ private final class DebugAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let viewController = DebugViewController(scenario: options.scenario)
+        SlopadDebugApp.configureNativeInputTrace(for: viewController, options: options)
         let window = NSWindow(
             contentRect: NSRect(
                 origin: NSPoint(x: 120, y: 120),
@@ -156,6 +171,7 @@ private struct DebugOptions {
     var screenshotPath: String?
     var autoExit = false
     var assertState = false
+    var nativeInputTrace = false
 
     init(arguments: [String]) {
         var iterator = arguments.dropFirst().makeIterator()
@@ -169,6 +185,8 @@ private struct DebugOptions {
                 autoExit = true
             case "--assert-state":
                 assertState = true
+            case "--native-input-trace":
+                nativeInputTrace = true
             default:
                 continue
             }
