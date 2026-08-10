@@ -44,10 +44,27 @@ fail closed before any normalizing core initializer runs.
 
 ### One opt-in pure codec, no storage abstraction
 
-Add `SlopadArchive` as a separate opt-in library product and target. It depends only on
-`SlopadCoreModel` and Foundation's `Data`; `SlopadEngine`, Session, AppKit, SwiftUI,
-TextKit, filesystem APIs, URLs, databases, and storage providers are not dependencies or
-public vocabulary.
+Add `SlopadArchive` as a separate opt-in library product and target. Its target dependency
+is only `SlopadCoreModel`; Foundation contributes `Data`. Source files that declare the
+public codec API use Swift 6 `public import SlopadCoreModel` so the underlying public types
+are legal in public declarations, then the archive module curates exactly these aliases:
+
+```swift
+public import SlopadCoreModel
+
+public typealias BlockID = SlopadCoreModel.BlockID
+public typealias BlockKind = SlopadCoreModel.BlockKind
+public typealias BlockContent = SlopadCoreModel.BlockContent
+public typealias TextRange = SlopadCoreModel.TextRange
+public typealias EditorBlockInput = SlopadCoreModel.EditorBlockInput
+```
+
+Nested public vocabulary such as block-kind payloads and inline-mark kinds remains reachable
+through its aliased parent type; it does not receive another top-level alias. This is a
+curated archive facade, not a `SlopadCoreModel` product or a blanket
+`@_exported import`. `SlopadArchive` does not copy or wrap these values, require
+`SlopadEngine`, or make Session, AppKit, SwiftUI, TextKit, filesystem APIs, URLs, databases,
+and storage providers dependencies or public vocabulary.
 
 The codec is synchronous, stateless, deterministic in meaning, and safe to call in any
 isolation domain that owns its input values. It performs no I/O, launches no task, retains
@@ -57,11 +74,17 @@ no document, and offers no repository or autosave protocol. `SlopadAppKit` and
 The intended public call sites are the complete public surface:
 
 ```swift
+import Foundation
 import SlopadArchive
 
 let data: Data = try SlopadArchive.encode(snapshot.blocks)
 let blocks: [EditorBlockInput] = try SlopadArchive.decode(data)
 ```
+
+Every `EditorBlockInput`, `BlockID`, `BlockKind`, `BlockContent`, and `TextRange` appearing
+in this API is the exact `SlopadArchive` alias above. Therefore `snapshot.blocks` obtained
+through any public UI or Engine facade is type-identical and crosses this boundary without
+conversion.
 
 The API draft is:
 
@@ -102,10 +125,11 @@ implementation, but the four decoding categories and their fail-closed meaning a
 There is no partial success value. Malformed JSON, an unsupported version, or a canonical
 invariant failure returns no blocks; invalid input returns no archive bytes.
 
-Only `Data`, public `SlopadCoreModel` values, and archive-owned error values cross this
-public boundary. `EditorSession`, `EditorDocumentSnapshot`, epoch, revision, selection,
-AppKit/SwiftUI/TextKit types, `URL`, database/storage protocols, and package-only
-`Document`/`Block` types do not.
+Only `Data`, the five curated `SlopadArchive` aliases above, and archive-owned error values
+cross this public boundary. Public signatures and associated error values use those exact
+aliases. `EditorSession`, `EditorDocumentSnapshot`, epoch, revision, selection,
+AppKit/SwiftUI/TextKit types, `URL`, database/storage protocols, raw
+`SlopadCoreModel` imports, and package-only `Document`/`Block` types do not.
 
 ### Version 1 wire contract
 
@@ -325,9 +349,18 @@ layer acquires command, invariant, selection, or history ownership.
   normalization.
 - Encoding may run away from the Session executor after the host captures immutable blocks;
   I/O and stale-write suppression remain host policy.
-- The archive target can be tested as a pure CoreModel consumer and by a dedicated opt-in
-  downstream fixture. Neither ordinary AppKit/SwiftUI lifecycle fixtures nor the Markdown
-  fixture gain an archive dependency.
+- Issue #78 must add an archive codec-surface fixture target/source whose only package
+  product dependency is `SlopadArchive` and whose source imports only Foundation and
+  `SlopadArchive`. It constructs the aliased block/kind/content/range/mark vocabulary and
+  round-trips it through the codec, proving that no raw CoreModel or Engine import is
+  needed.
+- Issue #78 must prove host lifecycle integration separately. That fixture target/source may
+  additionally import exactly one public UI facade plus `SlopadArchive`, passes the
+  facade's type-identical `snapshot.blocks` directly to the codec, and never imports raw
+  `SlopadEngine`, `SlopadCoreModel`, or package-only types. If both probes live in one
+  fixture package, they remain separate targets/sources with distinct product dependencies
+  and import audits. Neither ordinary AppKit/SwiftUI lifecycle fixtures nor the Markdown
+  fixture gains an archive dependency.
 - Adding encryption, cloud sync, attachments/blobs, incremental journals, streaming,
   partial loading, collaboration/CRDT, or a storage protocol requires a separate owner
   decision. None is implied by this archive.

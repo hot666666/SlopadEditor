@@ -36,9 +36,11 @@ The production targets form these direct dependency layers:
 | Storage | `SlopadDataStructure` | Editor-independent data structures |
 
 [ADR 0015](../ADR/0015-version-native-archive-and-keep-storage-host-owned.md) also fixes
-the future `SlopadArchive` boundary: an opt-in synchronous pure codec depending only on
-`SlopadCoreModel`. It is not yet a Package.swift product, so it is not listed as a current
-production target above.
+the future `SlopadArchive` boundary: an opt-in synchronous pure codec whose target depends
+only on `SlopadCoreModel`. Its public facade uses Swift 6 `public import` for declaration
+legality and exposes only five type-identical archive aliases; it does not make
+`SlopadCoreModel` a product or broadly re-export its vocabulary. It is not yet a
+Package.swift product, so it is not listed as a current production target above.
 
 The dependency graph enforces four important absences:
 
@@ -159,7 +161,8 @@ complete adapter/backend pair so geometry and drawing stay coherent.
 | SwiftUI app | `SlopadSwiftUI` | mount/unmount, document identity, bindings, persistence timing | controller bypass or a second runtime |
 | Complete custom platform adapter | `SlopadEngine` plus its own backend | native callback translation, drawing, focus, scroll coherence | direct model/layout coupling |
 | Markdown caller | `SlopadMarkdown` and optionally `SlopadEngine` | explicit import/export timing and failure UX | parser AST retention or partial success |
-| Native archive caller (planned) | `SlopadArchive` and optionally `SlopadEngine` | file/DB/cloud lifecycle, debounce, atomic write, conflict/retry/error UX | Session state, storage providers, or a second canonical document owner |
+| Native archive codec caller (planned) | `SlopadArchive` | construct/encode/decode the curated archive aliases | raw Engine/CoreModel imports, Session state, storage providers, or a second canonical document owner |
+| Native archive lifecycle host (planned) | exactly one public UI facade plus `SlopadArchive` | file/DB/cloud lifecycle, debounce, atomic write, conflict/retry/error UX | raw Engine/CoreModel imports, package-only state, or codec-owned lifecycle policy |
 | Debug/benchmark/fixture | development targets | scenarios, measurements, public compile proof | production ownership |
 
 The ordinary AppKit host surface is admitted by intent:
@@ -206,6 +209,15 @@ only. It preserves IDs, parent/root/sibling order, kinds, text, and inline marks
 selection, history, operation journal, external reference payloads, epoch/revision,
 composition, layout, viewport, and TextKit state.
 
+The target internally depends on `SlopadCoreModel`, and files declaring public signatures
+use Swift 6 `public import SlopadCoreModel`. The archive module itself declares only
+typealiases for `BlockID`, `BlockKind`, `BlockContent`, `TextRange`, and
+`EditorBlockInput`; nested kind/mark vocabulary remains reachable through those aliases.
+There is no `SlopadCoreModel` product, Engine dependency, copied wrapper model, or blanket
+`@_exported import`. All archive signatures and associated error values use those exact
+aliases, so blocks obtained through any UI or Engine facade are type-identical and need no
+conversion.
+
 Decode is fail-closed. Archive-owned raw wire DTOs are checked before constructing
 normalizing `BlockContent` values. A package-only strict CoreModel content constructor
 rejects any mark list that would clamp/drop/merge/reorder; then a selection-independent
@@ -220,6 +232,13 @@ uses epoch/revision only to discard a stale in-process result before its own ato
 those tokens are neither archive fields nor storage revisions. A separately stored reference
 may reattach by stable `BlockID`, but selection and undo/history do not restore. See
 [ADR 0015](../ADR/0015-version-native-archive-and-keep-storage-host-owned.md).
+
+Issue #78 proves the public boundary with two external targets/sources. The codec-surface
+probe depends on/imports only Foundation and `SlopadArchive`, constructs the aliased graph,
+and round-trips it. The lifecycle probe may additionally import exactly one public UI
+facade and passes its `snapshot.blocks` directly to the codec; it never imports raw Engine,
+CoreModel, or package-only types. A single fixture package may contain both only as separate
+targets/sources with distinct dependency and import audits.
 
 ## Access and Consumer Rules
 

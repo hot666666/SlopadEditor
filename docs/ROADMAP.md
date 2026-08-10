@@ -136,12 +136,18 @@ priority, and no public model internals.
   composition, layout, viewport, or TextKit state.
 - Implement [#78](https://github.com/hot666666/Slopad/issues/78) against ADR 0015's v1
   UTF-8 JSON schema, raw-wire-before-normalization decode, typed fail-closed errors, and
-  shared selection-independent CoreModel canonical-input validator.
+  shared selection-independent CoreModel canonical-input validator. The target uses Swift 6
+  `public import SlopadCoreModel` for declaration legality but exposes only the five curated,
+  type-identical archive aliases fixed by the ADR; it adds no CoreModel product, Engine
+  dependency, copied wrapper vocabulary, or blanket re-export.
 - The embedding app owns files, databases, cloud sync, autosave, conflict resolution,
   retry, and error UX. `SlopadArchive` owns neither storage nor lifecycle policy.
-- Add a dedicated opt-in archive format-consumer fixture when the codec exists; keep it
-  separate from the ordinary one-product AppKit/SwiftUI lifecycle fixtures and the Markdown
-  format-consumer fixture.
+- Under #78, add a codec-surface fixture target/source that depends on/imports only
+  Foundation plus `SlopadArchive` and constructs/round-trips the aliased vocabulary. Prove
+  lifecycle integration in a separate target/source that may additionally import exactly
+  one public UI facade and passes its type-identical `snapshot.blocks` directly to the
+  codec; neither probe imports raw Engine/CoreModel or package-only types. If one fixture
+  package contains both probes, keep their target dependencies and import audits distinct.
 - Add GFM table support only after the Core table vocabulary in
   [#50](https://github.com/hot666666/Slopad/issues/50) has a real owner and invariants.
 
