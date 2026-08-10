@@ -1,7 +1,7 @@
 # Selection Interaction Policy
 
 Status: non-IME policy implemented; live cross-block IME replacement is not implemented or
-product-verified
+product-verified. Apple built-in Korean 2-set installed-IME delivery is also not yet proven.
 
 Decided: 2026-08-09
 
@@ -53,6 +53,11 @@ canonical selection. The decided future `M` target replaces actual editing conte
 callback lifecycle and groups its history. The current foundation instead keeps a Session
 composition overlay, projects it through layout, and mutates canonical content once on
 commit. Native marked-range presentation remains runtime state and is not persisted.
+
+When the future live target replaces the overlay, its editing content is transaction-local
+until close: public `documentSnapshot` continues to expose the last published committed
+document and revision, not provisional marked text. A changed close publishes the new
+snapshot with its one committed revision; cancel or exact no-op restoration publishes neither.
 
 ## Non-Negotiable Invariants
 
@@ -415,6 +420,7 @@ canonical editor that it has multiple local carets or selections.
 | High-level UI | Engine facts it consumes | Engine action it sends |
 | --- | --- | --- |
 | Floating formatting toolbar | command state, mixed marks, visible/focus geometry | typed inline-style/clear-style action |
+| Todo checkbox | per-block todo action availability/state and exact block target | typed toggle-todo action for that block |
 | Context menu / command palette | action availability and selection summary | existing semantic `AppKitEditorAction` |
 | Block handle menu | selected roots, block-kind mixed value, structural availability | kind/indent/delete/reorder command |
 | Link editor / comment composer | exact selection source, selected fragments, geometry facts | stale-checked range command |
@@ -425,18 +431,25 @@ canonical editor that it has multiple local carets or selections.
 
 ### Snapshot and callback shape
 
-Built-in AppKit UI should first consume package fields on `EditorSessionSnapshot`:
+Built-in AppKit UI is P2's first command-state consumer. It should first consume package
+fields on `EditorSessionSnapshot`:
 
 - `selectionPresentation` for visible fragments and geometry;
 - a future P2 `commandState` for availability/mixed values;
 - the existing singular `activeTextInput` for callback-contract composition/focus
   synchronization. This does not prove installed-IME delivery.
 
-If a host-owned SwiftUI toolbar becomes a real supported use case, expose a curated,
-viewport-independent command state through `SlopadEditorModel` and a synchronized
-controller observation. Do not expose raw TextKit rectangles, BlockLayout, or the complete
-Session snapshot. Scroll-dependent floating chrome can remain in the built-in adapter
-until a host proves it needs a geometry contract.
+`EditorSession` owns the viewport-independent command-state derivation and revalidates every
+action against current state; `EditorModel` remains the canonical mutation owner. If a
+host-owned SwiftUI toolbar becomes a real supported use case, expose a curated Session-backed
+observation only after it passes ADR 0012. Do not expose raw TextKit rectangles, BlockLayout,
+or the complete Session snapshot. Scroll-dependent floating chrome remains in the built-in
+adapter until a host proves it needs a geometry contract.
+
+The todo checkbox is a control hit, not gutter chrome. AppKit must resolve its exact hit
+first and send the per-block toggle action through Session; that hit neither changes the
+selection nor begins a block drag. Only a non-control gutter hit reaches the structural
+selection/drag path. This priority is part of the P2 production-path regression contract.
 
 ### Additional correctness gates
 
@@ -449,6 +462,8 @@ until a host proves it needs a geometry contract.
 - Toolbar focus transfer must not silently clear selection or commit composition merely
   because the user opened a menu. The selected action may explicitly use the synchronized
   commit-before-action boundary.
+- Checkbox-hit tests must prove that a control click dispatches only its target block's todo
+  action and that an adjacent gutter drag still follows the structural path.
 - Accessibility and clipboard selected text must use the same canonical fragment resolver
   as mutation, including empty logical blocks and direction-independent normalization.
 
@@ -538,9 +553,10 @@ uses prepared visible-order ranks instead of that full-span traversal.
   every rerun is stable. The deterministic UI benchmark covers forward/reverse text
   selection at 100, 1,000, and 10,000 blocks with empty blocks mixed in.
 - Installed input-method events currently do not reach the composition consumer in
-  `SlopadDebugApp`. Repairing and proving that delivery is future work, followed by
-  implementation and product verification of the decided live replacement policy. The
-  repository-wide Swift Testing
+  `SlopadDebugApp`. Repairing and proving **Apple built-in Korean 2-set** delivery is future
+  work, followed by implementation and product verification of the decided live replacement
+  policy. The [#76 native composition termination table](https://github.com/hot666666/Slopad/issues/76)
+  is its required callback-by-callback criterion. The repository-wide Swift Testing
   helper can still terminate with an AppKit `NSWindow` teardown signal 11, most often
   when AppKit and SwiftUI suites share one process and occasionally in a focused AppKit
   rerun.
@@ -622,7 +638,9 @@ Build and run `SlopadDebugApp`. The native callback smoke must use synthesized `
 delivery through `NSWindow.sendEvent(_:)` and real `NSTextInputClient` callbacks rather
 than calling semantic handlers directly. Manually inspect forward/reverse cross-block
 drag, empty gaps, autoscroll, Escape/Cmd-A, clipboard round trips, caret blink, and Korean
-composition/cancel after installed-IME delivery is repaired. The direct marked-text smoke
+composition/cancel with Apple's built-in Korean 2-set after installed-IME delivery is
+repaired. Only then implement and verify [#76's native callback termination table](https://github.com/hot666666/Slopad/issues/76),
+including the committed-snapshot rule during live composition. The direct marked-text smoke
 proves callback handling only; it is not evidence that an installed input method reaches
 that consumer, nor that the decided live replacement policy is implemented.
 
@@ -666,12 +684,15 @@ and downstream-build evidence as separate claims.
 3. Add the viewport-bounded selection projection, visible-fragment damage, and focus-block
    native input contract.
 4. Route delete, paste, Enter, formatting, Escape, and Cmd-A through the shared range
-   semantics. Composition remains open until installed-IME delivery reaches the consumer;
-   then implement the decided live replacement lifecycle against that real path. Shared
-   command availability/mixed-state derivation stays P2 until the toolbar becomes its first
+   semantics. Composition remains open until Apple's built-in Korean 2-set delivery reaches
+   the consumer; then implement [#76's decided live replacement lifecycle](https://github.com/hot666666/Slopad/issues/76)
+   against that real path, including the committed-snapshot boundary. Shared command
+   availability/mixed-state derivation stays P2 until the built-in toolbar becomes its first
    real consumer.
 5. Add clipboard-plan negotiation and kind-aware plain/structured serialization.
-6. Add built-in high-level UI only against the shared snapshot/action contracts; add a
-   public host projection only when its first real consumer exists.
+6. Add the built-in AppKit floating toolbar and per-block todo checkbox only against the
+   shared Session snapshot/action contracts, with checkbox hit-control priority ahead of
+   gutter drag; add a public host projection only when its first real consumer passes ADR
+   0012.
 7. Prove the real AppKit path in `SlopadDebugApp`, then run the 100/1,000/10,000-block UI
    benchmark gates before claiming completion.

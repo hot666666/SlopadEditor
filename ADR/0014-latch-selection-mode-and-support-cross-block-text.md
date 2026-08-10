@@ -94,6 +94,17 @@ revision would advance only at commit. Marked-range geometry and candidate-windo
 presentation would remain runtime state, and cancellation would follow the AppKit callback
 result instead of maintaining a shadow document solely for rollback.
 
+That future live group may update transaction-local canonical editing content, but it must
+not expose provisional marked text through the public persistence surface.
+`documentSnapshot` remains the last published committed document and revision until close
+atomically publishes a changed document; autosave during composition therefore stores that
+prior snapshot, while an explicit save first flushes composition. The exact native callback
+termination table—first/subsequent `setMarkedText`, `insertText`, `unmarkText`, Escape,
+undo/redo, synchronized commands, focus loss, and explicit flush—is the implementation
+criterion in [#76](https://github.com/hot666666/Slopad/issues/76). It is implemented only
+after real installed-IME delivery, including Apple's built-in Korean 2-set, is proven in
+the product path.
+
 That future target is not the current implementation. Today Session keeps an effective-
 document composition overlay while composing and mutates canonical content once at commit.
 Installed-IME events do not currently reach this consumer in product use; direct
@@ -114,6 +125,12 @@ not switch over `EditorSelection` to decide what commands mean. Session derives 
 viewport-independent command state and a separate viewport-dependent selection
 presentation from the canonical selection. UI sends the same typed semantic actions as
 native input; the model revalidates and applies them through the same command path.
+
+The first P2 product consumer is a built-in AppKit floating toolbar plus todo checkbox.
+`EditorSession` owns availability/mixed state and the exact per-block todo action; AppKit
+owns placement and hit classification. A checkbox control hit dispatches that action before
+gutter selection or block drag is considered, so the adapter never infers a todo mutation
+from selection geometry.
 
 Search, comments, AI highlights, and remote cursors are derived decorations rather than
 additional local canonical selections. Asynchronous range UI uses an opaque stale-source
