@@ -49,10 +49,16 @@ struct AppKitTodoCheckboxPointerTests {
         #expect(controller.todoState(blockID: other) == .off)
         #expect(controller.snapshot?.selection == originalSelection)
         #expect(updates.count == 1)
+        #expect(updates.first?.committedDocumentRevision?.rawValue == 1)
+        #expect(controller.snapshot?.history.canUndo == true)
         _ = try #require(controller.perform(.undo, makeFirstResponder: false))
         #expect(controller.todoState(blockID: todo) == .off)
+        #expect(controller.snapshot?.history.canUndo == false)
+        #expect(controller.snapshot?.history.canRedo == true)
+        #expect(controller.perform(.undo, makeFirstResponder: false) == nil)
         _ = try #require(controller.perform(.redo, makeFirstResponder: false))
         #expect(controller.todoState(blockID: todo) == .on)
+        #expect(updates.compactMap { $0.committedDocumentRevision?.rawValue } == [1, 2, 3])
     }
 
     @Test("marked text 중 다른 todo checkbox click은 조합과 canonical selection을 보존한다")
