@@ -23,6 +23,7 @@ private struct HostChromeRenderer: AppKitBlockChromeRenderer {
 @MainActor
 private struct DownstreamAppKitHost {
     static func main() {
+        _ = NSApplication.shared
         let blockID: BlockID = "fixture-root"
         let style = AppKitEditorStyle(
             fontName: "System",
@@ -45,35 +46,78 @@ private struct DownstreamAppKitHost {
             style: style,
             blockChromeRenderer: HostChromeRenderer()
         )
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 320),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.animationBehavior = .none
+        window.contentViewController = controller
+        window.makeKeyAndOrderFront(nil)
+        controller.view.frame = window.contentView?.bounds ?? .zero
+        controller.view.layoutSubtreeIfNeeded()
+
+        precondition(window.contentViewController === controller)
+        precondition(controller.view.window === window)
 
         do {
-            try exercisePublicHostContract(controller, blockID: blockID, style: style)
+            try exercisePublicHostContract(
+                controller,
+                window: window,
+                blockID: blockID,
+                style: style
+            )
         } catch {
             fatalError("Public SlopadAppKit contract failed: \(error)")
         }
+
+        controller.setFocused(false)
+        window.orderOut(nil)
+        window.contentViewController = nil
+        precondition(window.contentViewController == nil)
+        precondition(controller.view.window == nil)
+        window.close()
     }
 
     private static func exercisePublicHostContract(
         _ controller: AppKitEditorViewController,
+        window: NSWindow,
         blockID: BlockID,
         style: AppKitEditorStyle
     ) throws {
         // A persistence host holds a committed change token and decides later whether it is
         // still worth writing. Both halves have to be public values.
         var capturedToken: (epoch: EditorSessionEpoch, revision: EditorDocumentRevision)?
+        var capturedCommittedSnapshot: EditorDocumentSnapshot?
         controller.onSnapshotChanged = { _ in }
         controller.onUpdate = { [weak controller] update in
             guard let revision = update.committedDocumentRevision else { return }
-            let documentSnapshot = controller?.documentSnapshot
-            _ = documentSnapshot?.revision == revision
-            _ = documentSnapshot?.epoch == update.epoch
-            _ = documentSnapshot?.blocks
+            guard let documentSnapshot = controller?.documentSnapshot else {
+                preconditionFailure("Committed observation lost its mounted controller")
+            }
+            precondition(documentSnapshot.revision == revision)
+            precondition(documentSnapshot.epoch == update.epoch)
             capturedToken = (update.epoch, revision)
+            capturedCommittedSnapshot = documentSnapshot
         }
         controller.blockChromeRenderer = HostChromeRenderer()
         _ = controller.editorStyle == style
         _ = controller.snapshot
         _ = controller.documentSnapshot
+
+        // The lifecycle gate mutates only after the production view is mounted. The
+        // callback reads the matching committed snapshot synchronously, like a save host.
+        let editUpdate = controller.perform(
+            .insertText("Mounted: "),
+            makeFirstResponder: false,
+            scrollSelectionIntoView: false
+        )
+        precondition(editUpdate?.committedDocumentRevision?.rawValue == 1)
+        precondition(capturedToken?.revision == editUpdate?.committedDocumentRevision)
+        precondition(
+            capturedCommittedSnapshot?.blocks.first?.content.text.hasPrefix("Mounted: ") == true
+        )
 
         let assistantContext: EditorDocumentContextSnapshot =
             try controller.documentContextSnapshot()
@@ -98,7 +142,7 @@ private struct DownstreamAppKitHost {
                 selectionAfter: .caret(blockID: blockID, offset: 7)
             )
         )
-        precondition(assistantUpdate?.committedDocumentRevision?.rawValue == 1)
+        precondition(assistantUpdate?.committedDocumentRevision?.rawValue == 2)
         let noOpContext = try controller.documentContextSnapshot()
         let noOpUpdate = try controller.applyDocumentPatch(
             EditorDocumentPatch(
@@ -136,12 +180,19 @@ private struct DownstreamAppKitHost {
 
         // Focus is a first-class contract now: a host observes it, sets it, and reads it
         // back without reaching for a render call.
+        controller.setFocused(false)
         var observedFocus: [Bool] = []
         controller.onFocusChange = { observedFocus.append($0) }
         controller.setFocused(true)
+        precondition(controller.isFocused)
         controller.setFocused(false)
-        _ = controller.isFocused
-        _ = observedFocus
+        precondition(!controller.isFocused)
+        precondition(observedFocus == [true, false])
+
+        window.setContentSize(NSSize(width: 720, height: 420))
+        controller.view.frame = window.contentView?.bounds ?? .zero
+        controller.view.layoutSubtreeIfNeeded()
+        precondition(controller.view.bounds.size == NSSize(width: 720, height: 420))
 
         controller.updateEditorStyle(
             AppKitEditorStyle(
@@ -178,24 +229,33 @@ private struct DownstreamAppKitHost {
                 scrollSelectionIntoView: false
             )
         }
+        // This is intentionally allowed to be a no-op: the public lifecycle still flushes
+        // before reading, but this fixture does not claim installed-IME delivery.
         _ = controller.commitActiveComposition()
+        let snapshotAfterFlush = controller.documentSnapshot
+        precondition(snapshotAfterFlush.epoch == capturedToken?.epoch)
         controller.scrollDocument(to: 0)
 
         let tokenBeforeReset = capturedToken
+        let epochBeforeReset = controller.documentSnapshot.epoch
+        let replacementBlockID: BlockID = "fixture-replacement"
         controller.resetDocument(
             blocks: [
                 EditorBlockInput(
-                    id: blockID,
+                    id: replacementBlockID,
                     content: BlockContent(text: "Reset by the host")
                 )
             ],
-            selection: .caret(blockID: blockID, offset: 0)
+            selection: .caret(blockID: replacementBlockID, offset: 0)
         )
 
         // The replacement Session restarts revisions at zero, so the epoch is the only
         // thing that tells the host its pending token belongs to a document that is gone.
-        if let tokenBeforeReset {
-            precondition(tokenBeforeReset.epoch != controller.documentSnapshot.epoch)
-        }
+        let replacementSnapshot = controller.documentSnapshot
+        precondition(replacementSnapshot.epoch != epochBeforeReset)
+        precondition(replacementSnapshot.revision.rawValue == 0)
+        precondition(replacementSnapshot.blocks.map(\.id) == [replacementBlockID])
+        precondition(replacementSnapshot.blocks.map(\.content.text) == ["Reset by the host"])
+        precondition(tokenBeforeReset?.epoch != replacementSnapshot.epoch)
     }
 }

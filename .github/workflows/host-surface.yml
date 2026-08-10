@@ -1,0 +1,20 @@
+name: Host Surface
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-lifecycle:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify public host lifecycle
+        run: bash scripts/verify-host-surface.sh

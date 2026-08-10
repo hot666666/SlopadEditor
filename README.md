@@ -132,9 +132,11 @@ Typed Markdown shortcuts are a different path. The internal parser-free
   hit testing, and rendering.
 - `SlopadUIBenchmarkApp` — real AppKit interaction and frame-time harness.
 - `SlopadHeightBenchmark` and `SlopadSessionBenchmark` — focused non-product benchmarks.
-- `Fixtures/DownstreamAppKitHost`, `Fixtures/DownstreamSwiftUIHost`, and
-  `Fixtures/DownstreamMarkdownHost` — compile-only proofs of intended public APIs without
-  `@testable` or package access.
+- `Fixtures/DownstreamAppKitHost` and `Fixtures/DownstreamSwiftUIHost` — deterministic
+  public lifecycle runtime smokes without `@testable` or package access; run both with
+  `bash scripts/verify-host-surface.sh`.
+- `Fixtures/DownstreamMarkdownHost` — separate opt-in Markdown format-consumer fixture,
+  not an ordinary host lifecycle substitute.
 
 ## Documentation
 

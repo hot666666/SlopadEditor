@@ -47,19 +47,22 @@ These constraints remain in force unless replaced by an ADR:
 - Markdown is not persistence state. Its semantic round-trip creates fresh `BlockID`s;
   P3's native archive preserves canonical block identity instead. Markdown remains an
   explicit whole-document import/export format, not a reload format.
+- ADR 0012's ordinary-host contract is continuously gated by
+  `bash scripts/verify-host-surface.sh`. It runs the one-product AppKit and SwiftUI public
+  lifecycle fixtures on every pull request; format-consumer fixtures remain separate.
 
 ## Priorities
 
 These are capability buckets, not permission to implement without an owner decision and a
 bounded tracking issue.
 
-### P0 — Continuous ADR 0012 host-surface gate
+### P0 — Preserve the continuous ADR 0012 host-surface gate
 
-This is the target continuous gate, not a separate feature to complete. Today,
-[`Testing`](TESTING.md)'s conditional gates remain authoritative. [#69](https://github.com/hot666666/Slopad/issues/69)
-must establish both ordinary AppKit and SwiftUI lifecycle fixtures as the always-run
-Epic #67 baseline before dependent implementation PRs; after #69, every host-surface PR
-uses that continuous gate.
+[#69](https://github.com/hot666666/Slopad/issues/69) implemented the always-run Epic #67
+baseline. [`scripts/verify-host-surface.sh`](../scripts/verify-host-surface.sh) is now the
+canonical gate for both ordinary AppKit and SwiftUI lifecycle fixtures, and CI invokes it
+on every pull request. This is an ongoing boundary constraint, not a feature waiting for
+completion.
 
 - Keep `SlopadAppKit` as the ordinary one-product/one-import path and `SlopadSwiftUI` as
   the declarative lifecycle surface.

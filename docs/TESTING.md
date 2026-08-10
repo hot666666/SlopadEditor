@@ -14,15 +14,34 @@ git diff --check
 Run focused owner tests while iterating, then the baseline after the executable diff is
 stable. `swift test` is not evidence for a host-only runtime path by itself.
 
+## Continuous public host gate
+
+```sh
+bash scripts/verify-host-surface.sh
+```
+
+`just host-surface` delegates to the same script. This is the canonical continuous ADR
+0012 gate on every pull request. It builds and runs both ordinary one-product lifecycle
+fixtures: `DownstreamAppKitHost` through `SlopadAppKit` alone and
+`DownstreamSwiftUIHost` through `SlopadSwiftUI` alone. Each mounts a literal window/view,
+performs a public semantic edit, observes the committed snapshot, flushes composition
+before reading, replaces the document with epoch/identity/content checks, exercises
+focus/resize, and tears down deterministically.
+
+This proves public lifecycle behavior and downstream source compatibility. It is not a
+visual, native key/pointer callback, installed-IME, candidate-window, physical-device, or
+accessibility proof. Composition flush may be a no-op in this gate; native callback and
+installed input-method delivery require their dedicated AppKit/UI evidence.
+
 ## Add the gates the change invalidates
 
 | Change surface | Required additional gate |
 | --- | --- |
-| AppKit or public host API | `swift build --product SlopadAppKit --quiet`; `swift build --product SlopadAppKitTextKit --quiet`; `swift build --product SlopadAppKitUI --quiet`; `swift build --package-path Fixtures/DownstreamAppKitHost --product DownstreamAppKitHost --quiet` |
+| AppKit or public host API | `bash scripts/verify-host-surface.sh`; `swift build --product SlopadAppKit --quiet`; `swift build --product SlopadAppKitTextKit --quiet`; `swift build --product SlopadAppKitUI --quiet` |
 | UI or runtime input/rendering | `swift build --product SlopadDebugApp --quiet`; exercise the affected native path in `SlopadDebugApp` when the claim is behavioral rather than compile-only |
 | Layout, drawing, cache, frame-time, drag/reorder, or large documents | `swift build --product SlopadUIBenchmarkApp --quiet`; run the affected `SlopadUIBenchmarkApp` scenario and state the benchmark environment and resolution limits |
 | Package or target graph | `swift package dump-package` |
-| Public SwiftUI host surface | build the downstream SwiftUI fixture and exercise its intended mount → edit → observe → flush → replace → unmount path |
+| Public SwiftUI host surface | `bash scripts/verify-host-surface.sh`; `swift build --product SlopadSwiftUI --quiet` |
 | Markdown format boundary | build the downstream Markdown fixture; verify supported round trips and typed failure diagnostics through the public codec boundary |
 
 For a focused repair, rerun the focused regression and only the broader gate that the

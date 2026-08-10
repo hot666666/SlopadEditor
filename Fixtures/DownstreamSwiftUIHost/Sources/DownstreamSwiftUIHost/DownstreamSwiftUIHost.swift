@@ -2,150 +2,161 @@ import AppKit
 import SlopadSwiftUI
 import SwiftUI
 
-// MARK: - Host Record
+@MainActor
+private struct HostRoot: View {
+    let editor: SlopadEditor?
+    let model: SlopadEditorModel
 
-/// The host's own storage model. Slopad never sees this type, and never sees the string
-/// inside it: turning it into blocks is the host codec's job.
-private struct Record: Identifiable {
-    let id: String
-    let body: String
-}
-
-/// The host codec. Its existence in the fixture and its absence from the Slopad API is the
-/// `[EditorBlockInput]`-only invariant, checked by compilation.
-private enum HostCodec {
-    static func decode(_ body: String) -> [EditorBlockInput] {
-        body.split(separator: "\n", omittingEmptySubsequences: false)
-            .enumerated()
-            .map { index, line in
-                EditorBlockInput(
-                    id: BlockID("line-\(index)"),
-                    content: BlockContent(text: String(line))
-                )
-            }
-    }
-
-    static func encode(_ blocks: [EditorBlockInput]) -> String {
-        blocks.map(\.content.text).joined(separator: "\n")
-    }
-}
-
-// MARK: - Host View
-
-/// The complete embedding surface a SwiftUI host writes.
-///
-/// Everything absent here is the point: no identity guard, no generation counter, no
-/// composition endpoint wiring, no render call to move focus, no snapshot subscription to
-/// learn the height.
-private struct HostView: View {
-    let record: Record
-
-    @State private var editor = SlopadEditorModel()
-    @State private var document: SlopadDocument?
     @FocusState private var isEditing: Bool
 
+    @ViewBuilder
     var body: some View {
-        SlopadEditor(model: editor, document: document)
-            .focused($isEditing)
-            .onCommittedChange { scheduleSave() }
-            .onUnhandledAction { action in
-                guard action == .escape else { return false }
-                isEditing = false
-                return true
-            }
-            // Another view in the window took the responder. What remains selected is host
-            // policy; dropping it takes one call and does not pull focus back.
-            .onChange(of: editor.isFocused) { _, isFocused in
-                guard !isFocused else { return }
-                editor.clearSelection()
-            }
-            .frame(height: max(editor.contentHeight, 1))
-            .task(id: record.id) {
-                document = SlopadDocument(
-                    id: record.id,
-                    blocks: HostCodec.decode(record.body)
-                )
-            }
-    }
-
-    private func scheduleSave() {
-        // A real host debounces here. What matters for the contract is that the token it
-        // captures is made of public values.
-        _ = (editor.epoch, editor.documentRevision)
+        if let editor {
+            editor
+                .focused($isEditing)
+                .onChange(of: model.isFocused) { _, isFocused in
+                    guard !isFocused else { return }
+                    model.clearSelection()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            EmptyView()
+        }
     }
 }
-
-// MARK: - Contract Exercise
 
 @main
 @MainActor
 private struct DownstreamSwiftUIHost {
     static func main() {
-        exerciseObservableSurface()
-        exerciseViewComposition()
-        exercisePersistenceHandshake()
-        exerciseHostOwnedCodec()
-    }
+        _ = NSApplication.shared
 
-    /// Every value a host binds to has to be readable without reaching into the adapter.
-    private static func exerciseObservableSurface() {
+        let initialBlockID: BlockID = "swiftui-initial"
+        let replacementBlockID: BlockID = "swiftui-replacement"
         let model = SlopadEditorModel()
-        let _: EditorSessionEpoch? = model.epoch
-        let _: EditorDocumentRevision? = model.documentRevision
-        let _: Bool = model.canUndo
-        let _: Bool = model.canRedo
-        let _: Bool = model.isComposing
-        let _: Bool = model.isFocused
-        let _: Double = model.contentHeight
-        let _: EditorDocumentSnapshot? = model.documentSnapshot
-        model.commitComposition()
-        model.setFocused(false)
-        _ = model.clearSelection()
-        _ = model.perform(.insertText("host toolbar button"))
-    }
-
-    /// The view has to compose with the modifiers a host actually writes.
-    private static func exerciseViewComposition() {
-        let record = Record(id: "record-1", body: "First line\nSecond line")
-        let hostView = HostView(record: record)
-        let controller = NSHostingController(rootView: hostView)
-        controller.view.setFrameSize(NSSize(width: 480, height: 320))
-        controller.view.layoutSubtreeIfNeeded()
-    }
-
-    /// The sequence that loses the last IME syllable when a host gets it wrong.
-    private static func exercisePersistenceHandshake() {
-        let model = SlopadEditorModel()
-        let record = Record(id: "record-2", body: "Persisted line")
-        let document = SlopadDocument(id: record.id, blocks: HostCodec.decode(record.body))
-
-        let controller = NSHostingController(
-            rootView: SlopadEditor(model: model, document: document)
-                .frame(width: 480, height: 320)
+        var committedChangeCount = 0
+        let initialDocument = SlopadDocument(
+            id: "record-1",
+            blocks: [
+                EditorBlockInput(
+                    id: initialBlockID,
+                    content: BlockContent(text: "Initial SwiftUI document")
+                )
+            ]
         )
-        controller.view.layoutSubtreeIfNeeded()
 
-        let capturedEpoch = model.epoch
-
-        // Flush composition first, then read. The other order silently drops the syllable
-        // being composed.
-        model.commitComposition()
-        guard let snapshot = model.documentSnapshot else {
-            fatalError("A mounted editor must expose a document snapshot")
+        func editor(document: SlopadDocument) -> SlopadEditor {
+            SlopadEditor(model: model, document: document)
+                .editorStyle(AppKitEditorStyle())
+                .onCommittedChange { committedChangeCount += 1 }
+                .onUnhandledAction { $0 == .escape }
         }
-        precondition(snapshot.epoch == capturedEpoch)
-        precondition(!snapshot.blocks.isEmpty)
-        _ = HostCodec.encode(snapshot.blocks)
+
+        var hostingController: NSHostingController<HostRoot>? = NSHostingController(
+            rootView: HostRoot(editor: editor(document: initialDocument), model: model)
+        )
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 320),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.animationBehavior = .none
+        window.contentViewController = hostingController
+        window.makeKeyAndOrderFront(nil)
+        hostingController?.view.frame = window.contentView?.bounds ?? .zero
+        hostingController?.view.layoutSubtreeIfNeeded()
+
+        waitUntil("SwiftUI editor did not mount") {
+            model.documentSnapshot?.blocks.map(\.id) == [initialBlockID]
+        }
+        let initialEpoch = require(model.epoch, "Mounted model must publish an epoch")
+        precondition(
+            model.documentSnapshot?.blocks.first?.content.text == "Initial SwiftUI document"
+        )
+
+        // A semantic action enters only through the public observable model after mount.
+        precondition(model.perform(.insertText(" edited")))
+        waitUntil("Committed SwiftUI edit was not observed") {
+            committedChangeCount == 1 && model.documentRevision?.rawValue == 1
+        }
+        precondition(
+            model.documentSnapshot?.blocks.first?.content.text
+                == "Initial SwiftUI document edited"
+        )
+
+        model.setFocused(true)
+        waitUntil("SwiftUI focus did not reach the mounted editor") { model.isFocused }
+        model.setFocused(false)
+        waitUntil("SwiftUI blur did not reach the mounted editor") { !model.isFocused }
+
+        window.setContentSize(NSSize(width: 720, height: 420))
+        hostingController?.view.frame = window.contentView?.bounds ?? .zero
+        hostingController?.view.layoutSubtreeIfNeeded()
+        precondition(hostingController?.view.bounds.size == NSSize(width: 720, height: 420))
+
+        // Flush first, then read. This can be a no-op because installed IME delivery is
+        // outside this public lifecycle gate.
+        model.commitComposition()
+        let snapshotAfterFlush = require(
+            model.documentSnapshot,
+            "Flush-before-read must leave a committed snapshot"
+        )
+        precondition(snapshotAfterFlush.epoch == initialEpoch)
+        precondition(snapshotAfterFlush.revision.rawValue == 1)
+
+        let replacementDocument = SlopadDocument(
+            id: "record-2",
+            blocks: [
+                EditorBlockInput(
+                    id: replacementBlockID,
+                    content: BlockContent(text: "Replacement SwiftUI document")
+                )
+            ]
+        )
+        hostingController?.rootView = HostRoot(
+            editor: editor(document: replacementDocument),
+            model: model
+        )
+        hostingController?.view.layoutSubtreeIfNeeded()
+        waitUntil("SwiftUI document identity did not replace the mounted Session") {
+            guard let snapshot = model.documentSnapshot else { return false }
+            return model.epoch != initialEpoch
+                && snapshot.epoch == model.epoch
+                && snapshot.revision.rawValue == 0
+                && snapshot.blocks.map(\.id) == [replacementBlockID]
+                && snapshot.blocks.map(\.content.text) == ["Replacement SwiftUI document"]
+        }
+
+        // Removing the representable from the host tree must invoke dismantling, so the
+        // public model can no longer read a stale controller.
+        model.setFocused(false)
+        hostingController?.rootView = HostRoot(editor: nil, model: model)
+        hostingController?.view.layoutSubtreeIfNeeded()
+        waitUntil("SwiftUI editor did not detach during teardown") {
+            model.documentSnapshot == nil
+        }
+
+        window.orderOut(nil)
+        window.contentViewController = nil
+        hostingController = nil
+        window.close()
     }
 
-    /// Encoding and decoding stay on the host side of the boundary.
-    private static func exerciseHostOwnedCodec() {
-        let blocks = HostCodec.decode("alpha\nbeta")
-        precondition(blocks.count == 2)
-        precondition(HostCodec.encode(blocks) == "alpha\nbeta")
+    private static func waitUntil(
+        _ failureMessage: @autoclosure () -> String,
+        timeout: TimeInterval = 2,
+        condition: () -> Bool
+    ) {
+        let deadline = Date(timeIntervalSinceNow: timeout)
+        while !condition() && Date() < deadline {
+            RunLoop.main.run(until: min(deadline, Date(timeIntervalSinceNow: 0.01)))
+        }
+        precondition(condition(), failureMessage())
+    }
 
-        // Identity is a host-chosen value, not a Slopad type.
-        let document = SlopadDocument(id: UUID(), blocks: blocks)
-        precondition(document.blocks.count == 2)
+    private static func require<Value>(_ value: Value?, _ message: String) -> Value {
+        guard let value else { preconditionFailure(message) }
+        return value
     }
 }
