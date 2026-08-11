@@ -14,7 +14,12 @@ jobs:
   public-lifecycle:
     runs-on: macos-26
     timeout-minutes: 15
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
     steps:
       - uses: actions/checkout@v4
+      - name: Install ripgrep
+        run: brew list ripgrep >/dev/null 2>&1 || brew install ripgrep
       - name: Verify public host lifecycle
         run: bash scripts/verify-host-surface.sh

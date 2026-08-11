@@ -11,7 +11,8 @@ private struct HostChromeRenderer: AppKitBlockChromeRenderer {
             width: width,
             height: context.blockFrame.height
         )
-        let color = context.isSelected
+        let color =
+            context.isSelected
             ? NSColor.selectedContentBackgroundColor
             : NSColor.separatorColor
         context.graphicsContext.setFillColor(color.cgColor)
@@ -42,7 +43,12 @@ private struct DownstreamAppKitHost {
                     content: BlockContent(text: "Public-only downstream host")
                 )
             ],
-            selection: .caret(blockID: blockID, offset: 0),
+            selection: .text(
+                TextSelection(
+                    anchor: TextPosition(blockID: blockID, offset: 0),
+                    focus: TextPosition(blockID: blockID, offset: 27)
+                )
+            ),
             style: style,
             blockChromeRenderer: HostChromeRenderer()
         )
@@ -106,14 +112,38 @@ private struct DownstreamAppKitHost {
         _ = controller.snapshot
         _ = controller.documentSnapshot
 
+        // Public host commands keep using the supported action surface after built-in
+        // chrome is installed. Formatting is one committed transaction and one undo step;
+        // the fixture does not need command-state or toolbar internals to prove it.
+        let formattingUpdate = controller.perform(
+            .toggleInlineStyle(.strong),
+            makeFirstResponder: false,
+            scrollSelectionIntoView: false
+        )
+        precondition(formattingUpdate?.committedDocumentRevision?.rawValue == 1)
+        precondition(
+            controller.documentSnapshot.blocks.first?.content.marks == [
+                .init(kind: .strong, range: TextRange(0, 27))
+            ]
+        )
+        let formattingUndo = controller.perform(
+            .undo,
+            makeFirstResponder: false,
+            scrollSelectionIntoView: false
+        )
+        precondition(formattingUndo?.committedDocumentRevision?.rawValue == 2)
+        precondition(controller.documentSnapshot.blocks.first?.content.marks.isEmpty == true)
+        precondition(controller.snapshot?.history.canUndo == false)
+
         // The lifecycle gate mutates only after the production view is mounted. The
         // callback reads the matching committed snapshot synchronously, like a save host.
+        controller.focus(blockID: blockID, offset: 0)
         let editUpdate = controller.perform(
             .insertText("Mounted: "),
             makeFirstResponder: false,
             scrollSelectionIntoView: false
         )
-        precondition(editUpdate?.committedDocumentRevision?.rawValue == 1)
+        precondition(editUpdate?.committedDocumentRevision?.rawValue == 3)
         precondition(capturedToken?.revision == editUpdate?.committedDocumentRevision)
         precondition(
             capturedCommittedSnapshot?.blocks.first?.content.text.hasPrefix("Mounted: ") == true
@@ -142,7 +172,7 @@ private struct DownstreamAppKitHost {
                 selectionAfter: .caret(blockID: blockID, offset: 7)
             )
         )
-        precondition(assistantUpdate?.committedDocumentRevision?.rawValue == 2)
+        precondition(assistantUpdate?.committedDocumentRevision?.rawValue == 4)
         let noOpContext = try controller.documentContextSnapshot()
         let noOpUpdate = try controller.applyDocumentPatch(
             EditorDocumentPatch(

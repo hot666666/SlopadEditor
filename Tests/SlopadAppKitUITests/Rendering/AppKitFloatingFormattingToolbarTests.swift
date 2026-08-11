@@ -87,6 +87,139 @@ struct AppKitFloatingFormattingToolbarTests {
         #expect(controller.documentSnapshot.blocks.allSatisfy { $0.content.marks.isEmpty })
     }
 
+    @Test("built-in toolbar와 공개 host action은 같은 Session/model transaction과 undo 결과를 만든다")
+    func givenEquivalentSelections_whenUsingToolbarAndHostAction_thenResultsAndUndoMatch() throws {
+        // Given
+        let a: BlockID = "a"
+        let child: BlockID = "child"
+        let b: BlockID = "b"
+        let blocks = [
+            EditorBlockInput(id: a, content: .init(text: "Alpha")),
+            EditorBlockInput(id: child, parentID: a, content: .init(text: "Child")),
+            EditorBlockInput(id: b, content: .init(text: "Bravo")),
+        ]
+        let selection = EditorSelection.blocks(
+            BlockSelection(blockIDs: [a, child, b], anchor: a, focus: b)
+        )
+        let toolbarController = AppKitEditorViewController(
+            blocks: blocks,
+            selection: selection,
+            focusOnAppear: false
+        )
+        let hostController = AppKitEditorViewController(
+            blocks: blocks,
+            selection: selection,
+            focusOnAppear: false
+        )
+        let toolbarFixture = mounted(toolbarController)
+        let hostFixture = mounted(hostController)
+        defer {
+            hostFixture.close()
+            toolbarFixture.close()
+        }
+        var toolbarUpdates: [EditorUpdate] = []
+        var hostUpdates: [EditorUpdate] = []
+        toolbarController.onUpdate = { toolbarUpdates.append($0) }
+        hostController.onUpdate = { hostUpdates.append($0) }
+        toolbarController.renderAndSyncSurface(makeFirstResponder: false)
+        hostController.renderAndSyncSurface(makeFirstResponder: false)
+
+        // When
+        toolbarController.performFloatingFormattingToolbarItem(.strong)
+        let hostUpdate = try #require(
+            hostController.perform(
+                AppKitEditorAction.toggleInlineStyle(.strong),
+                makeFirstResponder: false,
+                scrollSelectionIntoView: false
+            )
+        )
+
+        // Then
+        #expect(hostUpdate.committedDocumentRevision?.rawValue == 1)
+        #expect(toolbarUpdates.count == 1)
+        #expect(hostUpdates.count == 1)
+        #expect(toolbarController.documentSnapshot.blocks == hostController.documentSnapshot.blocks)
+        #expect(toolbarController.snapshot?.selection == hostController.snapshot?.selection)
+        #expect(toolbarController.snapshot?.history.canUndo == true)
+        #expect(hostController.snapshot?.history.canUndo == true)
+
+        // When: 같은 undo/redo가 strong transaction 하나만 왕복한다.
+        let toolbarStrongUndo = try #require(
+            toolbarController.perform(.undo, makeFirstResponder: false)
+        )
+        let hostStrongUndo = try #require(
+            hostController.perform(.undo, makeFirstResponder: false)
+        )
+        let toolbarStrongRedo = try #require(
+            toolbarController.perform(.redo, makeFirstResponder: false)
+        )
+        let hostStrongRedo = try #require(
+            hostController.perform(.redo, makeFirstResponder: false)
+        )
+
+        // Then
+        #expect(toolbarStrongUndo.committedDocumentRevision?.rawValue == 2)
+        #expect(hostStrongUndo.committedDocumentRevision?.rawValue == 2)
+        #expect(toolbarStrongRedo.committedDocumentRevision?.rawValue == 3)
+        #expect(hostStrongRedo.committedDocumentRevision?.rawValue == 3)
+        #expect(toolbarController.documentSnapshot.blocks == hostController.documentSnapshot.blocks)
+        #expect(toolbarController.snapshot?.selection == selection)
+        #expect(hostController.snapshot?.selection == selection)
+
+        // When: clear도 built-in과 공개 action에서 같은 한 transaction으로 적용된다.
+        toolbarController.performFloatingFormattingToolbarItem(.clear)
+        let hostClear = try #require(
+            hostController.perform(
+                AppKitEditorAction.clearInlineStyles,
+                makeFirstResponder: false,
+                scrollSelectionIntoView: false
+            )
+        )
+
+        // Then
+        #expect(hostClear.committedDocumentRevision?.rawValue == 4)
+        #expect(toolbarUpdates.count == 4)
+        #expect(hostUpdates.count == 4)
+        #expect(toolbarController.documentSnapshot.blocks == hostController.documentSnapshot.blocks)
+        #expect(toolbarController.documentSnapshot.blocks.allSatisfy { $0.content.marks.isEmpty })
+        #expect(toolbarController.snapshot?.selection == selection)
+        #expect(hostController.snapshot?.selection == selection)
+
+        // When: clear undo/redo도 strong 결과만 복원했다가 다시 제거한다.
+        let toolbarClearUndo = try #require(
+            toolbarController.perform(.undo, makeFirstResponder: false)
+        )
+        let hostClearUndo = try #require(
+            hostController.perform(.undo, makeFirstResponder: false)
+        )
+        let toolbarBlocksAfterClearUndo = toolbarController.documentSnapshot.blocks
+        let hostBlocksAfterClearUndo = hostController.documentSnapshot.blocks
+        let toolbarClearRedo = try #require(
+            toolbarController.perform(.redo, makeFirstResponder: false)
+        )
+        let hostClearRedo = try #require(
+            hostController.perform(.redo, makeFirstResponder: false)
+        )
+
+        // Then
+        #expect(toolbarClearUndo.committedDocumentRevision?.rawValue == 5)
+        #expect(hostClearUndo.committedDocumentRevision?.rawValue == 5)
+        #expect(toolbarBlocksAfterClearUndo == hostBlocksAfterClearUndo)
+        #expect(
+            toolbarBlocksAfterClearUndo.allSatisfy {
+                $0.content.text.isEmpty || !$0.content.marks.isEmpty
+            }
+        )
+        #expect(toolbarClearRedo.committedDocumentRevision?.rawValue == 6)
+        #expect(hostClearRedo.committedDocumentRevision?.rawValue == 6)
+        #expect(toolbarController.documentSnapshot.blocks == hostController.documentSnapshot.blocks)
+        #expect(toolbarController.documentSnapshot.blocks.allSatisfy { $0.content.marks.isEmpty })
+        #expect(toolbarController.snapshot?.selection == selection)
+        #expect(hostController.snapshot?.selection == selection)
+        #expect(toolbarUpdates.count == 6)
+        #expect(hostUpdates.count == 6)
+    }
+
     @Test("empty BlockSelection은 toolbar를 표시하되 inline command를 unavailable로 disable한다")
     func givenEmptyBlockSelection_whenRendering_thenUnavailableButtonsAreDisabled() throws {
         // Given
