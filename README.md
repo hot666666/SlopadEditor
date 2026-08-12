@@ -57,7 +57,7 @@ swift run SlopadDebugApp
 | Target | Owns | Must not own |
 | --- | --- | --- |
 | `SlopadEditorModel` | Canonical block tree, selection, commands, transactions, history | Layout, viewport, native state |
-| `SlopadBlockLayout` | Visible order, block geometry, hit/reveal facts, height index, text-layout cache | Canonical mutation, platform callbacks |
+| `SlopadEditorBlockLayout` | Visible order, block geometry, hit/reveal facts, height index, text-layout cache | Canonical mutation, platform callbacks |
 | `SlopadEngine` | `EditorSession`, composition/runtime overlays, owner coordination, snapshots | Duplicate document or layout state |
 | `SlopadEditorAppKitTextKit` | Coherent TextKit2 measurement, geometry, navigation, deletion, attributed content | Editing semantics, native input host |
 | `SlopadEditorAppKitUI` | AppKit callback translation, drawing, focus, scrolling, surface synchronization | Canonical mutation or command meaning |

@@ -52,7 +52,7 @@ The pointer-down hit classification chooses the gesture mode for its complete li
 - Autoscroll, viewport changes, and crossing empty blocks preserve the latched mode.
 
 The AppKit adapter classifies platform geometry and sends a typed begin event. Session owns
-the latched gesture runtime and semantic transition. `SlopadBlockLayout` and the text
+the latched gesture runtime and semantic transition. `SlopadEditorBlockLayout` and the text
 backend answer block and block-local text hit-test facts; neither owns the selection.
 
 ### Cross-block text uses two canonical endpoints

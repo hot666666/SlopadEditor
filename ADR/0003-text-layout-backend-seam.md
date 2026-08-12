@@ -20,12 +20,12 @@ same block-local text layout facts.
 
 Keep the public text layout seam in `SlopadCoreModel/Layout` as
 `BlockTextLayoutProtocol` and related value types. Keep block-local request construction
-and cache policy inside `SlopadBlockLayout/TextLayout`.
+and cache policy inside `SlopadEditorBlockLayout/TextLayout`.
 
 `SlopadEditorAppKitTextKit` is the current AppKit/TextKit2 backend. It implements the seam and
 provides fragment layout, geometry, attributed-content, and drawing helpers to the
 default `SlopadEditorAppKitUI` adapter. TextKit2 types do not belong in `SlopadEngine`,
-`SlopadEditorModel`, or `SlopadBlockLayout`.
+`SlopadEditorModel`, or `SlopadEditorBlockLayout`.
 
 The seam anchors a coherent geometry contract, not a height-only service or high-level
 paint hook. `EditorSession` owns the live composition overlay and supplies it to
@@ -67,7 +67,7 @@ next surface.
 - Do not rename `textLayouter` to `textMeasurer`; the seam covers more than height.
 - A future UIKit or non-Apple backend should implement the same layout protocol instead
   of changing engine semantics.
-- Layout cache invalidation belongs to `SlopadBlockLayout`, not the platform backend.
+- Layout cache invalidation belongs to `SlopadEditorBlockLayout`, not the platform backend.
 - Adapting `EditorTextRenderDescriptor` to backend requests belongs to the platform UI
   adapter, so the TextKit backend does not depend on `SlopadEngine`.
 - Native views draw from session render descriptors and backend layout results; they do

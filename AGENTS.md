@@ -30,7 +30,7 @@ SlopadEditor is a headless native block editor engine. The canonical document is
 Ownership:
 
 * `SlopadEditorModel` — canonical document mutation, selection, commands, history
-* `SlopadBlockLayout` — block layout, visibility, hit-test, reveal geometry
+* `SlopadEditorBlockLayout` — block layout, visibility, hit-test, reveal geometry
 * `TextLayout` — text measurement and text geometry
 * `SlopadEngine` / `EditorSession` — orchestration and editor semantics
 * `SlopadEditorAppKitUI` — AppKit input/drawing/focus/scroll adapter

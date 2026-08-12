@@ -1,6 +1,6 @@
 import Testing
 
-@testable import SlopadBlockLayout
+@testable import SlopadEditorBlockLayout
 import SlopadCoreModel
 
 @Suite("BlockHeightIndexStorage 변경")

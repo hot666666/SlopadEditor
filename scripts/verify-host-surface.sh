@@ -87,7 +87,7 @@ require_equal "AppKit lifecycle fixture declares more than one product dependenc
     "$(count_matches '\.product\(name:' "$appkit_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadEditorAppKitUI|SlopadEditorAppKitTextKit|SlopadEditorSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadEditorBlockLayout|SlopadEditorAppKitUI|SlopadEditorAppKitTextKit|SlopadEditorSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$appkit_fixture/Package.swift"; then
     echo "AppKit lifecycle fixture manifest bypasses the SlopadEditorAppKit facade" >&2
     exit 1
@@ -101,7 +101,7 @@ require_equal "SwiftUI lifecycle fixture declares more than one product dependen
     "$(count_matches '\.product\(name:' "$swiftui_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadEditorAppKitUI|SlopadEditorAppKitTextKit|SlopadEditorAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadEditorBlockLayout|SlopadEditorAppKitUI|SlopadEditorAppKitTextKit|SlopadEditorAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$swiftui_fixture/Package.swift"; then
     echo "SwiftUI lifecycle fixture manifest bypasses the SlopadEditorSwiftUI facade" >&2
     exit 1
@@ -392,7 +392,7 @@ declared_module_forbidden_symbols=(
     "SlopadEngine:EditorVisibleTextSelection"
     "SlopadEditorAppKitUI:AppKitFloatingFormattingToolbar"
     "SlopadEditorAppKitUI:AppKitTodoCheckboxControl"
-    "SlopadBlockLayout:BlockLayout"
+    "SlopadEditorBlockLayout:BlockLayout"
 )
 for entry in "${declared_module_forbidden_symbols[@]}"; do
     forbidden_probe "${entry%%:*}" "${entry##*:}" \

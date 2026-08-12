@@ -1,5 +1,5 @@
 import Foundation
-import SlopadBlockLayout
+import SlopadEditorBlockLayout
 import SlopadCoreModel
 
 let count = CommandLine.arguments.dropFirst().first.flatMap(Int.init) ?? 100_000

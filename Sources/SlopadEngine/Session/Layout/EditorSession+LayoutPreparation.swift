@@ -1,4 +1,4 @@
-import SlopadBlockLayout
+import SlopadEditorBlockLayout
 import SlopadCoreModel
 
 // MARK: - EditorSession LayoutPreparation

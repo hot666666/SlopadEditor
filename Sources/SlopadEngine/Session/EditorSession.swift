@@ -1,5 +1,5 @@
 import Foundation
-import SlopadBlockLayout
+import SlopadEditorBlockLayout
 import SlopadCoreModel
 import SlopadEditorModel
 

@@ -24,7 +24,7 @@ flowchart TB
     subgraph Headless["Headless Engine"]
         Engine["SlopadEngine / EditorSession"]
         EditorModel["SlopadEditorModel"]
-        BlockLayout["SlopadBlockLayout"]
+        BlockLayout["SlopadEditorBlockLayout"]
     end
 
     subgraph Foundation["Foundation & Data"]
@@ -54,7 +54,7 @@ Keep the SwiftPM targets aligned to ownership:
 - `SlopadCoreModel`: public vocabulary, backend seam values, package canonical document
   values.
 - `SlopadEditorModel`: semantic document/selection/command/history owner.
-- `SlopadBlockLayout`: layout projection, visible order, invalidation, geometry, text
+- `SlopadEditorBlockLayout`: layout projection, visible order, invalidation, geometry, text
   measurement cache, height index owner.
 - `SlopadEditorDataStructure`: pure data structures with no editor vocabulary.
 - `SlopadEngine`: public `EditorSession` facade and orchestration.
@@ -69,8 +69,8 @@ platform host surfaces such as the AppKit controller, style, and chrome contract
 
 ## Consequences
 
-- `SlopadEditorModel` must not import `SlopadBlockLayout`.
-- `SlopadBlockLayout` must not import `SlopadEditorModel`.
+- `SlopadEditorModel` must not import `SlopadEditorBlockLayout`.
+- `SlopadEditorBlockLayout` must not import `SlopadEditorModel`.
 - `SlopadEngine` may compose both owners and translate between semantic change facts and
   layout invalidation facts.
 - `SlopadEditorAppKitTextKit` implements the CoreModel backend seam and must not depend on

@@ -1,4 +1,4 @@
-@testable import SlopadBlockLayout
+@testable import SlopadEditorBlockLayout
 import SlopadCoreModel
 
 typealias BlockLayoutTestInput = (

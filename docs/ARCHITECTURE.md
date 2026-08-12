@@ -29,7 +29,7 @@ The production targets form these direct dependency layers:
 | Text backend | `SlopadEditorAppKitTextKit` | TextKit2 implementation of the text-layout capability seam |
 | Orchestration | `SlopadEngine` | Public `EditorSession` and editor semantics across owners |
 | Canonical owner | `SlopadEditorModel` | Document, selection, commands, transactions, history |
-| Derived owner | `SlopadBlockLayout` | Visibility, block geometry, hit/reveal facts, caches, height index |
+| Derived owner | `SlopadEditorBlockLayout` | Visibility, block geometry, hit/reveal facts, caches, height index |
 | Format syntax | `SlopadEditorMarkdownInputRules` | Internal immutable bounded typed-input patterns |
 | Format codec | `SlopadEditorMarkdown` | Opt-in stateless whole-document decode and encode |
 | Format codec | `SlopadEditorArchive` | Opt-in stateless versioned native archive encode and decode |
@@ -44,7 +44,7 @@ product or broadly re-export its vocabulary. See
 
 The dependency graph enforces four important absences:
 
-- `SlopadEditorModel` and `SlopadBlockLayout` do not import each other;
+- `SlopadEditorModel` and `SlopadEditorBlockLayout` do not import each other;
   `EditorSession` coordinates them.
 - `SlopadEditorAppKitTextKit` does not import the engine. Runtime calls arrive through
   `BlockTextLayoutProtocol` capabilities defined in `SlopadCoreModel`.
@@ -68,7 +68,7 @@ interchangeable.
 | Canonical editing state | `SlopadEditorModel` | caret/text/block selection, stored marks, history | Platform callbacks request transitions; they do not mutate it directly |
 | Session runtime | `EditorSession` | live composition, composition selection, slash query/source revision, drag/navigation context | Cleared or invalidated when its exact source state no longer matches |
 | Platform runtime | `SlopadEditorAppKitUI` | responder, native marked range, scroll position, overlay widgets | Must converge on Session facts without becoming semantics |
-| Derived layout | `SlopadBlockLayout` and text backend | visible order, y/height index, prepared text layout, hit/caret/selection geometry | Rebuildable from canonical plus runtime inputs; never persisted as document state |
+| Derived layout | `SlopadEditorBlockLayout` and text backend | visible order, y/height index, prepared text layout, hit/caret/selection geometry | Rebuildable from canonical plus runtime inputs; never persisted as document state |
 | Render projection | `EditorSessionSnapshot` | visible blocks, active text input, overlays, total height | Viewport-scoped and disposable |
 | Persistence projection | `EditorDocumentSnapshot` | complete canonical DFS block inputs and Session epoch/revision | Full-tree read; excludes selection, layout, viewport, scroll, and composition |
 | Review context | `EditorDocumentContextSnapshot` | full document, exact selection, selected content, opaque source | Short-lived CAS authority used only by `applyDocumentPatch(_:)` |
@@ -93,7 +93,7 @@ replacement policy in ADR 0014 remain unfinished product work.
 | Interaction | Producer-to-consumer path | Invariant |
 | --- | --- | --- |
 | Typing/IME | AppKit callback → `SlopadEditorAppKitUI` → `EditorSession.handleInput` → model transaction → layout invalidation → snapshot → synchronized native surface | Composition is a Session overlay until commit; canonical selection stays in canonical coordinates |
-| Text pointer selection | AppKit point → Session pointer event → `SlopadBlockLayout` block hit → text backend grapheme hit → Session selection transition → snapshot | Backend returns facts; Session owns selection meaning |
+| Text pointer selection | AppKit point → Session pointer event → `SlopadEditorBlockLayout` block hit → text backend grapheme hit → Session selection transition → snapshot | Backend returns facts; Session owns selection meaning |
 | Block selection/drag | AppKit gutter/body routing → Session runtime preview → layout drop/reveal geometry → model move transaction on successful drop | Preview is runtime state; only the final valid drop mutates the tree |
 | Slash command | Model typed-`/` rule → Session query/source runtime → snapshot anchor/catalog → AppKit overlay → Session CAS apply → one model transaction | Query/menu state is not canonical; `/query` deletion and kind change form one undo step |
 | Rendering/scroll | AppKit viewport → `EditorSession.render` → block visibility/layout → coherent text backend facts → render snapshot → AppKit surface sync | Only visible projection is rendered; it is not a persistence source |
@@ -131,7 +131,7 @@ hook.
 
 | Capability | Backend answers | Semantic owner after the answer |
 | --- | --- | --- |
-| `BlockMeasuring` | text height and measurement result for an effective request | `SlopadBlockLayout` caches and places blocks |
+| `BlockMeasuring` | text height and measurement result for an effective request | `SlopadEditorBlockLayout` caches and places blocks |
 | `TextGeometryResolving` | fragments, hit positions, caret and selection rects | Session assembles render/input facts |
 | `TextNavigationResolving` | physical/linguistic movement facts and transient bidi context | Session changes canonical selection and crosses block boundaries |
 | `TextDeletionResolving` | Unicode-aware deletion range | Session/model applies the edit and history |

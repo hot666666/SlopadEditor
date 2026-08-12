@@ -182,7 +182,7 @@ Goal-based
 
 ## Focus
 
-- Area: `SlopadBlockLayout/TextLayout`
+- Area: `SlopadEditorBlockLayout/TextLayout`
 - Files, targets, or symbols to inspect first: `TextLayoutCache`, `BlockMeasureRequest`
 - What should stay out of scope: AppKit drawing behavior
 - Existing behavior that must not change: rendered text measurement results
@@ -191,13 +191,13 @@ Goal-based
 
 - Current symptom, friction, cleanup pressure, or user-facing failure: text measurement helpers may be placed by folder name instead of producer/consumer ownership.
 - Why this matters to the app/user/workflow: misplaced helpers make later layout changes harder to verify and easier to route through the wrong module.
-- Suspected owner: `SlopadBlockLayout`
+- Suspected owner: `SlopadEditorBlockLayout`
 - Known constraints: keep `BlockTextLayoutProtocol` in `SlopadCoreModel`.
 - Known unknowns: whether `TextLayoutCache` is a reusable boundary or only an implementation detail.
 
 ## Owner Boundary & Human Gate
 
-- Canonical owner to preserve or clarify: `SlopadBlockLayout`
+- Canonical owner to preserve or clarify: `SlopadEditorBlockLayout`
 - Decisions the loop may make: move internal helpers, shrink access levels, delete unused types.
 - Decisions that require human judgment: changing public layout protocol responsibilities.
 - Architecture/product tradeoff to bring back instead of deciding silently: any change that alters AppKit drawing behavior.

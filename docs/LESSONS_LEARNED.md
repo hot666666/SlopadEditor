@@ -28,9 +28,9 @@ development direction.
   native surface that collects OS callbacks, forwards them as engine input, and draws
   engine snapshots.
 - `EditorSession` became the host-facing facade, `SlopadEditorModel` the semantic editing
-  owner, `SlopadBlockLayout` the layout projection owner, and `SlopadCoreModel` the public
+  owner, `SlopadEditorBlockLayout` the layout projection owner, and `SlopadCoreModel` the public
   vocabulary plus package canonical value owner.
-- The SwiftPM target graph now prevents `SlopadEditorModel` and `SlopadBlockLayout` from
+- The SwiftPM target graph now prevents `SlopadEditorModel` and `SlopadEditorBlockLayout` from
   importing each other. `Session` translates semantic results into layout requests.
 - Layout performance moved from a full-rebuild baseline through dirty edit, structural
   edit, visible-index mutation, render damage, and viewport-driven lazy measurement work.

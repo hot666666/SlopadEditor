@@ -1,6 +1,6 @@
 import Testing
 
-@testable import SlopadBlockLayout
+@testable import SlopadEditorBlockLayout
 import SlopadCoreModel
 
 @Suite("유효 문서 스냅샷")

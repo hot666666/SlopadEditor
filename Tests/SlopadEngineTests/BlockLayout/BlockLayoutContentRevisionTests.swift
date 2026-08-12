@@ -1,6 +1,6 @@
 import Testing
 
-@testable import SlopadBlockLayout
+@testable import SlopadEditorBlockLayout
 import SlopadCoreModel
 
 @Suite("BlockLayout content revision 전파")

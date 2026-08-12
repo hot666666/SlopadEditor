@@ -47,7 +47,7 @@ Target-specific placement:
 - `Sources/SlopadEditorModel`
   - Root: `EditorModel`, package entrypoints consumed by Session, and cross-target
     semantic change facts.
-- `Sources/SlopadBlockLayout`
+- `Sources/SlopadEditorBlockLayout`
   - Root: `BlockLayout`, package entrypoints consumed by Session, and package geometry or
     invalidation outputs when another target needs them.
 - `Sources/SlopadCoreModel`

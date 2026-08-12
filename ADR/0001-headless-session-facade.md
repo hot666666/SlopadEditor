@@ -24,7 +24,7 @@ two internal owners:
 
 - `SlopadEditorModel` for canonical document state, selection, command application,
   transaction/history, and semantic changes.
-- `SlopadBlockLayout` for visible order, block geometry, layout invalidation, reveal,
+- `SlopadEditorBlockLayout` for visible order, block geometry, layout invalidation, reveal,
   hit-test geometry, and text-layout-backed measurement.
 
 Native surface code, such as the reusable `SlopadEditorAppKitUI` adapter, receives OS callbacks

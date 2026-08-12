@@ -29,7 +29,7 @@ body:
         - SlopadEditorAppKitUI
         - SlopadEngine / EditorSession
         - SlopadEditorModel
-        - SlopadBlockLayout
+        - SlopadEditorBlockLayout
         - SlopadCoreModel
         - SlopadEditorAppKitTextKit
         - SlopadEditorDataStructure

@@ -80,7 +80,7 @@ let package = Package(
             dependencies: ["SlopadCoreModel", "SlopadEditorMarkdownInputRules"]
         ),
         .target(
-            name: "SlopadBlockLayout",
+            name: "SlopadEditorBlockLayout",
             dependencies: [
                 "SlopadCoreModel",
                 "SlopadEditorDataStructure",
@@ -91,7 +91,7 @@ let package = Package(
             dependencies: [
                 "SlopadCoreModel",
                 "SlopadEditorModel",
-                "SlopadBlockLayout",
+                "SlopadEditorBlockLayout",
             ]
         ),
         .target(
@@ -122,7 +122,7 @@ let package = Package(
             name: "SlopadHeightBenchmark",
             dependencies: [
                 "SlopadCoreModel",
-                "SlopadBlockLayout",
+                "SlopadEditorBlockLayout",
             ],
             path: "Benchmarks/SlopadHeightBenchmark"
         ),
@@ -155,7 +155,7 @@ let package = Package(
                 "SlopadCoreModel",
                 "SlopadEditorDataStructure",
                 "SlopadEditorModel",
-                "SlopadBlockLayout",
+                "SlopadEditorBlockLayout",
                 "SlopadEngine",
                 "SlopadEditorMarkdown",
                 "SlopadEditorMarkdownInputRules",

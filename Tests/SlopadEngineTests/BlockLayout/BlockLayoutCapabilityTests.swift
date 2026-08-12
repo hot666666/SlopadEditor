@@ -1,7 +1,7 @@
 import SlopadCoreModel
 import Testing
 
-@testable import SlopadBlockLayout
+@testable import SlopadEditorBlockLayout
 
 // MARK: - BlockLayout Capability
 
