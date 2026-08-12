@@ -80,7 +80,7 @@ require_equal "SwiftUI lifecycle fixture imports more than the supported facade"
     $'AppKit\nSlopadSwiftUI\nSwiftUI'
 
 require_equal "AppKit lifecycle fixture must depend on the SlopadAppKit product" \
-    "$(count_matches '\.product\(name: "SlopadAppKit", package: "Slopad"\)' \
+    "$(count_matches '\.product\(name: "SlopadAppKit", package: "SlopadEditor"\)' \
         "$appkit_fixture/Package.swift")" \
     "1"
 require_equal "AppKit lifecycle fixture declares more than one product dependency" \
@@ -94,7 +94,7 @@ if rg -n \
 fi
 
 require_equal "SwiftUI lifecycle fixture must depend on the SlopadSwiftUI product" \
-    "$(count_matches '\.product\(name: "SlopadSwiftUI", package: "Slopad"\)' \
+    "$(count_matches '\.product\(name: "SlopadSwiftUI", package: "SlopadEditor"\)' \
         "$swiftui_fixture/Package.swift")" \
     "1"
 require_equal "SwiftUI lifecycle fixture declares more than one product dependency" \
