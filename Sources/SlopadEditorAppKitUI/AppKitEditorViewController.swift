@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 import SlopadEditorAppKitTextKit
-import SlopadEngine
+import SlopadEditorEngine
 
 // MARK: - AppKitEditorViewController
 

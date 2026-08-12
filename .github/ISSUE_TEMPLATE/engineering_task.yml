@@ -34,7 +34,7 @@ body:
         - Needs owner decision
         - GitHub workflow
         - SlopadEditorAppKitUI
-        - SlopadEngine / EditorSession
+        - SlopadEditorEngine / EditorSession
         - SlopadEditorDocumentModel
         - SlopadEditorBlockLayout
         - SlopadCoreModel

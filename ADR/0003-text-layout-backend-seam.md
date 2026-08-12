@@ -24,7 +24,7 @@ and cache policy inside `SlopadEditorBlockLayout/TextLayout`.
 
 `SlopadEditorAppKitTextKit` is the current AppKit/TextKit2 backend. It implements the seam and
 provides fragment layout, geometry, attributed-content, and drawing helpers to the
-default `SlopadEditorAppKitUI` adapter. TextKit2 types do not belong in `SlopadEngine`,
+default `SlopadEditorAppKitUI` adapter. TextKit2 types do not belong in `SlopadEditorEngine`,
 `SlopadEditorDocumentModel`, or `SlopadEditorBlockLayout`.
 
 The seam anchors a coherent geometry contract, not a height-only service or high-level
@@ -69,7 +69,7 @@ next surface.
   of changing engine semantics.
 - Layout cache invalidation belongs to `SlopadEditorBlockLayout`, not the platform backend.
 - Adapting `EditorTextRenderDescriptor` to backend requests belongs to the platform UI
-  adapter, so the TextKit backend does not depend on `SlopadEngine`.
+  adapter, so the TextKit backend does not depend on `SlopadEditorEngine`.
 - Native views draw from session render descriptors and backend layout results; they do
   not own editor selection/composition semantics.
 - Engine code must not implement physical navigation as logical `offset +/- 1` or define

@@ -1,4 +1,4 @@
-import SlopadEngine
+import SlopadEditorEngine
 import SlopadEditorMarkdown
 
 private struct FixtureTextLayouter: BlockTextLayoutProtocol {

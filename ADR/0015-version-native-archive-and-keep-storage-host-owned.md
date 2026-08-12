@@ -62,7 +62,7 @@ Nested public vocabulary such as block-kind payloads and inline-mark kinds remai
 through its aliased parent type; it does not receive another top-level alias. This is a
 curated archive facade, not a `SlopadCoreModel` product or a blanket
 `@_exported import`. `SlopadEditorArchive` does not copy or wrap these values, require
-`SlopadEngine`, or make Session, AppKit, SwiftUI, TextKit, filesystem APIs, URLs, databases,
+`SlopadEditorEngine`, or make Session, AppKit, SwiftUI, TextKit, filesystem APIs, URLs, databases,
 and storage providers dependencies or public vocabulary.
 
 The codec is synchronous, stateless, deterministic in meaning, and safe to call in any
@@ -373,7 +373,7 @@ layer acquires command, invariant, selection, or history ownership.
 - The same fixture proves host lifecycle integration separately. Its lifecycle target/source may
   additionally import exactly one public UI facade plus `SlopadEditorArchive`, passes the
   facade's type-identical `snapshot.blocks` directly to the codec, and never imports raw
-  `SlopadEngine`, `SlopadCoreModel`, or package-only types. If both probes live in one
+  `SlopadEditorEngine`, `SlopadCoreModel`, or package-only types. If both probes live in one
   fixture package, they remain separate targets/sources with distinct product dependencies
   and import audits. Neither ordinary AppKit/SwiftUI lifecycle fixtures nor the Markdown
   fixture gains an archive dependency.

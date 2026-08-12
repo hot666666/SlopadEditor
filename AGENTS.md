@@ -32,7 +32,7 @@ Ownership:
 * `SlopadEditorDocumentModel` — canonical document mutation, selection, commands, history
 * `SlopadEditorBlockLayout` — block layout, visibility, hit-test, reveal geometry
 * `TextLayout` — text measurement and text geometry
-* `SlopadEngine` / `EditorSession` — orchestration and editor semantics
+* `SlopadEditorEngine` / `EditorSession` — orchestration and editor semantics
 * `SlopadEditorAppKitUI` — AppKit input/drawing/focus/scroll adapter
 * `SlopadEditorAppKitTextKit` — TextKit2 backend
 * `SlopadEditorDataStructure` — editor-independent data structures

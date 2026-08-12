@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import SlopadEditorAppKitTextKit
 import SlopadEditorAppKitUI
-import SlopadEngine
+import SlopadEditorEngine
 
 @MainActor
 final class DebugViewController: NSViewController {

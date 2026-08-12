@@ -14,7 +14,7 @@ let package = Package(
         .executableTarget(
             name: "DownstreamMarkdownHost",
             dependencies: [
-                .product(name: "SlopadEngine", package: "SlopadEditor"),
+                .product(name: "SlopadEditorEngine", package: "SlopadEditor"),
                 .product(name: "SlopadEditorMarkdown", package: "SlopadEditor"),
             ]
         )

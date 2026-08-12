@@ -2,9 +2,9 @@
 
 import Dispatch
 import Foundation
-import SlopadEngine
+import SlopadEditorEngine
 
-typealias EngineTextRange = SlopadEngine.TextRange
+typealias EngineTextRange = SlopadEditorEngine.TextRange
 
 // MARK: - CLI
 

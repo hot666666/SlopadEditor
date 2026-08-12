@@ -16,7 +16,7 @@
 </p>
 
 SlopadEditor is a work-in-progress block editor project. Its reusable foundation is
-`SlopadEngine`: the canonical document is a tree of blocks, the engine owns editing
+`SlopadEditorEngine`: the canonical document is a tree of blocks, the engine owns editing
 meaning, and platform adapters own native input, drawing, focus, and scrolling.
 
 The production platform path is macOS 14+ through AppKit and TextKit2. Package resolution
@@ -37,7 +37,7 @@ import SlopadEditorAppKit
 
 `SlopadEditorAppKit` is a compile-time facade. It exposes the supported controller, actions,
 style, block chrome, snapshots, and document transaction vocabulary, but creates no second
-runtime or state owner. `SlopadEditorAppKitUI`, `SlopadEditorAppKitTextKit`, and `SlopadEngine` remain
+runtime or state owner. `SlopadEditorAppKitUI`, `SlopadEditorAppKitTextKit`, and `SlopadEditorEngine` remain
 available to hosts that intentionally build a complete custom adapter.
 
 SwiftUI hosts use the separate `SlopadEditorSwiftUI` product. It layers declarative lifecycle
@@ -58,7 +58,7 @@ swift run SlopadDebugApp
 | --- | --- | --- |
 | `SlopadEditorDocumentModel` | Canonical block tree, selection, commands, transactions, history | Layout, viewport, native state |
 | `SlopadEditorBlockLayout` | Visible order, block geometry, hit/reveal facts, height index, text-layout cache | Canonical mutation, platform callbacks |
-| `SlopadEngine` | `EditorSession`, composition/runtime overlays, owner coordination, snapshots | Duplicate document or layout state |
+| `SlopadEditorEngine` | `EditorSession`, composition/runtime overlays, owner coordination, snapshots | Duplicate document or layout state |
 | `SlopadEditorAppKitTextKit` | Coherent TextKit2 measurement, geometry, navigation, deletion, attributed content | Editing semantics, native input host |
 | `SlopadEditorAppKitUI` | AppKit callback translation, drawing, focus, scrolling, surface synchronization | Canonical mutation or command meaning |
 | `SlopadEditorAppKit` | Curated ordinary-host API | Runtime state |

@@ -11,7 +11,7 @@ Accepted
 The default macOS integration is one coherent platform stack: `SlopadEditorAppKitUI` owns the
 native AppKit callback and surface lifecycle while `SlopadEditorAppKitTextKit` supplies the
 matching TextKit2 geometry and drawing backend. Ordinary downstream apps nevertheless had
-to depend on and import `SlopadEngine`, `SlopadEditorAppKitUI`, and `SlopadEditorAppKitTextKit`
+to depend on and import `SlopadEditorEngine`, `SlopadEditorAppKitUI`, and `SlopadEditorAppKitTextKit`
 individually. That exposed assembly details and made low-level engine input and adapter
 plumbing look like the normal host contract.
 
@@ -30,7 +30,7 @@ and existing integrations.
 Add `SlopadEditorAppKit` as the recommended library product and module for ordinary macOS hosts.
 Its target curates public controller, action, style, chrome, document, selection, update,
 and snapshot vocabulary from the existing owners. It depends on `SlopadEditorAppKitUI` and
-`SlopadEngine`; the UI adapter continues to depend on `SlopadEditorAppKitTextKit`, so the product
+`SlopadEditorEngine`; the UI adapter continues to depend on `SlopadEditorAppKitTextKit`, so the product
 assembles the complete default AppKit + TextKit2 stack without adding a runtime owner.
 
 An ordinary host uses one product dependency and one import:
@@ -88,8 +88,8 @@ The controller's ordinary public input boundary is synchronized and context-free
 
 This does not narrow the headless extension boundary. `EditorSession.handleInput(_:)`,
 `EditorInputEvent`, `EditorViewport`, and `BlockTextLayoutProtocol` remain public through
-`SlopadEngine` for hosts implementing a complete custom adapter. The
-`SlopadEditorAppKitUI`, `SlopadEditorAppKitTextKit`, and `SlopadEngine` library products also remain
+`SlopadEditorEngine` for hosts implementing a complete custom adapter. The
+`SlopadEditorAppKitUI`, `SlopadEditorAppKitTextKit`, and `SlopadEditorEngine` library products also remain
 available as advanced and compatibility seams.
 
 The source migration follows the ownership boundary:
@@ -111,7 +111,7 @@ The source migration follows the ownership boundary:
   layers.
 - Hosts migrate ordinary programmatic commands to `perform(_:)` and lifecycle composition
   flushes to `commitActiveComposition()`. Code implementing a complete adapter continues
-  to import `SlopadEngine` and use raw engine inputs directly.
+  to import `SlopadEditorEngine` and use raw engine inputs directly.
 - The facade exposes the complete `EditorDocumentSnapshot` and committed revision signal,
   so simplifying imports does not weaken viewport-independent persistence.
 - `AppKitBlockChromeRenderer` remains decoration-only. The facade does not add a partial

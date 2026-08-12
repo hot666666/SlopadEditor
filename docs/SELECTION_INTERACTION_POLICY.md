@@ -319,8 +319,8 @@ package struct ResolvedTextSpan: Sendable {
     package let fragments: [ResolvedTextFragment]
 }
 
-// SlopadEngine: viewport-independent facts for buttons/menus.
-// Sources/SlopadEngine/Session/CommandState/EditorCommandState.swift
+// SlopadEditorEngine: viewport-independent facts for buttons/menus.
+// Sources/SlopadEditorEngine/Session/CommandState/EditorCommandState.swift
 package struct EditorCommandState: Hashable, Sendable {
     package let selectionMode: EditorCommandSelectionMode
     package let detail: EditorCommandStateDetail
@@ -334,8 +334,8 @@ package struct EditorCommandState: Hashable, Sendable {
     let outdentBlocksAvailability: EditorActionAvailability
 }
 
-// SlopadEngine snapshot: viewport-dependent facts, never canonical state.
-// Sources/SlopadEngine/Session/EditorSelectionPresentation.swift
+// SlopadEditorEngine snapshot: viewport-dependent facts, never canonical state.
+// Sources/SlopadEditorEngine/Session/EditorSelectionPresentation.swift
 package struct EditorSelectionPresentation: Sendable {
     package let visibleTextSelections: [EditorVisibleTextSelection]
     package let visibleBlockSelectionIDs: Set<BlockID>
@@ -423,7 +423,7 @@ Replace the one-way `selectedPlainText()` shape with a two-phase boundary:
    payload back to Session, which applies one canonical transaction.
 
 This shipped as `EditorSession.clipboardWritePlan()` in
-[`EditorSession+ClipboardWritePlan.swift`](../Sources/SlopadEngine/Session/Selection/EditorSession+ClipboardWritePlan.swift),
+[`EditorSession+ClipboardWritePlan.swift`](../Sources/SlopadEditorEngine/Session/Selection/EditorSession+ClipboardWritePlan.swift),
 returning `EditorClipboardWritePlan` — a versioned `EditorClipboardPayload` plus its
 `plainText` fallback. The payload's structured content is
 `.textSlice(EditorClipboardTextSlice)` or `.blockSubtrees(EditorClipboardBlockSubtrees)`,
@@ -553,13 +553,13 @@ The old-policy sites were migrated under their existing owners:
 
 | Area | Implemented behavior |
 | --- | --- |
-| [`EditorSession+TextPointerDragInput.swift`](../Sources/SlopadEngine/Session/TextInteraction/EditorSession+TextPointerDragInput.swift) | Latches text mode, hit-tests the current block, and resolves an empty-origin drag from the nearest non-empty edge in its direction. |
-| [`EditorSession+VerticalMovementInput.swift`](../Sources/SlopadEngine/Session/Navigation/EditorSession+VerticalMovementInput.swift) | Extends text by one visual destination across block boundaries without converting to `B`. |
-| [`EditorSession+ActiveTextSelection.swift`](../Sources/SlopadEngine/Session/TextInteraction/EditorSession+ActiveTextSelection.swift) | Keeps one focus-block native input descriptor while canonical `TN` retains both endpoints. |
-| [`EditorSession+Rendering.swift`](../Sources/SlopadEngine/Session/EditorSession+Rendering.swift) | Projects visible block-local text ranges and atomic block tint from prepared visible-order ranks. |
-| [`EditorSession+RenderDamage.swift`](../Sources/SlopadEngine/Session/EditorSession+RenderDamage.swift) | Computes selection damage only from visible ranks; it no longer materializes the full `TN` span per pointer update. |
-| [`EditorSession+ClipboardWritePlan.swift`](../Sources/SlopadEngine/Session/Selection/EditorSession+ClipboardWritePlan.swift) | Produces versioned text-slice or block-subtree payloads and a kind-aware plain fallback. |
-| [`EditorSession+CommandInput.swift`](../Sources/SlopadEngine/Session/InputRouting/EditorSession+CommandInput.swift) | Routes `TN` typing, deletion, Enter, formatting, indentation, Escape, Cmd-A, and structured paste through shared model semantics. |
+| [`EditorSession+TextPointerDragInput.swift`](../Sources/SlopadEditorEngine/Session/TextInteraction/EditorSession+TextPointerDragInput.swift) | Latches text mode, hit-tests the current block, and resolves an empty-origin drag from the nearest non-empty edge in its direction. |
+| [`EditorSession+VerticalMovementInput.swift`](../Sources/SlopadEditorEngine/Session/Navigation/EditorSession+VerticalMovementInput.swift) | Extends text by one visual destination across block boundaries without converting to `B`. |
+| [`EditorSession+ActiveTextSelection.swift`](../Sources/SlopadEditorEngine/Session/TextInteraction/EditorSession+ActiveTextSelection.swift) | Keeps one focus-block native input descriptor while canonical `TN` retains both endpoints. |
+| [`EditorSession+Rendering.swift`](../Sources/SlopadEditorEngine/Session/EditorSession+Rendering.swift) | Projects visible block-local text ranges and atomic block tint from prepared visible-order ranks. |
+| [`EditorSession+RenderDamage.swift`](../Sources/SlopadEditorEngine/Session/EditorSession+RenderDamage.swift) | Computes selection damage only from visible ranks; it no longer materializes the full `TN` span per pointer update. |
+| [`EditorSession+ClipboardWritePlan.swift`](../Sources/SlopadEditorEngine/Session/Selection/EditorSession+ClipboardWritePlan.swift) | Produces versioned text-slice or block-subtree payloads and a kind-aware plain fallback. |
+| [`EditorSession+CommandInput.swift`](../Sources/SlopadEditorEngine/Session/InputRouting/EditorSession+CommandInput.swift) | Routes `TN` typing, deletion, Enter, formatting, indentation, Escape, Cmd-A, and structured paste through shared model semantics. |
 | [`EditorModel+TextContentCommands.swift`](../Sources/SlopadEditorDocumentModel/Command/EditorModel+TextContentCommands.swift) | Replaces normalized cross-block spans, preserves the earlier endpoint, promotes removed-endpoint descendants, and records one transaction. |
 | [`EditorModel+StructuredPasteCommands.swift`](../Sources/SlopadEditorDocumentModel/Command/EditorModel+StructuredPasteCommands.swift) | Applies fresh-ID structured forests using root-aware open-edge merging while preserving endpoint and middle subtrees. |
 | [`AppKitEditorViewController.swift`](../Sources/SlopadEditorAppKitUI/AppKitEditorViewController.swift) | Classifies the origin once, keeps text/block drag modes distinct, and continues text selection during autoscroll. |
@@ -650,10 +650,10 @@ test cannot substitute for a native callback, visual, or performance claim.
 
 ### Gate 1 — canonical owner and transactions
 
-The EditorModel-owned suites in `Tests/SlopadEngineTests/EditorModel` must cover forward
+The EditorModel-owned suites in `Tests/SlopadEditorEngineTests/EditorModel` must cover forward
 and reverse `TN` for replacement, Backspace/Delete, Enter, Shift-Enter, formatting,
 indent/outdent, and undo/redo. There is no separate `SlopadEditorDocumentModelTests` target;
-`SlopadEditorDocumentModel` is exercised through the `SlopadEngineTests` target, which declares it
+`SlopadEditorDocumentModel` is exercised through the `SlopadEditorEngineTests` target, which declares it
 as a direct dependency. Assertions must include:
 
 - exact document DFS post-image, surviving `BlockID`/kind/parent, and fresh pasted IDs;
@@ -664,7 +664,7 @@ as a direct dependency. Assertions must include:
 
 ### Gate 2 — Session semantics and bounded projection
 
-Focused `SlopadEngineTests` must exercise every implemented matrix row through
+Focused `SlopadEditorEngineTests` must exercise every implemented matrix row through
 `EditorSession.handleInput`, including pointer-origin latching, separator-only keyboard
 steps, Escape, staged Cmd-A, `B` printable no-op, `B` Enter/Shift-Enter, and typed clipboard
 payload routing. A direct `B` composition-event no-op remains callback-contract coverage,

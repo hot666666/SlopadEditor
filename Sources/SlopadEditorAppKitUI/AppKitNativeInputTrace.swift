@@ -1,6 +1,6 @@
 #if DEBUG
     import AppKit
-    import SlopadEngine
+    import SlopadEditorEngine
 
     // MARK: - AppKitNativeInputTraceHandler
 

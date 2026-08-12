@@ -77,7 +77,7 @@ concurrency design.
 
 `SlopadEditorMarkdown` is a separate, opt-in library product and target. Its target depends on
 `SlopadCoreModel` and on the `Markdown` product from `swift-markdown`; it is not folded into
-`SlopadEngine`, `SlopadEditorAppKit`, or `SlopadEditorSwiftUI`.
+`SlopadEditorEngine`, `SlopadEditorAppKit`, or `SlopadEditorSwiftUI`.
 
 Its public surface is expressed entirely in core vocabulary — `EditorBlockInput`,
 `BlockContent`, `BlockKind`, `BlockContent.InlineMark`, and diagnostics defined in that
@@ -91,7 +91,7 @@ a transitive module can still be visible to another target in the resolved graph
 therefore also adds a repository architecture test that requires every Markdown import to
 be spelled `internal import Markdown` inside `Sources/SlopadEditorMarkdown` and rejects it anywhere
 else under `Sources/`. A dedicated downstream fixture depends on the opt-in
-`SlopadEditorMarkdown` product plus `SlopadEngine`, decodes through the public core-vocabulary API,
+`SlopadEditorMarkdown` product plus `SlopadEditorEngine`, decodes through the public core-vocabulary API,
 passes the resulting blocks through `EditorDocumentPatch` and `EditorSession`, and never
 imports `Markdown`.
 

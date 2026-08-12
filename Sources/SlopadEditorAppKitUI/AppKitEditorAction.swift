@@ -1,4 +1,4 @@
-import SlopadEngine
+import SlopadEditorEngine
 
 // MARK: - AppKitEditorAction
 

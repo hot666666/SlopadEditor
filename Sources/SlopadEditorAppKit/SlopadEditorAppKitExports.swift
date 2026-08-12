@@ -1,5 +1,5 @@
 public import SlopadEditorAppKitUI
-public import SlopadEngine
+public import SlopadEditorEngine
 
 // MARK: - AppKit Platform Surface
 
@@ -14,43 +14,43 @@ public typealias AppKitDefaultBlockChromeRenderer =
 
 // MARK: - Host Document Vocabulary
 
-public typealias BlockID = SlopadEngine.BlockID
-public typealias BlockKind = SlopadEngine.BlockKind
-public typealias BlockMarkerKind = SlopadEngine.BlockMarkerKind
-public typealias BlockContent = SlopadEngine.BlockContent
-public typealias EditorBlockInput = SlopadEngine.EditorBlockInput
-public typealias EditorSelection = SlopadEngine.EditorSelection
-public typealias BlockSelection = SlopadEngine.BlockSelection
-public typealias TextSelection = SlopadEngine.TextSelection
-public typealias TextPosition = SlopadEngine.TextPosition
-public typealias TextRange = SlopadEngine.TextRange
-public typealias TextComposition = SlopadEngine.TextComposition
-public typealias TextAffinity = SlopadEngine.TextAffinity
-public typealias TextNavigationContext = SlopadEngine.TextNavigationContext
+public typealias BlockID = SlopadEditorEngine.BlockID
+public typealias BlockKind = SlopadEditorEngine.BlockKind
+public typealias BlockMarkerKind = SlopadEditorEngine.BlockMarkerKind
+public typealias BlockContent = SlopadEditorEngine.BlockContent
+public typealias EditorBlockInput = SlopadEditorEngine.EditorBlockInput
+public typealias EditorSelection = SlopadEditorEngine.EditorSelection
+public typealias BlockSelection = SlopadEditorEngine.BlockSelection
+public typealias TextSelection = SlopadEditorEngine.TextSelection
+public typealias TextPosition = SlopadEditorEngine.TextPosition
+public typealias TextRange = SlopadEditorEngine.TextRange
+public typealias TextComposition = SlopadEditorEngine.TextComposition
+public typealias TextAffinity = SlopadEditorEngine.TextAffinity
+public typealias TextNavigationContext = SlopadEditorEngine.TextNavigationContext
 
 // MARK: - Host Observation Vocabulary
 
-public typealias EditorUpdate = SlopadEngine.EditorUpdate
-public typealias EditorSessionEpoch = SlopadEngine.EditorSessionEpoch
-public typealias EditorDocumentRevision = SlopadEngine.EditorDocumentRevision
-public typealias EditorDocumentSnapshot = SlopadEngine.EditorDocumentSnapshot
-public typealias EditorDocumentSource = SlopadEngine.EditorDocumentSource
-public typealias EditorDocumentContextSnapshot = SlopadEngine.EditorDocumentContextSnapshot
-public typealias EditorDocumentPatch = SlopadEngine.EditorDocumentPatch
-public typealias EditorDocumentTransactionError = SlopadEngine.EditorDocumentTransactionError
-public typealias EditorSelectedContent = SlopadEngine.EditorSelectedContent
-public typealias EditorSelectedText = SlopadEngine.EditorSelectedText
-public typealias EditorSelectedTextFragment = SlopadEngine.EditorSelectedTextFragment
-public typealias EditorSelectedBlocks = SlopadEngine.EditorSelectedBlocks
-public typealias EditorSessionSnapshot = SlopadEngine.EditorSessionSnapshot
-public typealias EditorSnapshotRevision = SlopadEngine.EditorSnapshotRevision
-public typealias EditorHistoryState = SlopadEngine.EditorHistoryState
-public typealias EditorRenderedBlock = SlopadEngine.EditorRenderedBlock
-public typealias EditorRect = SlopadEngine.EditorRect
-public typealias BlockMeasureRequest = SlopadEngine.BlockMeasureRequest
+public typealias EditorUpdate = SlopadEditorEngine.EditorUpdate
+public typealias EditorSessionEpoch = SlopadEditorEngine.EditorSessionEpoch
+public typealias EditorDocumentRevision = SlopadEditorEngine.EditorDocumentRevision
+public typealias EditorDocumentSnapshot = SlopadEditorEngine.EditorDocumentSnapshot
+public typealias EditorDocumentSource = SlopadEditorEngine.EditorDocumentSource
+public typealias EditorDocumentContextSnapshot = SlopadEditorEngine.EditorDocumentContextSnapshot
+public typealias EditorDocumentPatch = SlopadEditorEngine.EditorDocumentPatch
+public typealias EditorDocumentTransactionError = SlopadEditorEngine.EditorDocumentTransactionError
+public typealias EditorSelectedContent = SlopadEditorEngine.EditorSelectedContent
+public typealias EditorSelectedText = SlopadEditorEngine.EditorSelectedText
+public typealias EditorSelectedTextFragment = SlopadEditorEngine.EditorSelectedTextFragment
+public typealias EditorSelectedBlocks = SlopadEditorEngine.EditorSelectedBlocks
+public typealias EditorSessionSnapshot = SlopadEditorEngine.EditorSessionSnapshot
+public typealias EditorSnapshotRevision = SlopadEditorEngine.EditorSnapshotRevision
+public typealias EditorHistoryState = SlopadEditorEngine.EditorHistoryState
+public typealias EditorRenderedBlock = SlopadEditorEngine.EditorRenderedBlock
+public typealias EditorRect = SlopadEditorEngine.EditorRect
+public typealias BlockMeasureRequest = SlopadEditorEngine.BlockMeasureRequest
 public typealias EditorSessionActiveTextInputDescriptor =
-    SlopadEngine.EditorSessionActiveTextInputDescriptor
-public typealias EditorTextRenderDescriptor = SlopadEngine.EditorTextRenderDescriptor
-public typealias EditorBlockDragState = SlopadEngine.EditorBlockDragState
+    SlopadEditorEngine.EditorSessionActiveTextInputDescriptor
+public typealias EditorTextRenderDescriptor = SlopadEditorEngine.EditorTextRenderDescriptor
+public typealias EditorBlockDragState = SlopadEditorEngine.EditorBlockDragState
 public typealias EditorBlockSelectionRectangleState =
-    SlopadEngine.EditorBlockSelectionRectangleState
+    SlopadEditorEngine.EditorBlockSelectionRectangleState

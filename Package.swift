@@ -9,8 +9,8 @@ let package = Package(
     ],
     products: [
         .library(
-            name: "SlopadEngine",
-            targets: ["SlopadEngine"]
+            name: "SlopadEditorEngine",
+            targets: ["SlopadEditorEngine"]
         ),
         .library(
             name: "SlopadEditorMarkdown",
@@ -87,7 +87,7 @@ let package = Package(
             ]
         ),
         .target(
-            name: "SlopadEngine",
+            name: "SlopadEditorEngine",
             dependencies: [
                 "SlopadCoreModel",
                 "SlopadEditorDocumentModel",
@@ -101,14 +101,14 @@ let package = Package(
         .target(
             name: "SlopadEditorAppKitUI",
             dependencies: [
-                "SlopadEngine",
+                "SlopadEditorEngine",
                 "SlopadEditorAppKitTextKit",
             ]
         ),
         .target(
             name: "SlopadEditorAppKit",
             dependencies: [
-                "SlopadEngine",
+                "SlopadEditorEngine",
                 "SlopadEditorAppKitUI",
             ]
         ),
@@ -128,13 +128,13 @@ let package = Package(
         ),
         .executableTarget(
             name: "SlopadSessionBenchmark",
-            dependencies: ["SlopadEngine"],
+            dependencies: ["SlopadEditorEngine"],
             path: "Benchmarks/SlopadSessionBenchmark"
         ),
         .executableTarget(
             name: "SlopadDebugApp",
             dependencies: [
-                "SlopadEngine",
+                "SlopadEditorEngine",
                 "SlopadEditorAppKitTextKit",
                 "SlopadEditorAppKitUI",
             ],
@@ -143,20 +143,20 @@ let package = Package(
         .executableTarget(
             name: "SlopadUIBenchmarkApp",
             dependencies: [
-                "SlopadEngine",
+                "SlopadEditorEngine",
                 "SlopadEditorAppKitTextKit",
                 "SlopadEditorAppKitUI",
             ],
             path: "Benchmarks/SlopadUIBenchmarkApp"
         ),
         .testTarget(
-            name: "SlopadEngineTests",
+            name: "SlopadEditorEngineTests",
             dependencies: [
                 "SlopadCoreModel",
                 "SlopadEditorDataStructure",
                 "SlopadEditorDocumentModel",
                 "SlopadEditorBlockLayout",
-                "SlopadEngine",
+                "SlopadEditorEngine",
                 "SlopadEditorMarkdown",
                 "SlopadEditorMarkdownInputRules",
             ]
@@ -186,7 +186,7 @@ let package = Package(
         .testTarget(
             name: "SlopadEditorAppKitUITests",
             dependencies: [
-                "SlopadEngine",
+                "SlopadEditorEngine",
                 "SlopadEditorAppKitUI",
             ]
         ),

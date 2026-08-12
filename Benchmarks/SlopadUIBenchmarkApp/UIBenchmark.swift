@@ -3,7 +3,7 @@ import Darwin
 import Foundation
 import SlopadEditorAppKitTextKit
 import SlopadEditorAppKitUI
-import SlopadEngine
+import SlopadEditorEngine
 
 @MainActor
 struct UIBenchmarkOptions {

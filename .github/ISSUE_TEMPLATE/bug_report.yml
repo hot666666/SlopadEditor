@@ -56,7 +56,7 @@ body:
       options:
         - Unknown / needs triage
         - SlopadEditorAppKitUI
-        - SlopadEngine / EditorSession
+        - SlopadEditorEngine / EditorSession
         - SlopadEditorDocumentModel
         - SlopadEditorBlockLayout
         - SlopadCoreModel

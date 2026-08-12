@@ -103,7 +103,7 @@ the AppKit backend alone resolves them to `NSFont`, `NSColor`, and attributed-te
 no-render batching helpers are not public host contracts. They use package access only
 when debug or benchmark targets require them; otherwise they remain internal or private.
 
-It depends on `SlopadEngine` and `SlopadEditorAppKitTextKit`. It does not expose `EditorModel`,
+It depends on `SlopadEditorEngine` and `SlopadEditorAppKitTextKit`. It does not expose `EditorModel`,
 `BlockLayout`, canonical `Document`, layout cache, or height-index storage.
 
 ## Consequences

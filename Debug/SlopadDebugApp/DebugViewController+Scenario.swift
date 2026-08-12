@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 import SlopadEditorAppKitTextKit
-import SlopadEngine
+import SlopadEditorEngine
 
 @MainActor
 extension DebugViewController {
@@ -475,7 +475,7 @@ extension DebugViewController {
                 scenario: scenario
             )
             try assertActiveTextSelection(
-                expectedRange: SlopadEngine.TextRange(0, DebugSeedFixture.introText.count),
+                expectedRange: SlopadEditorEngine.TextRange(0, DebugSeedFixture.introText.count),
                 scenario: scenario
             )
 
@@ -571,7 +571,7 @@ extension DebugViewController {
     }
 
     private func assertActiveTextSelection(
-        expectedRange: SlopadEngine.TextRange,
+        expectedRange: SlopadEditorEngine.TextRange,
         scenario: String
     ) throws {
         let activeInput = try require(
@@ -624,7 +624,7 @@ extension DebugViewController {
         try assertNonEmptyActiveTextSelection(blockID: blockID, scenario: scenario)
         let request = activeInput.renderDescriptor.measureRequest
         try require(
-            activeInput.selectedRange != SlopadEngine.TextRange(0, request.text.count),
+            activeInput.selectedRange != SlopadEditorEngine.TextRange(0, request.text.count),
             "\(scenario): expected partial text selection"
         )
     }

@@ -1,5 +1,5 @@
 import SlopadEditorAppKitTextKit
-import SlopadEngine
+import SlopadEditorEngine
 
 // MARK: - AppKitTextSystem
 

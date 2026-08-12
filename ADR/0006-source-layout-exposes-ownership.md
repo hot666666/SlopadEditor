@@ -41,7 +41,7 @@ Rules:
 
 Target-specific placement:
 
-- `Sources/SlopadEngine/Session`
+- `Sources/SlopadEditorEngine/Session`
   - Root: `EditorSession`, public snapshot/update/render output values, and thin public
     facade entrypoints.
 - `Sources/SlopadEditorDocumentModel`

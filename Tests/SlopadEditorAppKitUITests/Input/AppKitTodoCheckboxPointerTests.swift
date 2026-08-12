@@ -2,7 +2,7 @@ import AppKit
 import Testing
 
 @testable import SlopadEditorAppKitUI
-@testable import SlopadEngine
+@testable import SlopadEditorEngine
 
 @MainActor
 @Suite("AppKit todo checkbox pointer control")

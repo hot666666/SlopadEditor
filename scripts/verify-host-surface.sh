@@ -58,7 +58,7 @@ count_matches() {
 # Reduce every import to its module name before comparing. Attributes, attribute arguments,
 # indentation, and declaration-kind imports must not be able to carry a raw package
 # dependency past the allowlist. An attribute pattern that stops at the attribute name
-# fails open rather than closed: `@_spi(Internal) import SlopadEngine` stops looking like
+# fails open rather than closed: `@_spi(Internal) import SlopadEditorEngine` stops looking like
 # an import at all and drops out of the comparison entirely, which is the opposite of what
 # this guard is for.
 fixture_import_modules() {
@@ -87,7 +87,7 @@ require_equal "AppKit lifecycle fixture declares more than one product dependenc
     "$(count_matches '\.product\(name:' "$appkit_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorDocumentModel|SlopadEditorBlockLayout|SlopadEditorAppKitUI|SlopadEditorAppKitTextKit|SlopadEditorSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadCoreModel|SlopadEditorEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorDocumentModel|SlopadEditorBlockLayout|SlopadEditorAppKitUI|SlopadEditorAppKitTextKit|SlopadEditorSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$appkit_fixture/Package.swift"; then
     echo "AppKit lifecycle fixture manifest bypasses the SlopadEditorAppKit facade" >&2
     exit 1
@@ -101,7 +101,7 @@ require_equal "SwiftUI lifecycle fixture declares more than one product dependen
     "$(count_matches '\.product\(name:' "$swiftui_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorDocumentModel|SlopadEditorBlockLayout|SlopadEditorAppKitUI|SlopadEditorAppKitTextKit|SlopadEditorAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadCoreModel|SlopadEditorEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorDocumentModel|SlopadEditorBlockLayout|SlopadEditorAppKitUI|SlopadEditorAppKitTextKit|SlopadEditorAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$swiftui_fixture/Package.swift"; then
     echo "SwiftUI lifecycle fixture manifest bypasses the SlopadEditorSwiftUI facade" >&2
     exit 1
@@ -385,11 +385,11 @@ done
 # unreachable even when an external consumer imports their own module directly. These are
 # the symbols whose exposure would actually widen the host contract.
 declared_module_forbidden_symbols=(
-    "SlopadEngine:EditorCommandState"
-    "SlopadEngine:EditorCommandAction"
-    "SlopadEngine:EditorCommandSelectionMode"
-    "SlopadEngine:EditorSelectionPresentation"
-    "SlopadEngine:EditorVisibleTextSelection"
+    "SlopadEditorEngine:EditorCommandState"
+    "SlopadEditorEngine:EditorCommandAction"
+    "SlopadEditorEngine:EditorCommandSelectionMode"
+    "SlopadEditorEngine:EditorSelectionPresentation"
+    "SlopadEditorEngine:EditorVisibleTextSelection"
     "SlopadEditorAppKitUI:AppKitFloatingFormattingToolbar"
     "SlopadEditorAppKitUI:AppKitTodoCheckboxControl"
     "SlopadEditorBlockLayout:BlockLayout"

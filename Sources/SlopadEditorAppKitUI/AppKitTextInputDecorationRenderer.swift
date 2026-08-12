@@ -1,6 +1,6 @@
 import AppKit
 import CoreGraphics
-import SlopadEngine
+import SlopadEditorEngine
 
 // MARK: - AppKitTextInputDecorationRenderer
 

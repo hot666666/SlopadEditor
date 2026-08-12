@@ -22,7 +22,7 @@ flowchart TB
     end
 
     subgraph Headless["Headless Engine"]
-        Engine["SlopadEngine / EditorSession"]
+        Engine["SlopadEditorEngine / EditorSession"]
         EditorModel["SlopadEditorDocumentModel"]
         BlockLayout["SlopadEditorBlockLayout"]
     end
@@ -57,7 +57,7 @@ Keep the SwiftPM targets aligned to ownership:
 - `SlopadEditorBlockLayout`: layout projection, visible order, invalidation, geometry, text
   measurement cache, height index owner.
 - `SlopadEditorDataStructure`: pure data structures with no editor vocabulary.
-- `SlopadEngine`: public `EditorSession` facade and orchestration.
+- `SlopadEditorEngine`: public `EditorSession` facade and orchestration.
 - `SlopadEditorAppKitTextKit`: AppKit/TextKit2 text layout/rendering backend.
 - `SlopadEditorAppKitUI`: reusable AppKit view/controller adapter.
 - `SlopadDebugApp`: AppKit reference/debug host.
@@ -71,12 +71,12 @@ platform host surfaces such as the AppKit controller, style, and chrome contract
 
 - `SlopadEditorDocumentModel` must not import `SlopadEditorBlockLayout`.
 - `SlopadEditorBlockLayout` must not import `SlopadEditorDocumentModel`.
-- `SlopadEngine` may compose both owners and translate between semantic change facts and
+- `SlopadEditorEngine` may compose both owners and translate between semantic change facts and
   layout invalidation facts.
 - `SlopadEditorAppKitTextKit` implements the CoreModel backend seam and must not depend on
-  `SlopadEngine`; adapting Session render descriptors to TextKit calls belongs to
+  `SlopadEditorEngine`; adapting Session render descriptors to TextKit calls belongs to
   `SlopadEditorAppKitUI`.
-- A complete platform replacement adds a sibling adapter that depends on `SlopadEngine`
+- A complete platform replacement adds a sibling adapter that depends on `SlopadEditorEngine`
   and a coherent backend. It does not add platform dependencies to the engine or turn the
   default AppKit chrome hook into a renderer seam.
 - `SlopadCoreModel` is not a shared helper bucket. A value belongs there only when it is

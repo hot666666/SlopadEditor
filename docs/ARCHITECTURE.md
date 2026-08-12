@@ -27,7 +27,7 @@ The production targets form these direct dependency layers:
 | Host facade | `SlopadEditorAppKit` | One-product/one-import ordinary macOS surface |
 | Platform adapter | `SlopadEditorAppKitUI` | AppKit callbacks, native input, drawing, focus, scroll, surface sync |
 | Text backend | `SlopadEditorAppKitTextKit` | TextKit2 implementation of the text-layout capability seam |
-| Orchestration | `SlopadEngine` | Public `EditorSession` and editor semantics across owners |
+| Orchestration | `SlopadEditorEngine` | Public `EditorSession` and editor semantics across owners |
 | Canonical owner | `SlopadEditorDocumentModel` | Document, selection, commands, transactions, history |
 | Derived owner | `SlopadEditorBlockLayout` | Visibility, block geometry, hit/reveal facts, caches, height index |
 | Format syntax | `SlopadEditorMarkdownInputRules` | Internal immutable bounded typed-input patterns |
@@ -159,8 +159,8 @@ complete adapter/backend pair so geometry and drawing stay coherent.
 | --- | --- | --- | --- |
 | Ordinary macOS app | `SlopadEditorAppKit` | document storage policy, app chrome, lifecycle | raw TextKit graph, model/layout internals |
 | SwiftUI app | `SlopadEditorSwiftUI` | mount/unmount, document identity, bindings, persistence timing | controller bypass or a second runtime |
-| Complete custom platform adapter | `SlopadEngine` plus its own backend | native callback translation, drawing, focus, scroll coherence | direct model/layout coupling |
-| Markdown caller | `SlopadEditorMarkdown` and optionally `SlopadEngine` | explicit import/export timing and failure UX | parser AST retention or partial success |
+| Complete custom platform adapter | `SlopadEditorEngine` plus its own backend | native callback translation, drawing, focus, scroll coherence | direct model/layout coupling |
+| Markdown caller | `SlopadEditorMarkdown` and optionally `SlopadEditorEngine` | explicit import/export timing and failure UX | parser AST retention or partial success |
 | Native archive codec caller | `SlopadEditorArchive` | construct/encode/decode the curated archive aliases | raw Engine/CoreModel imports, Session state, storage providers, or a second canonical document owner |
 | Native archive lifecycle host | exactly one public UI facade plus `SlopadEditorArchive` | file/DB/cloud lifecycle, debounce, atomic write, conflict/retry/error UX | raw Engine/CoreModel imports, package-only state, or codec-owned lifecycle policy |
 | Debug/benchmark/fixture | development targets | scenarios, measurements, public compile proof | production ownership |

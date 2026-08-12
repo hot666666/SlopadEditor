@@ -1,5 +1,5 @@
 import AppKit
-import SlopadEngine
+import SlopadEditorEngine
 
 // MARK: - AppKitActiveInputOwner
 
@@ -88,7 +88,7 @@ final class AppKitActiveInputController {
     private var activeTextHostBlockID: BlockID?
     private var text = ""
     private var selectedRange = NSRange(location: 0, length: 0)
-    private var sessionSelectedRange: SlopadEngine.TextRange?
+    private var sessionSelectedRange: SlopadEditorEngine.TextRange?
     private var markedRange: NSRange?
     private var markedReplacementRange: NSRange?
     private var markedDocumentText: String?
@@ -258,7 +258,7 @@ final class AppKitActiveInputController {
         )
         let replacementTextRange =
             replacementRange.slopadTextRange(in: documentText)
-            ?? SlopadEngine.TextRange.point(documentText.count)
+            ?? SlopadEditorEngine.TextRange.point(documentText.count)
         let markedSelectedRange = normalizedMarkedSelectionRange(
             markedSelectedRange,
             in: markedText
@@ -340,7 +340,7 @@ final class AppKitActiveInputController {
         let replacementRange = NSRange(location: 0, length: documentText.utf16.count)
         let replacementTextRange =
             replacementRange.slopadTextRange(in: documentText)
-            ?? SlopadEngine.TextRange(0, documentText.count)
+            ?? SlopadEditorEngine.TextRange(0, documentText.count)
         syncGuard.performSessionSync {
             self.text = newText
             self.selectedRange = NSRange(location: newText.utf16.count, length: 0)
@@ -617,7 +617,7 @@ extension AppKitActiveInputController {
         let replacementRange = normalizedReplacementRange(replacementRange, in: documentText)
         let replacementTextRange =
             replacementRange.slopadTextRange(in: documentText)
-            ?? SlopadEngine.TextRange.point(documentText.count)
+            ?? SlopadEditorEngine.TextRange.point(documentText.count)
         text = replacingText(documentText, in: replacementRange, with: replacementText)
         selectedRange = NSRange(
             location: replacementRange.location + replacementText.utf16.count,
@@ -645,7 +645,7 @@ extension AppKitActiveInputController {
     private func syncSelectionFromNativeSurface() {
         guard let activeTextHostBlockID else { return }
         let range =
-            selectedRange.slopadTextRange(in: text) ?? SlopadEngine.TextRange.point(text.count)
+            selectedRange.slopadTextRange(in: text) ?? SlopadEditorEngine.TextRange.point(text.count)
         guard sessionSelectedRange != range else { return }
         emitEditorEvent(
             .activeTextSelectionChanged(

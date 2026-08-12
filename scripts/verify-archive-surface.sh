@@ -14,7 +14,7 @@ archive_source="Sources/SlopadEditorArchive"
 
 test "$(rg '^public typealias ' "$archive_source" | wc -l | tr -d ' ')" = "5"
 test "$(rg '^public import SlopadCoreModel$' "$archive_source" | wc -l | tr -d ' ')" = "1"
-if rg -n '@_exported import|import SlopadEngine|import SlopadEditorAppKit|import SlopadEditorSwiftUI' \
+if rg -n '@_exported import|import SlopadEditorEngine|import SlopadEditorAppKit|import SlopadEditorSwiftUI' \
     "$archive_source"; then
     echo "Archive target widened beyond its CoreModel-only boundary" >&2
     exit 1
@@ -36,18 +36,18 @@ fi
 lifecycle_manifest_block="$(sed -n '/name: "AppKitArchiveLifecycleProbe"/,$p' "$fixture/Package.swift")"
 test "$(printf '%s' "$lifecycle_manifest_block" | rg -c 'product\(name: "SlopadEditorArchive"')" = "1"
 test "$(printf '%s' "$lifecycle_manifest_block" | rg -c 'product\(name: "SlopadEditorAppKit"')" = "1"
-if printf '%s' "$lifecycle_manifest_block" | rg 'SlopadCoreModel|SlopadEngine|SlopadEditorSwiftUI|SlopadEditorAppKitUI'; then
+if printf '%s' "$lifecycle_manifest_block" | rg 'SlopadCoreModel|SlopadEditorEngine|SlopadEditorSwiftUI|SlopadEditorAppKitUI'; then
     echo "Lifecycle probe gained a raw product dependency" >&2
     exit 1
 fi
 
-if rg -n 'SlopadCoreModel|SlopadEngine|SlopadEditorAppKit|SlopadEditorSwiftUI|SlopadEditorAppKitUI' \
+if rg -n 'SlopadCoreModel|SlopadEditorEngine|SlopadEditorAppKit|SlopadEditorSwiftUI|SlopadEditorAppKitUI' \
     "$codec_source"; then
     echo "Codec probe bypasses the Archive facade" >&2
     exit 1
 fi
 
-if rg -n 'SlopadCoreModel|SlopadEngine|SlopadEditorSwiftUI|SlopadEditorAppKitUI|@testable|\bpackage\b' \
+if rg -n 'SlopadCoreModel|SlopadEditorEngine|SlopadEditorSwiftUI|SlopadEditorAppKitUI|@testable|\bpackage\b' \
     "$lifecycle_source"; then
     echo "Lifecycle probe bypasses its public facades" >&2
     exit 1

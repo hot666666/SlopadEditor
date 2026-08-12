@@ -1,7 +1,7 @@
 import AppKit
 import CoreGraphics
 import SlopadEditorAppKitTextKit
-import SlopadEngine
+import SlopadEditorEngine
 
 // MARK: - AppKitBlockChromeRenderer
 

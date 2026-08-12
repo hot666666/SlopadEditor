@@ -25,7 +25,7 @@ Keep `SlopadUIBenchmarkApp` as a named executable product because the standard A
 verification workflow builds and runs it directly. It is still a development harness and
 does not define a reusable library contract.
 
-The reusable library products are `SlopadEngine`, `SlopadEditorAppKitTextKit`, and
+The reusable library products are `SlopadEditorEngine`, `SlopadEditorAppKitTextKit`, and
 `SlopadEditorAppKitUI`. `SlopadDebugApp` and `SlopadUIBenchmarkApp` are executable products that
 consume those libraries from the outer edge.
 
