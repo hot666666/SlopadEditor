@@ -1,5 +1,5 @@
 import AppKit
-import SlopadSwiftUI
+import SlopadEditorSwiftUI
 import SwiftUI
 
 /// Counts host body evaluations so a lifecycle step can wait for SwiftUI's update pass to

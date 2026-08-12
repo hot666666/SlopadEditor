@@ -1,4 +1,4 @@
-// A SwiftUI host declares one product and writes `import SlopadSwiftUI`. Re-exporting the
+// A SwiftUI host declares one product and writes `import SlopadEditorSwiftUI`. Re-exporting the
 // platform vocabulary means it does not also have to depend on `SlopadAppKit` just to name
 // the block, selection and action values it already needs — and it keeps the downstream
 // fixture honest, since a single-product dependency is what a real host writes.

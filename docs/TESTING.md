@@ -23,7 +23,7 @@ bash scripts/verify-host-surface.sh
 `just host-surface` delegates to the same script. This is the canonical continuous ADR
 0012 gate on every pull request. It builds and runs both ordinary one-product lifecycle
 fixtures: `DownstreamAppKitHost` through `SlopadAppKit` alone and
-`DownstreamSwiftUIHost` through `SlopadSwiftUI` alone. Each mounts a literal window/view,
+`DownstreamSwiftUIHost` through `SlopadEditorSwiftUI` alone. Each mounts a literal window/view,
 performs public semantic and formatting edits with a one-step formatting undo, observes the
 committed snapshot, flushes composition before reading, replaces the document with
 epoch/identity/content checks, exercises focus/resize, and tears down deterministically.
@@ -50,7 +50,7 @@ installed input-method delivery require their dedicated AppKit/UI evidence.
 | UI or runtime input/rendering | `swift build --product SlopadDebugApp --quiet`; exercise the affected native path in `SlopadDebugApp` when the claim is behavioral rather than compile-only |
 | Layout, drawing, cache, frame-time, drag/reorder, or large documents | `swift build --product SlopadUIBenchmarkApp --quiet`; run the affected `SlopadUIBenchmarkApp` scenario and state the benchmark environment and resolution limits |
 | Package or target graph | `swift package dump-package` |
-| Public SwiftUI host surface | `bash scripts/verify-host-surface.sh`; `swift build --product SlopadSwiftUI --quiet` |
+| Public SwiftUI host surface | `bash scripts/verify-host-surface.sh`; `swift build --product SlopadEditorSwiftUI --quiet` |
 | Markdown format boundary | build the downstream Markdown fixture; verify supported round trips and typed failure diagnostics through the public codec boundary |
 | Native archive boundary | `bash scripts/verify-archive-surface.sh`; `swift build --product SlopadArchive --quiet`; run focused Archive/Core validation tests and the opt-in large-document lifecycle smoke when snapshot/encode cost is relevant |
 

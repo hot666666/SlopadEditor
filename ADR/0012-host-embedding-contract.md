@@ -65,7 +65,7 @@ that decision, which is what keeps it a notification rather than a hook.
   engine decision (test 3). What remains selected after focus moves away stays host policy;
   the editor reports focus and offers the transition, it does not pick one.
 - `contentHeight`, `onContentHeightChange`.
-- `SlopadSwiftUI`: `SlopadEditor`, `SlopadEditorModel`, `SlopadDocument`.
+- `SlopadEditorSwiftUI`: `SlopadEditor`, `SlopadEditorModel`, `SlopadDocument`.
 
 ### What the test excluded
 
@@ -122,7 +122,7 @@ contains both, they remain distinct targets/sources with distinct dependency and
 audits. Neither archive probe changes the ordinary one-product lifecycle gates, and no
 fixture gains a format dependency merely to persist.
 
-`SlopadSwiftUI` is layered on `SlopadAppKit` as its own target rather than folded into it,
+`SlopadEditorSwiftUI` is layered on `SlopadAppKit` as its own target rather than folded into it,
 for the same reason `SlopadAppKit` is a curated umbrella and not a runtime owner. It does
 not re-export `AppKitEditorViewController`: a SwiftUI host that can reach the controller
 can bypass the lifecycle wiring the target exists to provide.

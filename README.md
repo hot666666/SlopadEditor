@@ -40,7 +40,7 @@ style, block chrome, snapshots, and document transaction vocabulary, but creates
 runtime or state owner. `SlopadAppKitUI`, `SlopadAppKitTextKit`, and `SlopadEngine` remain
 available to hosts that intentionally build a complete custom adapter.
 
-SwiftUI hosts use the separate `SlopadSwiftUI` product. It layers declarative lifecycle
+SwiftUI hosts use the separate `SlopadEditorSwiftUI` product. It layers declarative lifecycle
 and observable host state over the same AppKit runtime; it does not create a second editor
 or expose the underlying controller.
 
@@ -62,7 +62,7 @@ swift run SlopadDebugApp
 | `SlopadAppKitTextKit` | Coherent TextKit2 measurement, geometry, navigation, deletion, attributed content | Editing semantics, native input host |
 | `SlopadAppKitUI` | AppKit callback translation, drawing, focus, scrolling, surface synchronization | Canonical mutation or command meaning |
 | `SlopadAppKit` | Curated ordinary-host API | Runtime state |
-| `SlopadSwiftUI` | SwiftUI mounting, identity, focus, observation, lifecycle flush | A second controller or Session |
+| `SlopadEditorSwiftUI` | SwiftUI mounting, identity, focus, observation, lifecycle flush | A second controller or Session |
 | `SlopadMarkdown` | Explicit stateless whole-document decode/encode | Canonical storage, editor runtime |
 | `SlopadArchive` | Versioned native archive encode/decode over canonical blocks | Storage lifecycle, editor runtime |
 

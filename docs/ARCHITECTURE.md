@@ -23,7 +23,7 @@ The production targets form these direct dependency layers:
 
 | Layer | Target | Direct role |
 | --- | --- | --- |
-| Host facade | `SlopadSwiftUI` | SwiftUI lifecycle over the curated AppKit facade |
+| Host facade | `SlopadEditorSwiftUI` | SwiftUI lifecycle over the curated AppKit facade |
 | Host facade | `SlopadAppKit` | One-product/one-import ordinary macOS surface |
 | Platform adapter | `SlopadAppKitUI` | AppKit callbacks, native input, drawing, focus, scroll, surface sync |
 | Text backend | `SlopadAppKitTextKit` | TextKit2 implementation of the text-layout capability seam |
@@ -52,7 +52,7 @@ The dependency graph enforces four important absences:
   block inputs enter a document transaction.
 - `SlopadArchive` likewise does not import the engine or a storage provider. It
   transforms canonical block inputs to/from `Data`; the host owns persistence lifecycle.
-- `SlopadAppKit` and `SlopadSwiftUI` add no second controller, Session, document, or cache.
+- `SlopadAppKit` and `SlopadEditorSwiftUI` add no second controller, Session, document, or cache.
 
 Debug apps, benchmarks, tests, and downstream fixtures are outer-edge consumers. They
 verify production owners but do not define editor behavior.
@@ -158,7 +158,7 @@ complete adapter/backend pair so geometry and drawing stay coherent.
 | Consumer | Recommended surface | Consumer owns | Consumer must not reach into |
 | --- | --- | --- | --- |
 | Ordinary macOS app | `SlopadAppKit` | document storage policy, app chrome, lifecycle | raw TextKit graph, model/layout internals |
-| SwiftUI app | `SlopadSwiftUI` | mount/unmount, document identity, bindings, persistence timing | controller bypass or a second runtime |
+| SwiftUI app | `SlopadEditorSwiftUI` | mount/unmount, document identity, bindings, persistence timing | controller bypass or a second runtime |
 | Complete custom platform adapter | `SlopadEngine` plus its own backend | native callback translation, drawing, focus, scroll coherence | direct model/layout coupling |
 | Markdown caller | `SlopadMarkdown` and optionally `SlopadEngine` | explicit import/export timing and failure UX | parser AST retention or partial success |
 | Native archive codec caller | `SlopadArchive` | construct/encode/decode the curated archive aliases | raw Engine/CoreModel imports, Session state, storage providers, or a second canonical document owner |
@@ -178,7 +178,7 @@ The ordinary AppKit host surface is admitted by intent:
 | Change default presentation | `updateEditorStyle(_:)` |
 | Draw block decoration | `AppKitBlockChromeRenderer` |
 
-`SlopadSwiftUI` packages the mount → edit → observe → flush → replace → unmount lifecycle.
+`SlopadEditorSwiftUI` packages the mount → edit → observe → flush → replace → unmount lifecycle.
 It guards document identity, filters committed changes, bridges focus, and flushes
 composition before persistence without re-exporting the controller.
 

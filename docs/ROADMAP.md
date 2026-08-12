@@ -68,7 +68,7 @@ canonical gate for both ordinary AppKit and SwiftUI lifecycle fixtures, and CI i
 on every pull request. This is an ongoing boundary constraint, not a feature waiting for
 completion.
 
-- Keep `SlopadAppKit` as the ordinary one-product/one-import path and `SlopadSwiftUI` as
+- Keep `SlopadAppKit` as the ordinary one-product/one-import path and `SlopadEditorSwiftUI` as
   the declarative lifecycle surface.
 - Admit new host operations only as synchronized actions, style/chrome customization,
   engine input contracts, or a complete custom-adapter requirement.

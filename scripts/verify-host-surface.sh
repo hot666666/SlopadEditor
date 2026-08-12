@@ -77,7 +77,7 @@ require_equal "AppKit lifecycle fixture imports more than the supported facade" 
     $'AppKit\nSlopadAppKit'
 require_equal "SwiftUI lifecycle fixture imports more than the supported facade" \
     "$(fixture_import_modules "$swiftui_source")" \
-    $'AppKit\nSlopadSwiftUI\nSwiftUI'
+    $'AppKit\nSlopadEditorSwiftUI\nSwiftUI'
 
 require_equal "AppKit lifecycle fixture must depend on the SlopadAppKit product" \
     "$(count_matches '\.product\(name: "SlopadAppKit", package: "SlopadEditor"\)' \
@@ -87,14 +87,14 @@ require_equal "AppKit lifecycle fixture declares more than one product dependenc
     "$(count_matches '\.product\(name:' "$appkit_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadMarkdownInputRules|SlopadMarkdown|SlopadArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadAppKitUI|SlopadAppKitTextKit|SlopadSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadCoreModel|SlopadEngine|SlopadMarkdownInputRules|SlopadMarkdown|SlopadArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadAppKitUI|SlopadAppKitTextKit|SlopadEditorSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$appkit_fixture/Package.swift"; then
     echo "AppKit lifecycle fixture manifest bypasses the SlopadAppKit facade" >&2
     exit 1
 fi
 
-require_equal "SwiftUI lifecycle fixture must depend on the SlopadSwiftUI product" \
-    "$(count_matches '\.product\(name: "SlopadSwiftUI", package: "SlopadEditor"\)' \
+require_equal "SwiftUI lifecycle fixture must depend on the SlopadEditorSwiftUI product" \
+    "$(count_matches '\.product\(name: "SlopadEditorSwiftUI", package: "SlopadEditor"\)' \
         "$swiftui_fixture/Package.swift")" \
     "1"
 require_equal "SwiftUI lifecycle fixture declares more than one product dependency" \
@@ -103,7 +103,7 @@ require_equal "SwiftUI lifecycle fixture declares more than one product dependen
 if rg -n \
     'SlopadCoreModel|SlopadEngine|SlopadMarkdownInputRules|SlopadMarkdown|SlopadArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadAppKitUI|SlopadAppKitTextKit|SlopadAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$swiftui_fixture/Package.swift"; then
-    echo "SwiftUI lifecycle fixture manifest bypasses the SlopadSwiftUI facade" >&2
+    echo "SwiftUI lifecycle fixture manifest bypasses the SlopadEditorSwiftUI facade" >&2
     exit 1
 fi
 
@@ -331,10 +331,10 @@ positive_probe SlopadAppKit AppKitEditorAction \
 positive_probe SlopadAppKit AppKitEditorViewController \
     "$appkit_swiftc" "$appkit_import_path" "$appkit_target" "$appkit_sdk" \
     "$appkit_frameworks" "$appkit_system_imports" "$appkit_swift_version"
-positive_probe SlopadSwiftUI SlopadEditor \
+positive_probe SlopadEditorSwiftUI SlopadEditor \
     "$swiftui_swiftc" "$swiftui_import_path" "$swiftui_target" "$swiftui_sdk" \
     "$swiftui_frameworks" "$swiftui_system_imports" "$swiftui_swift_version"
-positive_probe SlopadSwiftUI SlopadEditorModel \
+positive_probe SlopadEditorSwiftUI SlopadEditorModel \
     "$swiftui_swiftc" "$swiftui_import_path" "$swiftui_target" "$swiftui_sdk" \
     "$swiftui_frameworks" "$swiftui_system_imports" "$swiftui_swift_version"
 
@@ -368,7 +368,7 @@ swiftui_forbidden_symbols=(
     TextKitTextSystem
 )
 for symbol in "${swiftui_forbidden_symbols[@]}"; do
-    forbidden_probe SlopadSwiftUI "$symbol" \
+    forbidden_probe SlopadEditorSwiftUI "$symbol" \
         "$swiftui_swiftc" "$swiftui_import_path" "$swiftui_target" "$swiftui_sdk" \
         "$swiftui_frameworks" "$swiftui_system_imports" "$swiftui_swift_version"
 done

@@ -1,6 +1,6 @@
 # Rename Migration Plan
 
-Status: staged, not started. Stage 0 artifacts exist; no module has moved.
+Status: in progress. Stages 0-3 complete.
 
 Target scheme: [ADR 0016](../ADR/0016-name-the-package-slopadeditor-and-reserve-slopad-for-the-app.md).
 That record fixes *what* the names become; this document owns *how the tree gets there
@@ -57,9 +57,14 @@ Every module stage runs the same steps. Deviating from the order is how a step g
 1. `git mv Sources/<Old> Sources/<New>` — keeps file history.
 2. `Package.swift`: the target name, every `dependencies:` reference to it, and its
    `products:` entry when it has one.
-3. Every `import <Old>` across `Sources/`, `Tests/`, `Debug/`, `Benchmarks/`, `Fixtures/`.
+3. Every `import <Old>` across `Sources/`, `Tests/`, `Debug/`, `Benchmarks/`, `Fixtures/`,
+   and the `<Old>Tests` target and directory. A test target whose name no longer matches its
+   module does not build, so it moves in the same stage rather than waiting.
 4. **`scripts/verify-host-surface.sh` and `scripts/verify-archive-surface.sh`** — allowlists,
-   negative probes, and any literal manifest assertion.
+   negative probes, and any literal manifest assertion. Watch for shell ANSI-C strings of the
+   form `$'AppKit\nSlopadX\nSwiftUI'`: the literal backslash-n puts a word character
+   immediately before the module name, so a word-boundary search does not find it. Stage 3
+   shipped a stale allowlist this way and the gate caught it.
 5. `Fixtures/*/Package.swift` and fixture sources, when the module is a product.
 6. Any type inside the module that shares its name — `SlopadArchive`, `SlopadMarkdown`, and
    the `SlopadSwiftUI` facade types are namespace enums and structs whose names must track
@@ -103,10 +108,9 @@ first and the 239-file rename happens last, when the procedure is routine.
 | 12 | `SlopadEngine` | → `SlopadEditorEngine` | 39 imports, 107 files | Product. |
 | 13 | `SlopadCoreModel` | → `SlopadEditorCoreModel` | **239 imports, 265 files** | Largest. Mechanical, compiler-proven, but run alone. |
 | 14 | SwiftUI facade types | `SlopadEditor`→`SlopadEditorView`, `SlopadEditorModel`→`SlopadEditorViewModel`, `SlopadDocument`→`SlopadEditorDocument` | public API | Host-visible; fixtures and `verify-host-surface.sh` probes move together. |
-| 15 | Test targets | `SlopadEngineTests` → `SlopadEditorEngineTests`, and the five others | 6 targets | Names only; no test bodies change. |
-| 16 | Development targets | `SlopadDebugApp`, `SlopadUIBenchmarkApp`, `SlopadHeightBenchmark`, `SlopadSessionBenchmark` | 4 targets | `justfile` and `scripts/slopad-debug-*.sh` move with them, including their filenames. |
-| 17 | Repo tooling and pages | `.github/ISSUE_TEMPLATE/*`, `.codex/agents/*`, `docs/slopad-architecture-map.html` and its filename | 30 + 117 sites | The HTML pages are projections; regenerate rather than hand-edit where practical. |
-| 18 | Seal | `verify-naming.sh --strict` exits 0; add it to `.github/workflows` | — | The guard becomes a gate. |
+| 15 | Development targets | `SlopadDebugApp`, `SlopadUIBenchmarkApp`, `SlopadHeightBenchmark`, `SlopadSessionBenchmark` | 4 targets | `justfile` and `scripts/slopad-debug-*.sh` move with them, including their filenames. |
+| 16 | Repo tooling and pages | `.github/ISSUE_TEMPLATE/*`, `.codex/agents/*`, `docs/slopad-architecture-map.html` and its filename | 30 + 117 sites | The HTML pages are projections; regenerate rather than hand-edit where practical. |
+| 17 | Seal | `verify-naming.sh --strict` exits 0; add it to `.github/workflows` | — | The guard becomes a gate. |
 
 ## Rollback
 
@@ -115,18 +119,18 @@ Stages are independent in both directions: reverting stage 7 does not require re
 because module names do not reference each other — only importers reference them, and those
 edits live in the same commit.
 
-The one ordering constraint is stage 18, which cannot land before every category is zero.
+The one ordering constraint is the final seal, which cannot land before every category is zero.
 
 ## Open Decisions
 
 These do not block stage 1 and can be answered before the stage that needs them.
 
-- **Stage 16 · repository directory name.** SwiftPM derives a path dependency's identity from
+- **Stage 15 · repository directory name.** SwiftPM derives a path dependency's identity from
   the directory, not from `Package.swift`. The fixtures currently resolve
   `identity: slopad` from `/…/project/Slopad`. Renaming the working copy to `SlopadEditor`
   makes identity match the package; leaving it does not break anything, since fixtures use
   `path: "../.."`. Decide before sealing so `Package.resolved` churn happens once.
-- **Stage 17 · handoff document.** `Slopad_Semantic_Editor_Architecture_Handoff.md` is 2,227
+- **Stage 16 · handoff document.** `Slopad_Semantic_Editor_Architecture_Handoff.md` is 2,227
   lines with 13 references to a still-earlier name (`BlockEditorKit`) and 5 broken relative
   links. `AGENTS.md` calls it a background record, not a work order. Renaming it in place,
   archiving it, or deleting it are all defensible; it is currently on `verify-naming.sh`'s

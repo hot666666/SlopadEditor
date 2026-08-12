@@ -2,7 +2,7 @@
 
 import PackageDescription
 
-// A downstream host that only exists to fail. It depends on the SlopadSwiftUI product the
+// A downstream host that only exists to fail. It depends on the SlopadEditorSwiftUI product the
 // way a real app would — no `@testable`, no direct dependency on the underlying products,
 // no access to package-only state — so anything a SwiftUI host needs that is not public
 // breaks this build rather than being discovered by whoever integrates first.
@@ -18,7 +18,7 @@ let package = Package(
         .executableTarget(
             name: "DownstreamSwiftUIHost",
             dependencies: [
-                .product(name: "SlopadSwiftUI", package: "SlopadEditor")
+                .product(name: "SlopadEditorSwiftUI", package: "SlopadEditor")
             ]
         )
     ]

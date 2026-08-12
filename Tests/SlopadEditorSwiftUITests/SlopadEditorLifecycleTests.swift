@@ -3,7 +3,7 @@ import Foundation
 import SlopadAppKit
 import Testing
 
-@testable import SlopadSwiftUI
+@testable import SlopadEditorSwiftUI
 
 @MainActor
 @Suite("SwiftUI 호스트 lifecycle 배선")
