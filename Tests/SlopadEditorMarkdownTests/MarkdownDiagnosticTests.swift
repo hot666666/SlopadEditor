@@ -1,6 +1,6 @@
 import Testing
 
-@testable import SlopadMarkdown
+@testable import SlopadEditorMarkdown
 
 @Suite("Markdown decode diagnostics")
 struct MarkdownDiagnosticTests {
@@ -135,7 +135,7 @@ struct MarkdownDiagnosticTests {
 
         // When
         do {
-            _ = try SlopadMarkdown.decode(markdown)
+            _ = try SlopadEditorMarkdown.decode(markdown)
             returnedBlocks = true
         } catch {
             // Then
@@ -166,7 +166,7 @@ struct MarkdownDiagnosticTests {
     private func decodingError(for markdown: String) throws -> MarkdownDecodingError {
         var captured: MarkdownDecodingError?
         do {
-            _ = try SlopadMarkdown.decode(markdown)
+            _ = try SlopadEditorMarkdown.decode(markdown)
         } catch {
             captured = error
         }

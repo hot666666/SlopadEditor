@@ -1,7 +1,7 @@
 import SlopadCoreModel
 import Testing
 
-@testable import SlopadMarkdown
+@testable import SlopadEditorMarkdown
 
 @Suite("Markdown block decode")
 struct MarkdownBlockDecodingTests {
@@ -12,7 +12,7 @@ struct MarkdownBlockDecodingTests {
 
         // When / Then
         for markdown in inputs {
-            let blocks = try SlopadMarkdown.decode(markdown)
+            let blocks = try SlopadEditorMarkdown.decode(markdown)
             #expect(blocks.count == 1)
             #expect(blocks[0].parentID == nil)
             #expect(blocks[0].kind == .paragraph)
@@ -26,7 +26,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = "plain\n\n# one\n\n## two\n\n### three"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(
@@ -45,7 +45,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = "> first\n>\n> second\n>\n> - nested"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         let quote = try #require(blocks.first)
@@ -65,7 +65,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = "> - child"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(blocks.count == 2)
@@ -81,7 +81,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = "- parent\n\n  child paragraph\n\n  - nested"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         let item = try #require(blocks.first)
@@ -100,7 +100,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = "- > quoted"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(blocks.count == 2)
@@ -117,7 +117,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = "3. first\n4. second\n   - child"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(blocks.count == 3)
@@ -133,7 +133,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = "1. first\n2. second"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(
@@ -149,7 +149,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = "- [x] done\n- [ ] pending\n- plain"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(
@@ -167,7 +167,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = "```swift\nlet value = 1\n```\n\n    indented\n\n---"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(blocks.count == 3)
@@ -191,7 +191,7 @@ struct MarkdownBlockDecodingTests {
 
         // When / Then
         for markdown in cases {
-            let block = try #require(SlopadMarkdown.decode(markdown).first)
+            let block = try #require(SlopadEditorMarkdown.decode(markdown).first)
             #expect(block.kind == .codeBlock(language: "text"))
             #expect(block.content.text.contains(quoteLiteral))
             #expect(block.content.text.contains("level 64"))
@@ -211,7 +211,7 @@ struct MarkdownBlockDecodingTests {
         for markdown in inputs {
             var captured: MarkdownDecodingError?
             do {
-                _ = try SlopadMarkdown.decode(markdown)
+                _ = try SlopadEditorMarkdown.decode(markdown)
             } catch {
                 captured = error
             }
@@ -230,8 +230,8 @@ struct MarkdownBlockDecodingTests {
         let listMarkdown = "- parent\n\n  ```\n  \(quoteLiteral)\n  ```\n\n  - nested"
 
         // When
-        let quoteBlocks = try SlopadMarkdown.decode(quoteMarkdown)
-        let listBlocks = try SlopadMarkdown.decode(listMarkdown)
+        let quoteBlocks = try SlopadEditorMarkdown.decode(quoteMarkdown)
+        let listBlocks = try SlopadEditorMarkdown.decode(listMarkdown)
 
         // Then
         #expect(quoteBlocks.map(\.kind) == [.quote, .codeBlock(language: nil)])
@@ -261,7 +261,7 @@ struct MarkdownBlockDecodingTests {
         for markdown in inputs {
             var captured: MarkdownDecodingError?
             do {
-                _ = try SlopadMarkdown.decode(markdown)
+                _ = try SlopadEditorMarkdown.decode(markdown)
             } catch {
                 captured = error
             }
@@ -281,9 +281,9 @@ struct MarkdownBlockDecodingTests {
         let rootUnclosedFence = "```\n\(deepQuote)"
 
         // When
-        let quoteBlocks = try SlopadMarkdown.decode(quoteMarkdown)
-        let listBlocks = try SlopadMarkdown.decode(listMarkdown)
-        let rootBlocks = try SlopadMarkdown.decode(rootUnclosedFence)
+        let quoteBlocks = try SlopadEditorMarkdown.decode(quoteMarkdown)
+        let listBlocks = try SlopadEditorMarkdown.decode(listMarkdown)
+        let rootBlocks = try SlopadEditorMarkdown.decode(rootUnclosedFence)
 
         // Then
         #expect(quoteBlocks.map(\.kind) == [.quote, .codeBlock(language: nil)])
@@ -305,7 +305,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = "    \(quoteLiteral)\n\(listLiteral)"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(blocks.count == 1)
@@ -324,7 +324,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = "- parent\n\n      \(quoteLiteral)\n\(listLiteral)"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(blocks.count == 2)
@@ -340,7 +340,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = "> quote\n>\n> - one\n>   - nested\n> - two\n\nafter"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(blocks.map(\.content.text) == ["quote", "one", "nested", "two", "after"])
@@ -358,8 +358,8 @@ struct MarkdownBlockDecodingTests {
         let markdown = "one\n\n- two"
 
         // When
-        let first = try SlopadMarkdown.decode(markdown)
-        let second = try SlopadMarkdown.decode(markdown)
+        let first = try SlopadEditorMarkdown.decode(markdown)
+        let second = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(first.map(\.id) != second.map(\.id))
@@ -373,7 +373,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = "[target]: https://example.com"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(blocks.count == 1)
@@ -390,7 +390,7 @@ struct MarkdownBlockDecodingTests {
         // When
         var captured: MarkdownDecodingError?
         do {
-            _ = try SlopadMarkdown.decode(markdown)
+            _ = try SlopadEditorMarkdown.decode(markdown)
         } catch {
             captured = error
         }
@@ -420,7 +420,7 @@ struct MarkdownBlockDecodingTests {
 
         // When
         do {
-            _ = try SlopadMarkdown.decode(markdown)
+            _ = try SlopadEditorMarkdown.decode(markdown)
         } catch {
             captured = error
         }
@@ -443,7 +443,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = String(repeating: "> ", count: 64) + "deep"
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(blocks.count == 64)
@@ -459,7 +459,7 @@ struct MarkdownBlockDecodingTests {
         let markdown = nestedListMarkdown(depth: 64)
 
         // When
-        let blocks = try SlopadMarkdown.decode(markdown)
+        let blocks = try SlopadEditorMarkdown.decode(markdown)
 
         // Then
         #expect(blocks.count == 64)
@@ -477,7 +477,7 @@ struct MarkdownBlockDecodingTests {
 
         // When
         do {
-            _ = try SlopadMarkdown.decode(markdown)
+            _ = try SlopadEditorMarkdown.decode(markdown)
         } catch {
             captured = error
         }

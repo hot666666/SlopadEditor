@@ -70,7 +70,7 @@ that decision, which is what keeps it a notification rather than a hook.
 ### What the test excluded
 
 - **Format codecs.** A codec is not an ordinary AppKit/SwiftUI lifecycle operation, so it
-  does not widen either facade. `SlopadMarkdown` is the existing opt-in whole-document
+  does not widen either facade. `SlopadEditorMarkdown` is the existing opt-in whole-document
   codec. [ADR 0015](0015-version-native-archive-and-keep-storage-host-owned.md) defines
   `SlopadEditorArchive` as another opt-in, pure codec with an internal target dependency only on
   `SlopadCoreModel`; its public facade exposes exactly five type-identical aliases for the
@@ -91,7 +91,7 @@ that decision, which is what keeps it a notification rather than a hook.
 
 `[EditorBlockInput]` is the only document representation crossing the public ordinary-host
 boundary. No `String`, storage format, or codec type appears in that surface. An opt-in
-format target may transform core block values outside the facade: `SlopadMarkdown` does so
+format target may transform core block values outside the facade: `SlopadEditorMarkdown` does so
 for whole-document Markdown, and ADR 0015's `SlopadEditorArchive` will do so for the versioned
 native archive after its implementation. Neither changes who owns storage.
 

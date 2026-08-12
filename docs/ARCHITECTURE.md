@@ -31,7 +31,7 @@ The production targets form these direct dependency layers:
 | Canonical owner | `SlopadEditorModel` | Document, selection, commands, transactions, history |
 | Derived owner | `SlopadBlockLayout` | Visibility, block geometry, hit/reveal facts, caches, height index |
 | Format syntax | `SlopadEditorMarkdownInputRules` | Internal immutable bounded typed-input patterns |
-| Format codec | `SlopadMarkdown` | Opt-in stateless whole-document decode and encode |
+| Format codec | `SlopadEditorMarkdown` | Opt-in stateless whole-document decode and encode |
 | Format codec | `SlopadEditorArchive` | Opt-in stateless versioned native archive encode and decode |
 | Contracts | `SlopadCoreModel` | Public vocabulary and genuine package cross-target contracts |
 | Storage | `SlopadEditorDataStructure` | Editor-independent data structures |
@@ -48,7 +48,7 @@ The dependency graph enforces four important absences:
   `EditorSession` coordinates them.
 - `SlopadAppKitTextKit` does not import the engine. Runtime calls arrive through
   `BlockTextLayoutProtocol` capabilities defined in `SlopadCoreModel`.
-- `SlopadMarkdown` does not import the engine. A caller explicitly decides when decoded
+- `SlopadEditorMarkdown` does not import the engine. A caller explicitly decides when decoded
   block inputs enter a document transaction.
 - `SlopadEditorArchive` likewise does not import the engine or a storage provider. It
   transforms canonical block inputs to/from `Data`; the host owns persistence lifecycle.
@@ -99,7 +99,7 @@ replacement policy in ADR 0014 remain unfinished product work.
 | Rendering/scroll | AppKit viewport → `EditorSession.render` → block visibility/layout → coherent text backend facts → render snapshot → AppKit surface sync | Only visible projection is rendered; it is not a persistence source |
 | Persistence | model semantic change → Session committed revision → host callback → on-demand `documentSnapshot` → host debounce → archive encode → host storage | Snapshot blocks are the source; epoch/revision only reject stale in-process work and are never stored |
 | Reviewed replacement | context snapshot → external review → complete patch → Session epoch/revision/selection CAS → model validation/replacement → layout/runtime invalidation | A changed post-image is one transaction; stale, invalid, or composing sources fail without partial mutation |
-| Markdown import/export | caller → `SlopadMarkdown` → fresh `[EditorBlockInput]` or deterministic text → optional Session patch | Codec AST never crosses its target and no conversion is implicit |
+| Markdown import/export | caller → `SlopadEditorMarkdown` → fresh `[EditorBlockInput]` or deterministic text → optional Session patch | Codec AST never crosses its target and no conversion is implicit |
 | Native archive reload | host bytes → `SlopadEditorArchive` raw wire validation → canonical input validation → `[EditorBlockInput]` → explicit host Session lifecycle | Identity/order/content survive; malformed or unsupported archives return no partial blocks |
 
 ### Synchronized AppKit actions
@@ -160,7 +160,7 @@ complete adapter/backend pair so geometry and drawing stay coherent.
 | Ordinary macOS app | `SlopadAppKit` | document storage policy, app chrome, lifecycle | raw TextKit graph, model/layout internals |
 | SwiftUI app | `SlopadEditorSwiftUI` | mount/unmount, document identity, bindings, persistence timing | controller bypass or a second runtime |
 | Complete custom platform adapter | `SlopadEngine` plus its own backend | native callback translation, drawing, focus, scroll coherence | direct model/layout coupling |
-| Markdown caller | `SlopadMarkdown` and optionally `SlopadEngine` | explicit import/export timing and failure UX | parser AST retention or partial success |
+| Markdown caller | `SlopadEditorMarkdown` and optionally `SlopadEngine` | explicit import/export timing and failure UX | parser AST retention or partial success |
 | Native archive codec caller | `SlopadEditorArchive` | construct/encode/decode the curated archive aliases | raw Engine/CoreModel imports, Session state, storage providers, or a second canonical document owner |
 | Native archive lifecycle host | exactly one public UI facade plus `SlopadEditorArchive` | file/DB/cloud lifecycle, debounce, atomic write, conflict/retry/error UX | raw Engine/CoreModel imports, package-only state, or codec-owned lifecycle policy |
 | Debug/benchmark/fixture | development targets | scenarios, measurements, public compile proof | production ownership |
@@ -214,13 +214,13 @@ Markdown has two deliberately separate entry points:
 - `SlopadEditorMarkdownInputRules` contains parser-free bounded prefix/inline patterns linked
   into ordinary editing. `SlopadEditorModel` owns trigger classification, candidate
   evaluation, canonical mutation, and undo.
-- `SlopadMarkdown` is an opt-in whole-document codec. It accepts/returns public
+- `SlopadEditorMarkdown` is an opt-in whole-document codec. It accepts/returns public
   `[EditorBlockInput]` values and depends on `swift-markdown`; it owns no editor runtime.
 
 Decode and encode are stateless and fail closed with nonempty typed diagnostics. Decode
 creates fresh IDs. The supported round-trip contract preserves canonical tree/content
 semantics rather than source spelling or identity. Parser AST types remain internal:
-only `Sources/SlopadMarkdown` may use `internal import Markdown`.
+only `Sources/SlopadEditorMarkdown` may use `internal import Markdown`.
 
 The codec is not a plugin registry, persistence choice, or paste fallback. Callers decide
 when to import/export and how to present unsupported input. See

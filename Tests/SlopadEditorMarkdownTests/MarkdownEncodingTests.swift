@@ -1,5 +1,5 @@
 import SlopadCoreModel
-import SlopadMarkdown
+import SlopadEditorMarkdown
 import Testing
 
 @Suite("Markdown encode")
@@ -28,14 +28,14 @@ struct MarkdownEncodingTests {
         ]
 
         // When
-        let encoded = try SlopadMarkdown.encode(inputs)
-        let decoded = try SlopadMarkdown.decode(encoded)
+        let encoded = try SlopadEditorMarkdown.encode(inputs)
+        let decoded = try SlopadEditorMarkdown.decode(encoded)
 
         // Then
         expectSemanticEquality(decoded, inputs)
         #expect(encoded.contains("### heading"))
         #expect(encoded.contains("``` swift"))
-        let encodedAgain = try SlopadMarkdown.encode(inputs)
+        let encodedAgain = try SlopadEditorMarkdown.encode(inputs)
         #expect(encoded == encodedAgain)
     }
 
@@ -48,7 +48,7 @@ struct MarkdownEncodingTests {
         ]
 
         // When
-        let decoded = try SlopadMarkdown.decode(SlopadMarkdown.encode(source))
+        let decoded = try SlopadEditorMarkdown.decode(SlopadEditorMarkdown.encode(source))
 
         // Then
         #expect(Set(decoded.map(\.id)).isDisjoint(with: Set(source.map(\.id))))
@@ -73,8 +73,8 @@ struct MarkdownEncodingTests {
         )
 
         // When
-        let encoded = try SlopadMarkdown.encode([input])
-        let decoded = try SlopadMarkdown.decode(encoded)
+        let encoded = try SlopadEditorMarkdown.encode([input])
+        let decoded = try SlopadEditorMarkdown.decode(encoded)
 
         // Then
         expectSemanticEquality(decoded, [input])
@@ -90,8 +90,8 @@ struct MarkdownEncodingTests {
         let input = block("emphasis", content: content("alpha", marks: [mark(.emphasis, 0, 5)]))
 
         // When
-        let encoded = try SlopadMarkdown.encode([input])
-        let decoded = try SlopadMarkdown.decode(encoded)
+        let encoded = try SlopadEditorMarkdown.encode([input])
+        let decoded = try SlopadEditorMarkdown.decode(encoded)
 
         // Then
         #expect(encoded == "_alpha_")
@@ -114,8 +114,8 @@ struct MarkdownEncodingTests {
         )
 
         // When
-        let encoded = try SlopadMarkdown.encode([input])
-        let decoded = try SlopadMarkdown.decode(encoded)
+        let encoded = try SlopadEditorMarkdown.encode([input])
+        let decoded = try SlopadEditorMarkdown.decode(encoded)
 
         // Then
         #expect(encoded.contains("*&#x78;"))
@@ -135,8 +135,8 @@ struct MarkdownEncodingTests {
                 "code-\(index)",
                 content: content(text, marks: [mark(.code, 0, text.count)])
             )
-            let encoded = try SlopadMarkdown.encode([input])
-            let decoded = try SlopadMarkdown.decode(encoded)
+            let encoded = try SlopadEditorMarkdown.encode([input])
+            let decoded = try SlopadEditorMarkdown.decode(encoded)
 
             #expect(index == 0 ? encoded.hasPrefix("``") : encoded.hasPrefix("`"))
             expectSemanticEquality(decoded, [input])
@@ -153,8 +153,8 @@ struct MarkdownEncodingTests {
         )
 
         // When
-        let encoded = try SlopadMarkdown.encode([input])
-        let decoded = try SlopadMarkdown.decode(encoded)
+        let encoded = try SlopadEditorMarkdown.encode([input])
+        let decoded = try SlopadEditorMarkdown.decode(encoded)
 
         // Then
         #expect(encoded.hasPrefix("```` swift\n"))
@@ -170,8 +170,8 @@ struct MarkdownEncodingTests {
         )
 
         // When
-        let encoded = try SlopadMarkdown.encode([input])
-        let decoded = try SlopadMarkdown.decode(encoded)
+        let encoded = try SlopadEditorMarkdown.encode([input])
+        let decoded = try SlopadEditorMarkdown.decode(encoded)
 
         // Then
         expectSemanticEquality(decoded, [input])
@@ -197,11 +197,11 @@ struct MarkdownEncodingTests {
         let value = `1`
         ```
         """
-        let first = try SlopadMarkdown.decode(markdown)
+        let first = try SlopadEditorMarkdown.decode(markdown)
 
         // When
-        let encoded = try SlopadMarkdown.encode(first)
-        let second = try SlopadMarkdown.decode(encoded)
+        let encoded = try SlopadEditorMarkdown.encode(first)
+        let second = try SlopadEditorMarkdown.decode(encoded)
 
         // Then
         expectSemanticEquality(second, first)
@@ -229,8 +229,8 @@ struct MarkdownEncodingTests {
             }
             let input = block("random", content: content(text, marks: marks))
 
-            let encoded = try SlopadMarkdown.encode([input])
-            let decoded = try SlopadMarkdown.decode(encoded)
+            let encoded = try SlopadEditorMarkdown.encode([input])
+            let decoded = try SlopadEditorMarkdown.decode(encoded)
 
             expectSemanticEquality(decoded, [input])
         }
@@ -276,7 +276,7 @@ struct MarkdownEncodingTests {
         for (inputs, expectedKind) in cases {
             var captured: MarkdownEncodingError?
             do {
-                _ = try SlopadMarkdown.encode(inputs)
+                _ = try SlopadEditorMarkdown.encode(inputs)
             } catch {
                 captured = error
             }
@@ -290,8 +290,8 @@ struct MarkdownEncodingTests {
         let input = block("empty")
 
         // When
-        let encoded = try SlopadMarkdown.encode([input])
-        let decoded = try SlopadMarkdown.decode(encoded)
+        let encoded = try SlopadEditorMarkdown.encode([input])
+        let decoded = try SlopadEditorMarkdown.decode(encoded)
 
         // Then
         #expect(encoded.isEmpty)
@@ -321,7 +321,7 @@ struct MarkdownEncodingTests {
         for (inputs, emptyParagraphID) in cases {
             var captured: MarkdownEncodingError?
             do {
-                _ = try SlopadMarkdown.encode(inputs)
+                _ = try SlopadEditorMarkdown.encode(inputs)
             } catch {
                 captured = error
             }
@@ -376,7 +376,7 @@ struct MarkdownEncodingTests {
         for (container, child) in cases {
             var captured: MarkdownEncodingError?
             do {
-                _ = try SlopadMarkdown.encode([container, child])
+                _ = try SlopadEditorMarkdown.encode([container, child])
             } catch {
                 captured = error
             }

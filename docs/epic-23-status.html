@@ -49,7 +49,7 @@
 
   <section class="runtime panel" aria-labelledby="runtime-title"><div class="label">Runtime ownership</div><h2 id="runtime-title">입력 경로와 문서 codec은 의도적으로 다릅니다</h2>
     <div class="flow"><div><b>AppKit → UI adapter</b><small>키·포인터·IME를 native intent로 번역</small></div><div><b>EditorSession → owners</b><small>Model mutation, BlockLayout, TextKit geometry를 조정</small></div><div><b>Snapshot → AppKit</b><small>draw·focus·scroll 동기화</small></div></div>
-    <div class="owners"><div><b>typing rules</b><small>parser-free, bounded candidate; ordinary typing·IME·paste 분류</small></div><div><b>SlopadMarkdown</b><small>명시적 opt-in whole-document decode/encode</small></div><div><b>EditorModel</b><small>canonical mutation·selection·history</small></div><div><b>TextKit store</b><small>derived prepared layout, canonical state 아님</small></div></div>
+    <div class="owners"><div><b>typing rules</b><small>parser-free, bounded candidate; ordinary typing·IME·paste 분류</small></div><div><b>SlopadEditorMarkdown</b><small>명시적 opt-in whole-document decode/encode</small></div><div><b>EditorModel</b><small>canonical mutation·selection·history</small></div><div><b>TextKit store</b><small>derived prepared layout, canonical state 아님</small></div></div>
   </section>
 
   <section class="lower"><div class="ledger panel"><div class="label">Integration ledger</div><h2>PR #39–56 · 통합과 review repair</h2>

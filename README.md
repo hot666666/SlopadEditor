@@ -20,7 +20,7 @@ SlopadEditor is a work-in-progress block editor project. Its reusable foundation
 meaning, and platform adapters own native input, drawing, focus, and scrolling.
 
 The production platform path is macOS 14+ through AppKit and TextKit2. Package resolution
-requires Swift 6.2 or later because the opt-in `SlopadMarkdown` product pins
+requires Swift 6.2 or later because the opt-in `SlopadEditorMarkdown` product pins
 `swift-markdown` 0.8.0.
 
 ## Start Here
@@ -63,7 +63,7 @@ swift run SlopadDebugApp
 | `SlopadAppKitUI` | AppKit callback translation, drawing, focus, scrolling, surface synchronization | Canonical mutation or command meaning |
 | `SlopadAppKit` | Curated ordinary-host API | Runtime state |
 | `SlopadEditorSwiftUI` | SwiftUI mounting, identity, focus, observation, lifecycle flush | A second controller or Session |
-| `SlopadMarkdown` | Explicit stateless whole-document decode/encode | Canonical storage, editor runtime |
+| `SlopadEditorMarkdown` | Explicit stateless whole-document decode/encode | Canonical storage, editor runtime |
 | `SlopadEditorArchive` | Versioned native archive encode/decode over canonical blocks | Storage lifecycle, editor runtime |
 
 The compiler-enforced graph is in [`Package.swift`](Package.swift). The
@@ -109,14 +109,14 @@ Markdown is an input/output format, never the canonical model. Whole-document co
 is opt-in:
 
 ```swift
-.product(name: "SlopadMarkdown", package: "SlopadEditor")
+.product(name: "SlopadEditorMarkdown", package: "SlopadEditor")
 ```
 
 ```swift
-import SlopadMarkdown
+import SlopadEditorMarkdown
 
-let blocks = try SlopadMarkdown.decode("# Imported")
-let markdown = try SlopadMarkdown.encode(blocks)
+let blocks = try SlopadEditorMarkdown.decode("# Imported")
+let markdown = try SlopadEditorMarkdown.encode(blocks)
 ```
 
 Decode and encode are synchronous, stateless, and fail closed with typed diagnostics; no

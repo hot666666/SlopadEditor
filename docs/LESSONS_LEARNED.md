@@ -212,7 +212,7 @@ Next time:
 
 - Keep parser-free pattern data in `SlopadEditorMarkdownInputRules` and let `EditorModel` own
   gating and atomic application.
-- Keep `SlopadMarkdown` stateless and opt-in over public `[EditorBlockInput]` values.
+- Keep `SlopadEditorMarkdown` stateless and opt-in over public `[EditorBlockInput]` values.
 - Treat typing syntax and document conversion as two integrations even when they recognize
   similar spelling.
 

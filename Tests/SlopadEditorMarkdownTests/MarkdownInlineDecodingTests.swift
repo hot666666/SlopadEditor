@@ -1,5 +1,5 @@
 import SlopadCoreModel
-import SlopadMarkdown
+import SlopadEditorMarkdown
 import Testing
 
 @Suite("Markdown inline decode")
@@ -10,7 +10,7 @@ struct MarkdownInlineDecodingTests {
         let markdown = "**a *😀e\u{301}* z**"
 
         // When
-        let content = try #require(SlopadMarkdown.decode(markdown).first).content
+        let content = try #require(SlopadEditorMarkdown.decode(markdown).first).content
 
         // Then
         #expect(content.text == "a 😀e\u{301} z")
@@ -35,7 +35,7 @@ struct MarkdownInlineDecodingTests {
 
         // When / Then
         for (markdown, expectedText) in cases {
-            let content = try #require(SlopadMarkdown.decode(markdown).first).content
+            let content = try #require(SlopadEditorMarkdown.decode(markdown).first).content
             let normalizedAgain = BlockContent(text: content.text, marks: content.marks)
 
             #expect(content.text == expectedText)
@@ -51,7 +51,7 @@ struct MarkdownInlineDecodingTests {
         let markdown = "**e\u{301}** **👩\u{200D}💻** **🇰🇷**"
 
         // When
-        let content = try #require(SlopadMarkdown.decode(markdown).first).content
+        let content = try #require(SlopadEditorMarkdown.decode(markdown).first).content
         let normalizedAgain = BlockContent(text: content.text, marks: content.marks)
 
         // Then
@@ -71,7 +71,7 @@ struct MarkdownInlineDecodingTests {
         let markdown = "[a](same)[b](same)"
 
         // When
-        let content = try #require(SlopadMarkdown.decode(markdown).first).content
+        let content = try #require(SlopadEditorMarkdown.decode(markdown).first).content
 
         // Then
         #expect(content.text == "ab")
@@ -84,7 +84,7 @@ struct MarkdownInlineDecodingTests {
         let markdown = "**s** *e* ~~x~~ `c`"
 
         // When
-        let content = try #require(SlopadMarkdown.decode(markdown).first).content
+        let content = try #require(SlopadEditorMarkdown.decode(markdown).first).content
 
         // Then
         #expect(content.text == "s e x c")
@@ -103,7 +103,7 @@ struct MarkdownInlineDecodingTests {
         let markdown = "soft\nbreak  \nhard"
 
         // When
-        let content = try #require(SlopadMarkdown.decode(markdown).first).content
+        let content = try #require(SlopadEditorMarkdown.decode(markdown).first).content
 
         // Then
         #expect(content.text == "soft break\nhard")
@@ -115,7 +115,7 @@ struct MarkdownInlineDecodingTests {
         let markdown = #"\*literal\* &amp; &#x1F600;"#
 
         // When
-        let content = try #require(SlopadMarkdown.decode(markdown).first).content
+        let content = try #require(SlopadEditorMarkdown.decode(markdown).first).content
 
         // Then
         #expect(content.text == "*literal* & 😀")
@@ -128,7 +128,7 @@ struct MarkdownInlineDecodingTests {
         let markdown = #""quote" -- dash"#
 
         // When
-        let content = try #require(SlopadMarkdown.decode(markdown).first).content
+        let content = try #require(SlopadEditorMarkdown.decode(markdown).first).content
 
         // Then
         #expect(content.text == #""quote" -- dash"#)
@@ -140,7 +140,7 @@ struct MarkdownInlineDecodingTests {
         let markdown = "[empty]() <https://e.x> [ref][id]\n\n[id]: /target"
 
         // When
-        let content = try #require(SlopadMarkdown.decode(markdown).first).content
+        let content = try #require(SlopadEditorMarkdown.decode(markdown).first).content
 
         // Then
         #expect(content.text == "empty https://e.x ref")
@@ -158,7 +158,7 @@ struct MarkdownInlineDecodingTests {
         let markdown = "[**go**](destination)"
 
         // When
-        let content = try #require(SlopadMarkdown.decode(markdown).first).content
+        let content = try #require(SlopadEditorMarkdown.decode(markdown).first).content
 
         // Then
         #expect(content.text == "go")

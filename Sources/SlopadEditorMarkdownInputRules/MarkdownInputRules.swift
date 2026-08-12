@@ -10,7 +10,7 @@ private extension TextRange {
 
 /// Bounded Markdown patterns used while text is typed.
 ///
-/// This lightweight target intentionally contains no parser dependency. `SlopadMarkdown`
+/// This lightweight target intentionally contains no parser dependency. `SlopadEditorMarkdown`
 /// remains the opt-in whole-document codec; these rules only recognize a completed local
 /// candidate after the editor-model runner has passed its trigger gate.
 package enum MarkdownInputRules {

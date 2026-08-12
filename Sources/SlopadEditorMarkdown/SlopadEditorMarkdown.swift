@@ -1,14 +1,14 @@
 import SlopadCoreModel
 
 /// Stateless Markdown conversion into SlopadEditor's canonical block-input vocabulary.
-public enum SlopadMarkdown {
+public enum SlopadEditorMarkdown {
     /// Decodes Markdown without retaining or exposing parser state.
     ///
     /// Every successful call creates fresh block identifiers. Unsupported syntax fails
     /// closed with all maximal unsupported subtrees reported in source order.
     ///
     /// ```swift
-    /// let blocks = try SlopadMarkdown.decode("# Title")
+    /// let blocks = try SlopadEditorMarkdown.decode("# Title")
     /// ```
     public static func decode(
         _ markdown: String
@@ -29,7 +29,7 @@ public enum SlopadMarkdown {
     /// return no partial Markdown string.
     ///
     /// ```swift
-    /// let markdown = try SlopadMarkdown.encode(blocks)
+    /// let markdown = try SlopadEditorMarkdown.encode(blocks)
     /// ```
     public static func encode(
         _ blocks: [EditorBlockInput]

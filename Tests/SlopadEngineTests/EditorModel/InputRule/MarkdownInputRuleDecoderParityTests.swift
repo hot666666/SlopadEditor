@@ -1,5 +1,5 @@
 import SlopadCoreModel
-import SlopadMarkdown
+import SlopadEditorMarkdown
 import Testing
 
 @testable import SlopadEditorModel
@@ -34,7 +34,7 @@ struct MarkdownInputRuleDecoderParityTests {
             for character in source {
                 _ = editor.apply(.insertText(String(character)))
             }
-            let decoded = try #require(SlopadMarkdown.decode(source).first?.content)
+            let decoded = try #require(SlopadEditorMarkdown.decode(source).first?.content)
 
             // Then
             #expect(editor.document.block("block")?.content == decoded, "\(source)의 input/decode 결과가 달라졌다")

@@ -15,7 +15,7 @@ let package = Package(
             name: "DownstreamMarkdownHost",
             dependencies: [
                 .product(name: "SlopadEngine", package: "SlopadEditor"),
-                .product(name: "SlopadMarkdown", package: "SlopadEditor"),
+                .product(name: "SlopadEditorMarkdown", package: "SlopadEditor"),
             ]
         )
     ]

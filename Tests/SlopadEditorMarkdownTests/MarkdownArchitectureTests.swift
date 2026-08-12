@@ -30,7 +30,7 @@ struct MarkdownArchitectureTests {
         // Then
         #expect(!markdownImports.isEmpty)
         for markdownImport in markdownImports {
-            #expect(markdownImport.path.contains("/Sources/SlopadMarkdown/"))
+            #expect(markdownImport.path.contains("/Sources/SlopadEditorMarkdown/"))
             #expect(markdownImport.line == "internal import Markdown")
         }
     }

@@ -13,8 +13,8 @@ let package = Package(
             targets: ["SlopadEngine"]
         ),
         .library(
-            name: "SlopadMarkdown",
-            targets: ["SlopadMarkdown"]
+            name: "SlopadEditorMarkdown",
+            targets: ["SlopadEditorMarkdown"]
         ),
         .library(
             name: "SlopadEditorArchive",
@@ -62,7 +62,7 @@ let package = Package(
             dependencies: ["SlopadCoreModel"]
         ),
         .target(
-            name: "SlopadMarkdown",
+            name: "SlopadEditorMarkdown",
             dependencies: [
                 "SlopadCoreModel",
                 .product(name: "Markdown", package: "swift-markdown"),
@@ -157,15 +157,15 @@ let package = Package(
                 "SlopadEditorModel",
                 "SlopadBlockLayout",
                 "SlopadEngine",
-                "SlopadMarkdown",
+                "SlopadEditorMarkdown",
                 "SlopadEditorMarkdownInputRules",
             ]
         ),
         .testTarget(
-            name: "SlopadMarkdownTests",
+            name: "SlopadEditorMarkdownTests",
             dependencies: [
                 "SlopadCoreModel",
-                "SlopadMarkdown",
+                "SlopadEditorMarkdown",
             ]
         ),
         .testTarget(

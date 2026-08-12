@@ -75,7 +75,7 @@ concurrency design.
 
 ### The dependency lives behind one target
 
-`SlopadMarkdown` is a separate, opt-in library product and target. Its target depends on
+`SlopadEditorMarkdown` is a separate, opt-in library product and target. Its target depends on
 `SlopadCoreModel` and on the `Markdown` product from `swift-markdown`; it is not folded into
 `SlopadEngine`, `SlopadAppKit`, or `SlopadEditorSwiftUI`.
 
@@ -89,9 +89,9 @@ That is the compiler-enforced public API boundary.
 SwiftPM target separation alone is not claimed to make the module physically unimportable:
 a transitive module can still be visible to another target in the resolved graph. #30
 therefore also adds a repository architecture test that requires every Markdown import to
-be spelled `internal import Markdown` inside `Sources/SlopadMarkdown` and rejects it anywhere
+be spelled `internal import Markdown` inside `Sources/SlopadEditorMarkdown` and rejects it anywhere
 else under `Sources/`. A dedicated downstream fixture depends on the opt-in
-`SlopadMarkdown` product plus `SlopadEngine`, decodes through the public core-vocabulary API,
+`SlopadEditorMarkdown` product plus `SlopadEngine`, decodes through the public core-vocabulary API,
 passes the resulting blocks through `EditorDocumentPatch` and `EditorSession`, and never
 imports `Markdown`.
 
@@ -112,7 +112,7 @@ downstream fixture or host is its own resolution root and does not inherit Slopa
 That propagation is intentional. Once #30 adds the package dependency, every host resolving
 SlopadEditor must resolve and parse `swift-markdown`'s manifest, so those roots need a Swift
 6.2-or-later toolchain even if their own manifest uses an older tools version. Only a host
-that selects the opt-in `SlopadMarkdown` product needs to build and link its Markdown and C
+that selects the opt-in `SlopadEditorMarkdown` product needs to build and link its Markdown and C
 targets. #30 updates the README requirement when that package-graph change lands.
 
 ### Round-trip is semantic, not byte-exact
@@ -205,7 +205,7 @@ unimplemented;
 
 ## Consequences
 
-- Only `SlopadMarkdown` declares or imports the `Markdown` product. A second target needing
+- Only `SlopadEditorMarkdown` declares or imports the `Markdown` product. A second target needing
   Markdown means the opt-in product is missing an API, not that the dependency should spread.
 - Adding the package dependency in #30 raises the effective build-toolchain requirement to
   Swift 6.2 or later and updates the README then; this docs-only decision does not change the
