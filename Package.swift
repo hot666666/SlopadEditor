@@ -21,8 +21,8 @@ let package = Package(
             targets: ["SlopadEditorArchive"]
         ),
         .library(
-            name: "SlopadAppKit",
-            targets: ["SlopadAppKit"]
+            name: "SlopadEditorAppKit",
+            targets: ["SlopadEditorAppKit"]
         ),
         .library(
             name: "SlopadEditorSwiftUI",
@@ -106,17 +106,17 @@ let package = Package(
             ]
         ),
         .target(
-            name: "SlopadAppKit",
+            name: "SlopadEditorAppKit",
             dependencies: [
                 "SlopadEngine",
                 "SlopadEditorAppKitUI",
             ]
         ),
         // Layered on top of the AppKit facade rather than folded into it, for the same
-        // reason SlopadAppKit is a curated umbrella and not a runtime owner.
+        // reason SlopadEditorAppKit is a curated umbrella and not a runtime owner.
         .target(
             name: "SlopadEditorSwiftUI",
-            dependencies: ["SlopadAppKit"]
+            dependencies: ["SlopadEditorAppKit"]
         ),
         .executableTarget(
             name: "SlopadHeightBenchmark",
@@ -190,14 +190,14 @@ let package = Package(
                 "SlopadEditorAppKitUI",
             ]
         ),
-        // SlopadAppKit is a test-only dependency: the tests construct a controller directly
+        // SlopadEditorAppKit is a test-only dependency: the tests construct a controller directly
         // to stand in for what `makeNSViewController` produces. SlopadEditorSwiftUI deliberately
         // does not re-export the controller, so a SwiftUI host cannot reach around it.
         .testTarget(
             name: "SlopadEditorSwiftUITests",
             dependencies: [
                 "SlopadEditorSwiftUI",
-                "SlopadAppKit",
+                "SlopadEditorAppKit",
             ]
         ),
     ]

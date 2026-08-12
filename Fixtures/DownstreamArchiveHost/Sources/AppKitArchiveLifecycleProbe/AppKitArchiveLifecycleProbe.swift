@@ -1,5 +1,5 @@
 import AppKit
-import SlopadAppKit
+import SlopadEditorAppKit
 import SlopadEditorArchive
 
 private struct HostSaveToken: Equatable, Sendable {

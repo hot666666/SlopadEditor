@@ -1,38 +1,38 @@
 // A SwiftUI host declares one product and writes `import SlopadEditorSwiftUI`. Re-exporting the
-// platform vocabulary means it does not also have to depend on `SlopadAppKit` just to name
+// platform vocabulary means it does not also have to depend on `SlopadEditorAppKit` just to name
 // the block, selection and action values it already needs — and it keeps the downstream
 // fixture honest, since a single-product dependency is what a real host writes.
 //
-// This adds no vocabulary of its own; every name below is `SlopadAppKit`'s. That module
+// This adds no vocabulary of its own; every name below is `SlopadEditorAppKit`'s. That module
 // remains the curated platform surface.
 
-public import SlopadAppKit
+public import SlopadEditorAppKit
 
 // MARK: - Host Document Vocabulary
 
-public typealias BlockID = SlopadAppKit.BlockID
-public typealias BlockKind = SlopadAppKit.BlockKind
-public typealias BlockMarkerKind = SlopadAppKit.BlockMarkerKind
-public typealias BlockContent = SlopadAppKit.BlockContent
-public typealias EditorBlockInput = SlopadAppKit.EditorBlockInput
-public typealias EditorSelection = SlopadAppKit.EditorSelection
-public typealias BlockSelection = SlopadAppKit.BlockSelection
-public typealias TextSelection = SlopadAppKit.TextSelection
-public typealias TextPosition = SlopadAppKit.TextPosition
-public typealias TextRange = SlopadAppKit.TextRange
+public typealias BlockID = SlopadEditorAppKit.BlockID
+public typealias BlockKind = SlopadEditorAppKit.BlockKind
+public typealias BlockMarkerKind = SlopadEditorAppKit.BlockMarkerKind
+public typealias BlockContent = SlopadEditorAppKit.BlockContent
+public typealias EditorBlockInput = SlopadEditorAppKit.EditorBlockInput
+public typealias EditorSelection = SlopadEditorAppKit.EditorSelection
+public typealias BlockSelection = SlopadEditorAppKit.BlockSelection
+public typealias TextSelection = SlopadEditorAppKit.TextSelection
+public typealias TextPosition = SlopadEditorAppKit.TextPosition
+public typealias TextRange = SlopadEditorAppKit.TextRange
 
 // MARK: - Host Observation Vocabulary
 
-public typealias EditorUpdate = SlopadAppKit.EditorUpdate
-public typealias EditorSessionEpoch = SlopadAppKit.EditorSessionEpoch
-public typealias EditorDocumentRevision = SlopadAppKit.EditorDocumentRevision
-public typealias EditorDocumentSnapshot = SlopadAppKit.EditorDocumentSnapshot
-public typealias EditorHistoryState = SlopadAppKit.EditorHistoryState
+public typealias EditorUpdate = SlopadEditorAppKit.EditorUpdate
+public typealias EditorSessionEpoch = SlopadEditorAppKit.EditorSessionEpoch
+public typealias EditorDocumentRevision = SlopadEditorAppKit.EditorDocumentRevision
+public typealias EditorDocumentSnapshot = SlopadEditorAppKit.EditorDocumentSnapshot
+public typealias EditorHistoryState = SlopadEditorAppKit.EditorHistoryState
 
 // MARK: - Host Action and Style Vocabulary
 
-public typealias AppKitEditorAction = SlopadAppKit.AppKitEditorAction
-public typealias AppKitEditorStyle = SlopadAppKit.AppKitEditorStyle
-public typealias AppKitBlockChromeRenderer = SlopadAppKit.AppKitBlockChromeRenderer
-public typealias AppKitBlockChromeRenderContext = SlopadAppKit.AppKitBlockChromeRenderContext
-public typealias AppKitDefaultBlockChromeRenderer = SlopadAppKit.AppKitDefaultBlockChromeRenderer
+public typealias AppKitEditorAction = SlopadEditorAppKit.AppKitEditorAction
+public typealias AppKitEditorStyle = SlopadEditorAppKit.AppKitEditorStyle
+public typealias AppKitBlockChromeRenderer = SlopadEditorAppKit.AppKitBlockChromeRenderer
+public typealias AppKitBlockChromeRenderContext = SlopadEditorAppKit.AppKitBlockChromeRenderContext
+public typealias AppKitDefaultBlockChromeRenderer = SlopadEditorAppKit.AppKitDefaultBlockChromeRenderer

@@ -28,14 +28,14 @@ requires Swift 6.2 or later because the opt-in `SlopadEditorMarkdown` product pi
 Ordinary macOS hosts should depend on the curated facade:
 
 ```swift
-.product(name: "SlopadAppKit", package: "SlopadEditor")
+.product(name: "SlopadEditorAppKit", package: "SlopadEditor")
 ```
 
 ```swift
-import SlopadAppKit
+import SlopadEditorAppKit
 ```
 
-`SlopadAppKit` is a compile-time facade. It exposes the supported controller, actions,
+`SlopadEditorAppKit` is a compile-time facade. It exposes the supported controller, actions,
 style, block chrome, snapshots, and document transaction vocabulary, but creates no second
 runtime or state owner. `SlopadEditorAppKitUI`, `SlopadAppKitTextKit`, and `SlopadEngine` remain
 available to hosts that intentionally build a complete custom adapter.
@@ -61,7 +61,7 @@ swift run SlopadDebugApp
 | `SlopadEngine` | `EditorSession`, composition/runtime overlays, owner coordination, snapshots | Duplicate document or layout state |
 | `SlopadAppKitTextKit` | Coherent TextKit2 measurement, geometry, navigation, deletion, attributed content | Editing semantics, native input host |
 | `SlopadEditorAppKitUI` | AppKit callback translation, drawing, focus, scrolling, surface synchronization | Canonical mutation or command meaning |
-| `SlopadAppKit` | Curated ordinary-host API | Runtime state |
+| `SlopadEditorAppKit` | Curated ordinary-host API | Runtime state |
 | `SlopadEditorSwiftUI` | SwiftUI mounting, identity, focus, observation, lifecycle flush | A second controller or Session |
 | `SlopadEditorMarkdown` | Explicit stateless whole-document decode/encode | Canonical storage, editor runtime |
 | `SlopadEditorArchive` | Versioned native archive encode/decode over canonical blocks | Storage lifecycle, editor runtime |

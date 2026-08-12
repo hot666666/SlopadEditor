@@ -24,7 +24,7 @@ The production targets form these direct dependency layers:
 | Layer | Target | Direct role |
 | --- | --- | --- |
 | Host facade | `SlopadEditorSwiftUI` | SwiftUI lifecycle over the curated AppKit facade |
-| Host facade | `SlopadAppKit` | One-product/one-import ordinary macOS surface |
+| Host facade | `SlopadEditorAppKit` | One-product/one-import ordinary macOS surface |
 | Platform adapter | `SlopadEditorAppKitUI` | AppKit callbacks, native input, drawing, focus, scroll, surface sync |
 | Text backend | `SlopadAppKitTextKit` | TextKit2 implementation of the text-layout capability seam |
 | Orchestration | `SlopadEngine` | Public `EditorSession` and editor semantics across owners |
@@ -52,7 +52,7 @@ The dependency graph enforces four important absences:
   block inputs enter a document transaction.
 - `SlopadEditorArchive` likewise does not import the engine or a storage provider. It
   transforms canonical block inputs to/from `Data`; the host owns persistence lifecycle.
-- `SlopadAppKit` and `SlopadEditorSwiftUI` add no second controller, Session, document, or cache.
+- `SlopadEditorAppKit` and `SlopadEditorSwiftUI` add no second controller, Session, document, or cache.
 
 Debug apps, benchmarks, tests, and downstream fixtures are outer-edge consumers. They
 verify production owners but do not define editor behavior.
@@ -157,7 +157,7 @@ complete adapter/backend pair so geometry and drawing stay coherent.
 
 | Consumer | Recommended surface | Consumer owns | Consumer must not reach into |
 | --- | --- | --- | --- |
-| Ordinary macOS app | `SlopadAppKit` | document storage policy, app chrome, lifecycle | raw TextKit graph, model/layout internals |
+| Ordinary macOS app | `SlopadEditorAppKit` | document storage policy, app chrome, lifecycle | raw TextKit graph, model/layout internals |
 | SwiftUI app | `SlopadEditorSwiftUI` | mount/unmount, document identity, bindings, persistence timing | controller bypass or a second runtime |
 | Complete custom platform adapter | `SlopadEngine` plus its own backend | native callback translation, drawing, focus, scroll coherence | direct model/layout coupling |
 | Markdown caller | `SlopadEditorMarkdown` and optionally `SlopadEngine` | explicit import/export timing and failure UX | parser AST retention or partial success |
@@ -202,7 +202,7 @@ symbols whose exposure would widen the host contract.
 Symbols that are public in another module are probed only through the facade, and that
 pins only that the facade does not re-export them. SwiftPM gives a downstream target a
 single import path covering every built module, so a host that declared only the
-`SlopadAppKit` product can still write `import SlopadAppKitTextKit` and reach
+`SlopadEditorAppKit` product can still write `import SlopadAppKitTextKit` and reach
 `TextKitTextSystem`; `--explicit-target-dependency-import-check error` does not prevent
 this across packages. Such a host has imported a module it never declared, which review
 catches, but the compiler does not.

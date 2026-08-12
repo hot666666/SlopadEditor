@@ -1,6 +1,6 @@
 import AppKit
 import Foundation
-import SlopadAppKit
+import SlopadEditorAppKit
 import Testing
 
 @testable import SlopadEditorSwiftUI

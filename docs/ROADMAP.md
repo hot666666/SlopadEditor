@@ -68,7 +68,7 @@ canonical gate for both ordinary AppKit and SwiftUI lifecycle fixtures, and CI i
 on every pull request. This is an ongoing boundary constraint, not a feature waiting for
 completion.
 
-- Keep `SlopadAppKit` as the ordinary one-product/one-import path and `SlopadEditorSwiftUI` as
+- Keep `SlopadEditorAppKit` as the ordinary one-product/one-import path and `SlopadEditorSwiftUI` as
   the declarative lifecycle surface.
 - Admit new host operations only as synchronized actions, style/chrome customization,
   engine input contracts, or a complete custom-adapter requirement.
@@ -177,7 +177,7 @@ platform-hosted tests and fixtures.
 
 - TextKit2 geometry varies with OS, font, and layout-manager behavior; unit tests should
   assert invariants and real UI paths should cover native interaction.
-- Convenience APIs can pull semantics into `SlopadAppKit`/`SlopadEditorAppKitUI`; apply the
+- Convenience APIs can pull semantics into `SlopadEditorAppKit`/`SlopadEditorAppKitUI`; apply the
   ADR 0012 host-surface test before widening them.
 - A partial text-renderer hook would split measurement, geometry, and drawing. Full text
   replacement requires a coherent adapter/backend pair.

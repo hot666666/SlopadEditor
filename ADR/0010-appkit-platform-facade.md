@@ -27,7 +27,7 @@ and existing integrations.
 
 ## Decision
 
-Add `SlopadAppKit` as the recommended library product and module for ordinary macOS hosts.
+Add `SlopadEditorAppKit` as the recommended library product and module for ordinary macOS hosts.
 Its target curates public controller, action, style, chrome, document, selection, update,
 and snapshot vocabulary from the existing owners. It depends on `SlopadEditorAppKitUI` and
 `SlopadEngine`; the UI adapter continues to depend on `SlopadAppKitTextKit`, so the product
@@ -36,11 +36,11 @@ assembles the complete default AppKit + TextKit2 stack without adding a runtime 
 An ordinary host uses one product dependency and one import:
 
 ```swift
-.product(name: "SlopadAppKit", package: "SlopadEditor")
+.product(name: "SlopadEditorAppKit", package: "SlopadEditor")
 ```
 
 ```swift
-import SlopadAppKit
+import SlopadEditorAppKit
 ```
 
 The facade is a compile-time assembly boundary, not a runtime owner:
@@ -48,7 +48,7 @@ The facade is a compile-time assembly boundary, not a runtime owner:
 ```mermaid
 flowchart LR
     Host["Ordinary macOS host"]
-    Facade[["SlopadAppKit<br/>curated product and module"]]
+    Facade[["SlopadEditorAppKit<br/>curated product and module"]]
     Controller["AppKitEditorViewController<br/>runtime adapter owner"]
     Engine["EditorSession<br/>semantic runtime owner"]
     TextKit["SlopadAppKitTextKit<br/>coherent text backend"]
@@ -62,7 +62,7 @@ flowchart LR
     Engine -->|"commands and transactions"| Canonical
 ```
 
-Only the arrows below `Controller` and `Engine` describe runtime work. `SlopadAppKit`
+Only the arrows below `Controller` and `Engine` describe runtime work. `SlopadEditorAppKit`
 does not wrap those objects, duplicate their state, or become another callback hop.
 
 `AppKitEditorViewController` owns one `AppKitTextSystem`. A single
@@ -96,7 +96,7 @@ The source migration follows the ownership boundary:
 
 | Previous ordinary-host surface | New surface | Result |
 | --- | --- | --- |
-| Three product dependencies and imports | `SlopadAppKit` | Default stack assembly becomes library-owned |
+| Three product dependencies and imports | `SlopadEditorAppKit` | Default stack assembly becomes library-owned |
 | `TextKitEditorStyle` | `AppKitEditorStyle` | Style names the complete platform configuration rather than one backend |
 | `handleInput(.command(...))` | `perform(AppKitEditorAction)` | Viewport and synchronized surface work remain adapter-owned |
 | `handleInput(.commitComposition)` | `commitActiveComposition()` | Session and native marked state settle as one public operation |

@@ -1,4 +1,4 @@
-import SlopadAppKit
+import SlopadEditorAppKit
 import SwiftUI
 
 // MARK: - SlopadEditor

@@ -69,7 +69,7 @@ callback, layout, or render work.
 
 `AppKitEditorViewController` only adds synchronized forwarding: after Session success it
 publishes one `onUpdate`, then converges render, native text, selection, focus, and reveal
-state. The `SlopadAppKit` facade explicitly aliases every public context/patch type so an
+state. The `SlopadEditorAppKit` facade explicitly aliases every public context/patch type so an
 ordinary host retains the one-product, one-import contract.
 
 ## Consequences
@@ -88,6 +88,6 @@ ordinary host retains the one-product, one-import contract.
   without mutation.
 - Session starts a fresh derived `BlockLayout` state after a changed post-image because
   public block values may retain IDs while replacing content and canonical visible order.
-- `Fixtures/DownstreamAppKitHost` compile-runs the contract through `SlopadAppKit` alone;
+- `Fixtures/DownstreamAppKitHost` compile-runs the contract through `SlopadEditorAppKit` alone;
   owner tests cover structured selection, CAS failures, validation rollback, no-op,
   history, callbacks, and surface synchronization.

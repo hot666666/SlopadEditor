@@ -67,7 +67,7 @@ and storage providers dependencies or public vocabulary.
 
 The codec is synchronous, stateless, deterministic in meaning, and safe to call in any
 isolation domain that owns its input values. It performs no I/O, launches no task, retains
-no document, and offers no repository or autosave protocol. `SlopadAppKit` and
+no document, and offers no repository or autosave protocol. `SlopadEditorAppKit` and
 `SlopadEditorSwiftUI` do not re-export it.
 
 The intended public call sites are the complete public surface:

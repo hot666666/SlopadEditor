@@ -77,7 +77,7 @@ concurrency design.
 
 `SlopadEditorMarkdown` is a separate, opt-in library product and target. Its target depends on
 `SlopadCoreModel` and on the `Markdown` product from `swift-markdown`; it is not folded into
-`SlopadEngine`, `SlopadAppKit`, or `SlopadEditorSwiftUI`.
+`SlopadEngine`, `SlopadEditorAppKit`, or `SlopadEditorSwiftUI`.
 
 Its public surface is expressed entirely in core vocabulary — `EditorBlockInput`,
 `BlockContent`, `BlockKind`, `BlockContent.InlineMark`, and diagnostics defined in that

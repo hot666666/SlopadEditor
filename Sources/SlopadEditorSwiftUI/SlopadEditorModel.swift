@@ -1,5 +1,5 @@
 import Observation
-import SlopadAppKit
+import SlopadEditorAppKit
 
 // MARK: - SlopadEditorModel
 

@@ -74,13 +74,13 @@ fixture_import_modules() {
 # also a module it cannot name.
 require_equal "AppKit lifecycle fixture imports more than the supported facade" \
     "$(fixture_import_modules "$appkit_source")" \
-    $'AppKit\nSlopadAppKit'
+    $'AppKit\nSlopadEditorAppKit'
 require_equal "SwiftUI lifecycle fixture imports more than the supported facade" \
     "$(fixture_import_modules "$swiftui_source")" \
     $'AppKit\nSlopadEditorSwiftUI\nSwiftUI'
 
-require_equal "AppKit lifecycle fixture must depend on the SlopadAppKit product" \
-    "$(count_matches '\.product\(name: "SlopadAppKit", package: "SlopadEditor"\)' \
+require_equal "AppKit lifecycle fixture must depend on the SlopadEditorAppKit product" \
+    "$(count_matches '\.product\(name: "SlopadEditorAppKit", package: "SlopadEditor"\)' \
         "$appkit_fixture/Package.swift")" \
     "1"
 require_equal "AppKit lifecycle fixture declares more than one product dependency" \
@@ -89,7 +89,7 @@ require_equal "AppKit lifecycle fixture declares more than one product dependenc
 if rg -n \
     'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadEditorAppKitUI|SlopadAppKitTextKit|SlopadEditorSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$appkit_fixture/Package.swift"; then
-    echo "AppKit lifecycle fixture manifest bypasses the SlopadAppKit facade" >&2
+    echo "AppKit lifecycle fixture manifest bypasses the SlopadEditorAppKit facade" >&2
     exit 1
 fi
 
@@ -101,7 +101,7 @@ require_equal "SwiftUI lifecycle fixture declares more than one product dependen
     "$(count_matches '\.product\(name:' "$swiftui_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadEditorAppKitUI|SlopadAppKitTextKit|SlopadAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadEditorAppKitUI|SlopadAppKitTextKit|SlopadEditorAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$swiftui_fixture/Package.swift"; then
     echo "SwiftUI lifecycle fixture manifest bypasses the SlopadEditorSwiftUI facade" >&2
     exit 1
@@ -325,10 +325,10 @@ swiftui_swift_version="$(
     swift_command_argument "$swiftui_description" "$swiftui_command_key" -swift-version
 )"
 
-positive_probe SlopadAppKit AppKitEditorAction \
+positive_probe SlopadEditorAppKit AppKitEditorAction \
     "$appkit_swiftc" "$appkit_import_path" "$appkit_target" "$appkit_sdk" \
     "$appkit_frameworks" "$appkit_system_imports" "$appkit_swift_version"
-positive_probe SlopadAppKit AppKitEditorViewController \
+positive_probe SlopadEditorAppKit AppKitEditorViewController \
     "$appkit_swiftc" "$appkit_import_path" "$appkit_target" "$appkit_sdk" \
     "$appkit_frameworks" "$appkit_system_imports" "$appkit_swift_version"
 positive_probe SlopadEditorSwiftUI SlopadEditor \
@@ -350,7 +350,7 @@ appkit_forbidden_symbols=(
     TextKitTextSystem
 )
 for symbol in "${appkit_forbidden_symbols[@]}"; do
-    forbidden_probe SlopadAppKit "$symbol" \
+    forbidden_probe SlopadEditorAppKit "$symbol" \
         "$appkit_swiftc" "$appkit_import_path" "$appkit_target" "$appkit_sdk" \
         "$appkit_frameworks" "$appkit_system_imports" "$appkit_swift_version"
 done
@@ -377,7 +377,7 @@ done
 # through the supported product". For a symbol that is public in another module that is the
 # entire claim available: SwiftPM gives the downstream target one `-I` covering every built
 # module, so `import SlopadAppKitTextKit` compiles in a target that only declared the
-# SlopadAppKit product, and `--explicit-target-dependency-import-check error` does not stop
+# SlopadEditorAppKit product, and `--explicit-target-dependency-import-check error` does not stop
 # it across packages. Reaching that symbol still costs the host an explicit import of a
 # module it never declared, which is visible in review, but the compiler does not forbid it.
 #

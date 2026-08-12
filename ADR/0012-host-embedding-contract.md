@@ -122,8 +122,8 @@ contains both, they remain distinct targets/sources with distinct dependency and
 audits. Neither archive probe changes the ordinary one-product lifecycle gates, and no
 fixture gains a format dependency merely to persist.
 
-`SlopadEditorSwiftUI` is layered on `SlopadAppKit` as its own target rather than folded into it,
-for the same reason `SlopadAppKit` is a curated umbrella and not a runtime owner. It does
+`SlopadEditorSwiftUI` is layered on `SlopadEditorAppKit` as its own target rather than folded into it,
+for the same reason `SlopadEditorAppKit` is a curated umbrella and not a runtime owner. It does
 not re-export `AppKitEditorViewController`: a SwiftUI host that can reach the controller
 can bypass the lifecycle wiring the target exists to provide.
 

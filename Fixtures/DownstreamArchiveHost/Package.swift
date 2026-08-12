@@ -21,7 +21,7 @@ let package = Package(
             name: "AppKitArchiveLifecycleProbe",
             dependencies: [
                 .product(name: "SlopadEditorArchive", package: "SlopadEditor"),
-                .product(name: "SlopadAppKit", package: "SlopadEditor"),
+                .product(name: "SlopadEditorAppKit", package: "SlopadEditor"),
             ]
         ),
     ]
