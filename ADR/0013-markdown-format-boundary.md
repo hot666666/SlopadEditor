@@ -193,7 +193,7 @@ The persistence source of truth is now decided: a versioned native archive, not 
 Markdown remains explicit whole-document import/export and therefore keeps its fresh-ID and
 syntax-normalization contract.
 [ADR 0015](0015-version-native-archive-and-keep-storage-host-owned.md) defines
-`SlopadArchive` as an opt-in pure codec whose target depends only on `SlopadCoreModel`; its
+`SlopadEditorArchive` as an opt-in pure codec whose target depends only on `SlopadCoreModel`; its
 public facade exposes only the ADR's curated, type-identical archive aliases, not a
 CoreModel product. It encodes a format version and canonical blocks, including their
 identities, but never selection, undo/history, operation journal, epoch/revision,

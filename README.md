@@ -64,7 +64,7 @@ swift run SlopadDebugApp
 | `SlopadAppKit` | Curated ordinary-host API | Runtime state |
 | `SlopadEditorSwiftUI` | SwiftUI mounting, identity, focus, observation, lifecycle flush | A second controller or Session |
 | `SlopadMarkdown` | Explicit stateless whole-document decode/encode | Canonical storage, editor runtime |
-| `SlopadArchive` | Versioned native archive encode/decode over canonical blocks | Storage lifecycle, editor runtime |
+| `SlopadEditorArchive` | Versioned native archive encode/decode over canonical blocks | Storage lifecycle, editor runtime |
 
 The compiler-enforced graph is in [`Package.swift`](Package.swift). The
 [interactive responsibility map](docs/slopad-architecture-map.html) shows module
@@ -132,15 +132,15 @@ Typed Markdown shortcuts are a different path. The internal parser-free
 Identity-preserving native persistence conversion is a separate opt-in product:
 
 ```swift
-.product(name: "SlopadArchive", package: "SlopadEditor")
+.product(name: "SlopadEditorArchive", package: "SlopadEditor")
 ```
 
 ```swift
 import Foundation
-import SlopadArchive
+import SlopadEditorArchive
 
-let data = try SlopadArchive.encode(snapshot.blocks)
-let blocks = try SlopadArchive.decode(data)
+let data = try SlopadEditorArchive.encode(snapshot.blocks)
+let blocks = try SlopadEditorArchive.decode(data)
 ```
 
 The synchronous codec preserves canonical block IDs, tree preorder, kinds, content, and

@@ -8,7 +8,7 @@ Accepted
 
 Decision tracking: [issue #75](https://github.com/hot666666/SlopadEditor/issues/75) owns this ADR
 and its fixed contract. Implementation tracking:
-[issue #78](https://github.com/hot666666/SlopadEditor/issues/78) owns the `SlopadArchive`
+[issue #78](https://github.com/hot666666/SlopadEditor/issues/78) owns the `SlopadEditorArchive`
 product/target, codec, CoreModel validation seams, and downstream fixture.
 
 ## Context
@@ -43,7 +43,7 @@ fail closed before any normalizing core initializer runs.
 
 ### One opt-in pure codec, no storage abstraction
 
-Add `SlopadArchive` as a separate opt-in library product and target. Its target dependency
+Add `SlopadEditorArchive` as a separate opt-in library product and target. Its target dependency
 is only `SlopadCoreModel`; Foundation contributes `Data`. Source files that declare the
 public codec API use Swift 6 `public import SlopadCoreModel` so the underlying public types
 are legal in public declarations, then the archive module curates exactly these aliases:
@@ -61,7 +61,7 @@ public typealias EditorBlockInput = SlopadCoreModel.EditorBlockInput
 Nested public vocabulary such as block-kind payloads and inline-mark kinds remains reachable
 through its aliased parent type; it does not receive another top-level alias. This is a
 curated archive facade, not a `SlopadCoreModel` product or a blanket
-`@_exported import`. `SlopadArchive` does not copy or wrap these values, require
+`@_exported import`. `SlopadEditorArchive` does not copy or wrap these values, require
 `SlopadEngine`, or make Session, AppKit, SwiftUI, TextKit, filesystem APIs, URLs, databases,
 and storage providers dependencies or public vocabulary.
 
@@ -74,21 +74,21 @@ The intended public call sites are the complete public surface:
 
 ```swift
 import Foundation
-import SlopadArchive
+import SlopadEditorArchive
 
-let data: Data = try SlopadArchive.encode(snapshot.blocks)
-let blocks: [EditorBlockInput] = try SlopadArchive.decode(data)
+let data: Data = try SlopadEditorArchive.encode(snapshot.blocks)
+let blocks: [EditorBlockInput] = try SlopadEditorArchive.decode(data)
 ```
 
 Every `EditorBlockInput`, `BlockID`, `BlockKind`, `BlockContent`, and `TextRange` appearing
-in this API is the exact `SlopadArchive` alias above. Therefore `snapshot.blocks` obtained
+in this API is the exact `SlopadEditorArchive` alias above. Therefore `snapshot.blocks` obtained
 through any public UI or Engine facade is type-identical and crosses this boundary without
 conversion.
 
 The API draft is:
 
 ```swift
-public enum SlopadArchive {
+public enum SlopadEditorArchive {
     public static func encode(
         _ blocks: [EditorBlockInput]
     ) throws(SlopadArchiveEncodingError) -> Data
@@ -124,7 +124,7 @@ implementation, but the four decoding categories and their fail-closed meaning a
 There is no partial success value. Malformed JSON, an unsupported version, or a canonical
 invariant failure returns no blocks; invalid input returns no archive bytes.
 
-Only `Data`, the five curated `SlopadArchive` aliases above, and archive-owned error values
+Only `Data`, the five curated `SlopadEditorArchive` aliases above, and archive-owned error values
 cross this public boundary. Public signatures and associated error values use those exact
 aliases. `EditorSession`, `EditorDocumentSnapshot`, epoch, revision, selection,
 AppKit/SwiftUI/TextKit types, `URL`, database/storage protocols, raw
@@ -262,7 +262,7 @@ empty document, duplicate IDs, noncanonical content, a missing parent, a cycle, 
 array that is not canonical depth-first preorder. A child preceding its parent is therefore
 rejected as noncanonical preorder even if that parent occurs later in the array.
 
-`SlopadArchive.encode` validates before writing. `SlopadArchive.decode` performs raw wire
+`SlopadEditorArchive.encode` validates before writing. `SlopadEditorArchive.decode` performs raw wire
 validation, constructs core values, then validates before returning. Model replacement
 calls the same seam and separately validates its requested selection. Selection does not
 enter the shared validator or archive API, and the archive target does not duplicate model
@@ -275,7 +275,7 @@ contracts, not public host APIs and not a generic CoreModel helper bucket.
 
 ### Version evolution and migration
 
-`SlopadArchive` owns wire-version recognition and pure in-memory migration. A host must not
+`SlopadEditorArchive` owns wire-version recognition and pure in-memory migration. A host must not
 inspect a version and recreate SlopadEditor's canonical migration rules in file, database, or
 cloud code.
 
@@ -366,12 +366,12 @@ layer acquires command, invariant, selection, or history ownership.
 - Encoding may run away from the Session executor after the host captures immutable blocks;
   I/O and stale-write suppression remain host policy.
 - `Fixtures/DownstreamArchiveHost` includes an archive codec-surface target/source whose only package
-  product dependency is `SlopadArchive` and whose source imports only Foundation and
-  `SlopadArchive`. It constructs the aliased block/kind/content/range/mark vocabulary and
+  product dependency is `SlopadEditorArchive` and whose source imports only Foundation and
+  `SlopadEditorArchive`. It constructs the aliased block/kind/content/range/mark vocabulary and
   round-trips it through the codec, proving that no raw CoreModel or Engine import is
   needed.
 - The same fixture proves host lifecycle integration separately. Its lifecycle target/source may
-  additionally import exactly one public UI facade plus `SlopadArchive`, passes the
+  additionally import exactly one public UI facade plus `SlopadEditorArchive`, passes the
   facade's type-identical `snapshot.blocks` directly to the codec, and never imports raw
   `SlopadEngine`, `SlopadCoreModel`, or package-only types. If both probes live in one
   fixture package, they remain separate targets/sources with distinct product dependencies

@@ -17,8 +17,8 @@ let package = Package(
             targets: ["SlopadMarkdown"]
         ),
         .library(
-            name: "SlopadArchive",
-            targets: ["SlopadArchive"]
+            name: "SlopadEditorArchive",
+            targets: ["SlopadEditorArchive"]
         ),
         .library(
             name: "SlopadAppKit",
@@ -69,7 +69,7 @@ let package = Package(
             ]
         ),
         .target(
-            name: "SlopadArchive",
+            name: "SlopadEditorArchive",
             dependencies: ["SlopadCoreModel"]
         ),
         .target(
@@ -169,9 +169,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "SlopadArchiveTests",
+            name: "SlopadEditorArchiveTests",
             dependencies: [
-                "SlopadArchive",
+                "SlopadEditorArchive",
                 "SlopadCoreModel",
             ],
             resources: [.copy("Fixtures")]

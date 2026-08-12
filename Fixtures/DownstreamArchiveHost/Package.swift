@@ -14,13 +14,13 @@ let package = Package(
         .executableTarget(
             name: "ArchiveCodecSurfaceProbe",
             dependencies: [
-                .product(name: "SlopadArchive", package: "SlopadEditor")
+                .product(name: "SlopadEditorArchive", package: "SlopadEditor")
             ]
         ),
         .executableTarget(
             name: "AppKitArchiveLifecycleProbe",
             dependencies: [
-                .product(name: "SlopadArchive", package: "SlopadEditor"),
+                .product(name: "SlopadEditorArchive", package: "SlopadEditor"),
                 .product(name: "SlopadAppKit", package: "SlopadEditor"),
             ]
         ),

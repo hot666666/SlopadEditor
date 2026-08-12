@@ -10,7 +10,7 @@ mkdir -p "$CLANG_MODULE_CACHE_PATH"
 fixture="Fixtures/DownstreamArchiveHost"
 codec_source="$fixture/Sources/ArchiveCodecSurfaceProbe/ArchiveCodecSurfaceProbe.swift"
 lifecycle_source="$fixture/Sources/AppKitArchiveLifecycleProbe/AppKitArchiveLifecycleProbe.swift"
-archive_source="Sources/SlopadArchive"
+archive_source="Sources/SlopadEditorArchive"
 
 test "$(rg '^public typealias ' "$archive_source" | wc -l | tr -d ' ')" = "5"
 test "$(rg '^public import SlopadCoreModel$' "$archive_source" | wc -l | tr -d ' ')" = "1"
@@ -21,20 +21,20 @@ if rg -n '@_exported import|import SlopadEngine|import SlopadAppKit|import Slopa
 fi
 
 codec_imports="$(rg '^import ' "$codec_source" | sort)"
-test "$codec_imports" = $'import Foundation\nimport SlopadArchive'
+test "$codec_imports" = $'import Foundation\nimport SlopadEditorArchive'
 
 lifecycle_imports="$(rg '^import ' "$lifecycle_source" | sort)"
-test "$lifecycle_imports" = $'import AppKit\nimport SlopadAppKit\nimport SlopadArchive'
+test "$lifecycle_imports" = $'import AppKit\nimport SlopadAppKit\nimport SlopadEditorArchive'
 
 codec_manifest_block="$(sed -n '/name: "ArchiveCodecSurfaceProbe"/,/name: "AppKitArchiveLifecycleProbe"/p' "$fixture/Package.swift")"
-test "$(printf '%s' "$codec_manifest_block" | rg -c 'product\(name: "SlopadArchive"')" = "1"
+test "$(printf '%s' "$codec_manifest_block" | rg -c 'product\(name: "SlopadEditorArchive"')" = "1"
 if printf '%s' "$codec_manifest_block" | rg 'product\(name: "SlopadAppKit"'; then
     echo "Codec probe gained an AppKit dependency" >&2
     exit 1
 fi
 
 lifecycle_manifest_block="$(sed -n '/name: "AppKitArchiveLifecycleProbe"/,$p' "$fixture/Package.swift")"
-test "$(printf '%s' "$lifecycle_manifest_block" | rg -c 'product\(name: "SlopadArchive"')" = "1"
+test "$(printf '%s' "$lifecycle_manifest_block" | rg -c 'product\(name: "SlopadEditorArchive"')" = "1"
 test "$(printf '%s' "$lifecycle_manifest_block" | rg -c 'product\(name: "SlopadAppKit"')" = "1"
 if printf '%s' "$lifecycle_manifest_block" | rg 'SlopadCoreModel|SlopadEngine|SlopadEditorSwiftUI|SlopadAppKitUI'; then
     echo "Lifecycle probe gained a raw product dependency" >&2
@@ -53,7 +53,7 @@ if rg -n 'SlopadCoreModel|SlopadEngine|SlopadEditorSwiftUI|SlopadAppKitUI|@testa
     exit 1
 fi
 
-if rg -n 'SlopadArchive' \
+if rg -n 'SlopadEditorArchive' \
     Fixtures/DownstreamAppKitHost \
     Fixtures/DownstreamSwiftUIHost \
     Fixtures/DownstreamMarkdownHost \

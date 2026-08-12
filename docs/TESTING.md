@@ -52,7 +52,7 @@ installed input-method delivery require their dedicated AppKit/UI evidence.
 | Package or target graph | `swift package dump-package` |
 | Public SwiftUI host surface | `bash scripts/verify-host-surface.sh`; `swift build --product SlopadEditorSwiftUI --quiet` |
 | Markdown format boundary | build the downstream Markdown fixture; verify supported round trips and typed failure diagnostics through the public codec boundary |
-| Native archive boundary | `bash scripts/verify-archive-surface.sh`; `swift build --product SlopadArchive --quiet`; run focused Archive/Core validation tests and the opt-in large-document lifecycle smoke when snapshot/encode cost is relevant |
+| Native archive boundary | `bash scripts/verify-archive-surface.sh`; `swift build --product SlopadEditorArchive --quiet`; run focused Archive/Core validation tests and the opt-in large-document lifecycle smoke when snapshot/encode cost is relevant |
 
 The Archive unit suite checks every V1 wire safety budget at its exact boundary and at
 boundary plus one. The AppKit lifecycle probe deterministically suspends an old save before

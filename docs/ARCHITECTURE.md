@@ -32,11 +32,11 @@ The production targets form these direct dependency layers:
 | Derived owner | `SlopadBlockLayout` | Visibility, block geometry, hit/reveal facts, caches, height index |
 | Format syntax | `SlopadEditorMarkdownInputRules` | Internal immutable bounded typed-input patterns |
 | Format codec | `SlopadMarkdown` | Opt-in stateless whole-document decode and encode |
-| Format codec | `SlopadArchive` | Opt-in stateless versioned native archive encode and decode |
+| Format codec | `SlopadEditorArchive` | Opt-in stateless versioned native archive encode and decode |
 | Contracts | `SlopadCoreModel` | Public vocabulary and genuine package cross-target contracts |
 | Storage | `SlopadEditorDataStructure` | Editor-independent data structures |
 
-`SlopadArchive` is an opt-in synchronous pure codec whose target depends only on
+`SlopadEditorArchive` is an opt-in synchronous pure codec whose target depends only on
 `SlopadCoreModel`. Its public facade uses Swift 6 `public import` for declaration legality
 and exposes only five type-identical archive aliases; it does not make `SlopadCoreModel` a
 product or broadly re-export its vocabulary. See
@@ -50,7 +50,7 @@ The dependency graph enforces four important absences:
   `BlockTextLayoutProtocol` capabilities defined in `SlopadCoreModel`.
 - `SlopadMarkdown` does not import the engine. A caller explicitly decides when decoded
   block inputs enter a document transaction.
-- `SlopadArchive` likewise does not import the engine or a storage provider. It
+- `SlopadEditorArchive` likewise does not import the engine or a storage provider. It
   transforms canonical block inputs to/from `Data`; the host owns persistence lifecycle.
 - `SlopadAppKit` and `SlopadEditorSwiftUI` add no second controller, Session, document, or cache.
 
@@ -100,7 +100,7 @@ replacement policy in ADR 0014 remain unfinished product work.
 | Persistence | model semantic change → Session committed revision → host callback → on-demand `documentSnapshot` → host debounce → archive encode → host storage | Snapshot blocks are the source; epoch/revision only reject stale in-process work and are never stored |
 | Reviewed replacement | context snapshot → external review → complete patch → Session epoch/revision/selection CAS → model validation/replacement → layout/runtime invalidation | A changed post-image is one transaction; stale, invalid, or composing sources fail without partial mutation |
 | Markdown import/export | caller → `SlopadMarkdown` → fresh `[EditorBlockInput]` or deterministic text → optional Session patch | Codec AST never crosses its target and no conversion is implicit |
-| Native archive reload | host bytes → `SlopadArchive` raw wire validation → canonical input validation → `[EditorBlockInput]` → explicit host Session lifecycle | Identity/order/content survive; malformed or unsupported archives return no partial blocks |
+| Native archive reload | host bytes → `SlopadEditorArchive` raw wire validation → canonical input validation → `[EditorBlockInput]` → explicit host Session lifecycle | Identity/order/content survive; malformed or unsupported archives return no partial blocks |
 
 ### Synchronized AppKit actions
 
@@ -161,8 +161,8 @@ complete adapter/backend pair so geometry and drawing stay coherent.
 | SwiftUI app | `SlopadEditorSwiftUI` | mount/unmount, document identity, bindings, persistence timing | controller bypass or a second runtime |
 | Complete custom platform adapter | `SlopadEngine` plus its own backend | native callback translation, drawing, focus, scroll coherence | direct model/layout coupling |
 | Markdown caller | `SlopadMarkdown` and optionally `SlopadEngine` | explicit import/export timing and failure UX | parser AST retention or partial success |
-| Native archive codec caller | `SlopadArchive` | construct/encode/decode the curated archive aliases | raw Engine/CoreModel imports, Session state, storage providers, or a second canonical document owner |
-| Native archive lifecycle host | exactly one public UI facade plus `SlopadArchive` | file/DB/cloud lifecycle, debounce, atomic write, conflict/retry/error UX | raw Engine/CoreModel imports, package-only state, or codec-owned lifecycle policy |
+| Native archive codec caller | `SlopadEditorArchive` | construct/encode/decode the curated archive aliases | raw Engine/CoreModel imports, Session state, storage providers, or a second canonical document owner |
+| Native archive lifecycle host | exactly one public UI facade plus `SlopadEditorArchive` | file/DB/cloud lifecycle, debounce, atomic write, conflict/retry/error UX | raw Engine/CoreModel imports, package-only state, or codec-owned lifecycle policy |
 | Debug/benchmark/fixture | development targets | scenarios, measurements, public compile proof | production ownership |
 
 The ordinary AppKit host surface is admitted by intent:
@@ -228,7 +228,7 @@ when to import/export and how to present unsupported input. See
 
 ## Native Archive Boundary
 
-`SlopadArchive` v1 is a separate opt-in `SlopadCoreModel`-only codec over UTF-8 JSON
+`SlopadEditorArchive` v1 is a separate opt-in `SlopadCoreModel`-only codec over UTF-8 JSON
 `Data`. Its envelope contains `formatVersion` and the complete canonical preorder blocks
 only. It preserves IDs, parent/root/sibling order, kinds, text, and inline marks; it excludes
 selection, history, operation journal, external reference payloads, epoch/revision,
@@ -270,7 +270,7 @@ fails without a partial document or oversized output.
 
 `Fixtures/DownstreamArchiveHost` proves the public boundary with two external
 targets/sources. The codec-surface
-probe depends on/imports only Foundation and `SlopadArchive`, constructs the aliased graph,
+probe depends on/imports only Foundation and `SlopadEditorArchive`, constructs the aliased graph,
 and round-trips it. The lifecycle probe may additionally import exactly one public UI
 facade and passes its `snapshot.blocks` directly to the codec; it never imports raw Engine,
 CoreModel, or package-only types. A single fixture package may contain both only as separate

@@ -1,5 +1,5 @@
 import Foundation
-import SlopadArchive
+import SlopadEditorArchive
 
 @main
 private struct ArchiveCodecSurfaceProbe {
@@ -32,8 +32,8 @@ private struct ArchiveCodecSurfaceProbe {
             ),
         ]
 
-        let data = try SlopadArchive.encode(blocks)
-        let decoded = try SlopadArchive.decode(data)
+        let data = try SlopadEditorArchive.encode(blocks)
+        let decoded = try SlopadEditorArchive.decode(data)
         precondition(decoded == blocks)
     }
 }

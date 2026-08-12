@@ -133,7 +133,7 @@ priority, and no public model internals.
   fail-closed codec; it handles whole documents only and never becomes an implicit
   persistence or paste path.
 - The embedding app owns files, databases, cloud sync, autosave, conflict resolution,
-  retry, and error UX. `SlopadArchive` owns neither storage nor lifecycle policy.
+  retry, and error UX. `SlopadEditorArchive` owns neither storage nor lifecycle policy.
 - Add GFM table support only after the Core table vocabulary in
   [#50](https://github.com/hot666666/SlopadEditor/issues/50) has a real owner and invariants.
 

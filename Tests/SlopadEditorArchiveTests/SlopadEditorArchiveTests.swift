@@ -2,10 +2,10 @@ import Foundation
 import SlopadCoreModel
 import Testing
 
-@testable import SlopadArchive
+@testable import SlopadEditorArchive
 
 @Suite("SlopadEditor native archive")
-struct SlopadArchiveTests {
+struct SlopadEditorArchiveTests {
     @Test("공개 alias는 CoreModel 값과 type identity를 유지한다")
     func publicAliasesAreTypeIdentical() {
         // Given
@@ -45,8 +45,8 @@ struct SlopadArchiveTests {
         let blocks = allKindBlocks(root: root, child: child)
 
         // When
-        let data = try SlopadArchive.encode(blocks)
-        let decoded = try SlopadArchive.decode(data)
+        let data = try SlopadEditorArchive.encode(blocks)
+        let decoded = try SlopadEditorArchive.decode(data)
 
         // Then
         #expect(decoded == blocks)
@@ -60,7 +60,7 @@ struct SlopadArchiveTests {
         )
 
         // When
-        let blocks = try SlopadArchive.decode(source)
+        let blocks = try SlopadEditorArchive.decode(source)
 
         // Then
         #expect(blocks[0].id.rawValue.isEmpty)
@@ -79,9 +79,9 @@ struct SlopadArchiveTests {
         let fixture = try Data(contentsOf: fixtureURL)
 
         // When
-        let blocks = try SlopadArchive.decode(fixture)
-        let reencoded = try SlopadArchive.encode(blocks)
-        let roundTripped = try SlopadArchive.decode(reencoded)
+        let blocks = try SlopadEditorArchive.decode(fixture)
+        let reencoded = try SlopadEditorArchive.encode(blocks)
+        let roundTripped = try SlopadEditorArchive.decode(reencoded)
 
         // Then
         #expect(blocks.map(\.id) == ["title", "task"])
@@ -96,7 +96,7 @@ struct SlopadArchiveTests {
         let blocks = [EditorBlockInput(id: "root", content: BlockContent(text: "value"))]
 
         // When
-        let data = try SlopadArchive.encode(blocks)
+        let data = try SlopadEditorArchive.encode(blocks)
         let envelope = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         let rawBlocks = try #require(envelope["blocks"] as? [[String: Any]])
         let rawBlock = try #require(rawBlocks.first)
@@ -116,8 +116,8 @@ struct SlopadArchiveTests {
         let blocks = allKindBlocks(root: "root", child: "child")
 
         // When
-        let first = try SlopadArchive.decode(SlopadArchive.encode(blocks))
-        let second = try SlopadArchive.decode(SlopadArchive.encode(blocks))
+        let first = try SlopadEditorArchive.decode(SlopadEditorArchive.encode(blocks))
+        let second = try SlopadEditorArchive.decode(SlopadEditorArchive.encode(blocks))
 
         // Then
         #expect(first == blocks)
@@ -131,19 +131,19 @@ struct SlopadArchiveTests {
             throws: SlopadArchiveDecodingError.unsupportedFutureVersion(
                 found: 2, latestSupported: 1)
         ) {
-            try SlopadArchive.decode(Self.json(#"{"formatVersion":2,"blocks":null}"#))
+            try SlopadEditorArchive.decode(Self.json(#"{"formatVersion":2,"blocks":null}"#))
         }
         #expect(
             throws: SlopadArchiveDecodingError.unsupportedPastVersion(
                 found: 0, earliestSupported: 1)
         ) {
-            try SlopadArchive.decode(Self.json(#"{"formatVersion":0,"blocks":null}"#))
+            try SlopadEditorArchive.decode(Self.json(#"{"formatVersion":0,"blocks":null}"#))
         }
         #expect(
             throws: SlopadArchiveDecodingError.unsupportedPastVersion(
                 found: -1, earliestSupported: 1)
         ) {
-            try SlopadArchive.decode(Self.json(#"{"formatVersion":-1,"blocks":null}"#))
+            try SlopadEditorArchive.decode(Self.json(#"{"formatVersion":-1,"blocks":null}"#))
         }
     }
 
@@ -159,7 +159,7 @@ struct SlopadArchiveTests {
     func invalidVersionTokensFailAsMalformed(source: String) {
         // Given / When / Then
         #expect(throws: SlopadArchiveDecodingError.malformedData) {
-            try SlopadArchive.decode(Self.json(source))
+            try SlopadEditorArchive.decode(Self.json(source))
         }
     }
 
@@ -183,11 +183,11 @@ struct SlopadArchiveTests {
 
         // When / Then
         #expect(throws: SlopadArchiveDecodingError.malformedData) {
-            try SlopadArchive.decode(invalidUTF8)
+            try SlopadEditorArchive.decode(invalidUTF8)
         }
         for source in malformedSources {
             #expect(throws: SlopadArchiveDecodingError.malformedData) {
-                try SlopadArchive.decode(Self.json(source))
+                try SlopadEditorArchive.decode(Self.json(source))
             }
         }
     }
@@ -195,7 +195,7 @@ struct SlopadArchiveTests {
     @Test("archive byte budget은 정확한 경계를 허용하고 한 byte 초과를 거절한다")
     func archiveByteBudgetBoundaryIsExact() throws {
         // Given
-        let encoded = try SlopadArchive.encode([
+        let encoded = try SlopadEditorArchive.encode([
             EditorBlockInput(id: "a", content: BlockContent(text: "a"))
         ])
         let paddingCount = ArchiveWireBudget.v1.maximumArchiveBytes - encoded.count
@@ -205,12 +205,12 @@ struct SlopadArchiveTests {
         overBoundary.append(0x20)
 
         // When
-        let decoded = try SlopadArchive.decode(exactBoundary)
+        let decoded = try SlopadEditorArchive.decode(exactBoundary)
 
         // Then
         #expect(decoded[0].id == "a")
         #expect(throws: SlopadArchiveDecodingError.malformedData) {
-            try SlopadArchive.decode(overBoundary)
+            try SlopadEditorArchive.decode(overBoundary)
         }
     }
 
@@ -304,7 +304,7 @@ struct SlopadArchiveTests {
         // When / Then
         for source in [hugeUnknownObject, hugeBlocks, hugeMarks] {
             #expect(throws: SlopadArchiveDecodingError.malformedData) {
-                try SlopadArchive.decode(source)
+                try SlopadEditorArchive.decode(source)
             }
         }
     }
@@ -321,16 +321,16 @@ struct SlopadArchiveTests {
         let overBlock = EditorBlockInput(id: "a", content: BlockContent(text: exactText + "a"))
 
         // When
-        let encoded = try SlopadArchive.encode([exactBlock])
+        let encoded = try SlopadEditorArchive.encode([exactBlock])
 
         // Then
-        #expect(try SlopadArchive.decode(encoded) == [exactBlock])
+        #expect(try SlopadEditorArchive.decode(encoded) == [exactBlock])
         #expect(
             throws: SlopadArchiveEncodingError.canonicalInvariant(
                 .invalidContent(blockID: "a")
             )
         ) {
-            try SlopadArchive.encode([overBlock])
+            try SlopadEditorArchive.encode([overBlock])
         }
     }
 
@@ -338,7 +338,7 @@ struct SlopadArchiveTests {
     func encoderUsesTheSameArchiveByteBudget() throws {
         // Given
         let emptyBlock = EditorBlockInput(id: "a", content: BlockContent())
-        let fixedArchiveBytes = try SlopadArchive.encode([emptyBlock]).count
+        let fixedArchiveBytes = try SlopadEditorArchive.encode([emptyBlock]).count
         let remainingBytes = ArchiveWireBudget.v1.maximumArchiveBytes - fixedArchiveBytes
         let escapedScalarCount = remainingBytes / 6
         let plainScalarCount = remainingBytes % 6
@@ -349,17 +349,17 @@ struct SlopadArchiveTests {
         let overBlock = EditorBlockInput(id: "a", content: BlockContent(text: exactText + "a"))
 
         // When
-        let encoded = try SlopadArchive.encode([exactBlock])
+        let encoded = try SlopadEditorArchive.encode([exactBlock])
 
         // Then
         #expect(encoded.count == ArchiveWireBudget.v1.maximumArchiveBytes)
-        #expect(try SlopadArchive.decode(encoded) == [exactBlock])
+        #expect(try SlopadEditorArchive.decode(encoded) == [exactBlock])
         #expect(
             throws: SlopadArchiveEncodingError.canonicalInvariant(
                 .invalidContent(blockID: "a")
             )
         ) {
-            try SlopadArchive.encode([overBlock])
+            try SlopadEditorArchive.encode([overBlock])
         }
     }
 
@@ -457,7 +457,7 @@ struct SlopadArchiveTests {
 
         // When
         do {
-            _ = try SlopadArchive.encodeForTesting(blocks) {
+            _ = try SlopadEditorArchive.encodeForTesting(blocks) {
                 canonicalValidationEntryCount += 1
             }
             Issue.record("over-cap input unexpectedly encoded")
@@ -480,7 +480,7 @@ struct SlopadArchiveTests {
 
         // When
         do {
-            _ = try SlopadArchive.encodeForTesting([block]) {
+            _ = try SlopadEditorArchive.encodeForTesting([block]) {
                 canonicalValidationEntryCount += 1
             }
             Issue.record("over-cap marks unexpectedly encoded")
@@ -511,7 +511,7 @@ struct SlopadArchiveTests {
 
         // When / Then
         #expect(throws: SlopadArchiveDecodingError.malformedData) {
-            try SlopadArchive.decode(Self.json(source))
+            try SlopadEditorArchive.decode(Self.json(source))
         }
     }
 
@@ -531,7 +531,7 @@ struct SlopadArchiveTests {
 
         // When / Then
         #expect(throws: SlopadArchiveDecodingError.malformedData) {
-            try SlopadArchive.decode(Self.json(source))
+            try SlopadEditorArchive.decode(Self.json(source))
         }
     }
 
@@ -547,7 +547,7 @@ struct SlopadArchiveTests {
 
         // When / Then
         #expect(throws: SlopadArchiveDecodingError.malformedData) {
-            try SlopadArchive.decode(Self.json(source))
+            try SlopadEditorArchive.decode(Self.json(source))
         }
     }
 
@@ -565,7 +565,7 @@ struct SlopadArchiveTests {
 
         // When / Then
         #expect(throws: SlopadArchiveDecodingError.malformedData) {
-            try SlopadArchive.decode(Self.json(source))
+            try SlopadEditorArchive.decode(Self.json(source))
         }
     }
 
@@ -593,7 +593,7 @@ struct SlopadArchiveTests {
         #expect(
             throws: SlopadArchiveDecodingError.canonicalInvariant(.invalidContent(blockID: "a"))
         ) {
-            try SlopadArchive.decode(Self.json(source))
+            try SlopadEditorArchive.decode(Self.json(source))
         }
     }
 
@@ -609,7 +609,7 @@ struct SlopadArchiveTests {
         )
 
         // When
-        let blocks = try SlopadArchive.decode(Self.json(source))
+        let blocks = try SlopadEditorArchive.decode(Self.json(source))
 
         // Then
         #expect(blocks[0].content.marks.count == 2)
@@ -630,7 +630,7 @@ struct SlopadArchiveTests {
     func invalidDocumentFailsClosed(source: String, invariant: SlopadArchiveCanonicalInvariant) {
         // Given / When / Then
         #expect(throws: SlopadArchiveDecodingError.canonicalInvariant(invariant)) {
-            try SlopadArchive.decode(Self.json(source))
+            try SlopadEditorArchive.decode(Self.json(source))
         }
     }
 
@@ -653,11 +653,11 @@ struct SlopadArchiveTests {
         #expect(
             throws: SlopadArchiveEncodingError.canonicalInvariant(.invalidContent(blockID: "a"))
         ) {
-            try SlopadArchive.encode(invalidContentBlocks)
+            try SlopadEditorArchive.encode(invalidContentBlocks)
         }
         #expect(throws: SlopadArchiveEncodingError.canonicalInvariant(.noncanonicalDepthFirstOrder))
         {
-            try SlopadArchive.encode(invalidOrderBlocks)
+            try SlopadEditorArchive.encode(invalidOrderBlocks)
         }
     }
 

@@ -72,7 +72,7 @@ that decision, which is what keeps it a notification rather than a hook.
 - **Format codecs.** A codec is not an ordinary AppKit/SwiftUI lifecycle operation, so it
   does not widen either facade. `SlopadMarkdown` is the existing opt-in whole-document
   codec. [ADR 0015](0015-version-native-archive-and-keep-storage-host-owned.md) defines
-  `SlopadArchive` as another opt-in, pure codec with an internal target dependency only on
+  `SlopadEditorArchive` as another opt-in, pure codec with an internal target dependency only on
   `SlopadCoreModel`; its public facade exposes exactly five type-identical aliases for the
   archive graph, not a `SlopadCoreModel` product or blanket re-export. It has no Session,
   AppKit, storage, or lifecycle owner. A host still owns when to call either codec and all
@@ -92,7 +92,7 @@ that decision, which is what keeps it a notification rather than a hook.
 `[EditorBlockInput]` is the only document representation crossing the public ordinary-host
 boundary. No `String`, storage format, or codec type appears in that surface. An opt-in
 format target may transform core block values outside the facade: `SlopadMarkdown` does so
-for whole-document Markdown, and ADR 0015's `SlopadArchive` will do so for the versioned
+for whole-document Markdown, and ADR 0015's `SlopadEditorArchive` will do so for the versioned
 native archive after its implementation. Neither changes who owns storage.
 
 This keeps SlopadEditor from acquiring a second canonical model by way of a convenience format.
@@ -113,9 +113,9 @@ the full mount → edit → observe → flush → replace → unmount sequence a
 contract mismatch.
 
 Those ordinary lifecycle fixtures are not format fixtures. `DownstreamMarkdownHost` is a
-separate opt-in format-consumer gate. When `SlopadArchive` exists, issue #78 adds two
+separate opt-in format-consumer gate. When `SlopadEditorArchive` exists, issue #78 adds two
 separate archive probes: a codec-surface target/source depending on the archive product and
-importing only Foundation plus `SlopadArchive`, and a lifecycle target/source that may add
+importing only Foundation plus `SlopadEditorArchive`, and a lifecycle target/source that may add
 exactly one public UI facade and passes its type-identical `snapshot.blocks` directly to the
 codec. Neither imports raw Engine/CoreModel or package-only types. If one fixture package
 contains both, they remain distinct targets/sources with distinct dependency and import
