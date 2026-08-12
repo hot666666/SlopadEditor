@@ -105,7 +105,7 @@ committed snapshot's blocks and never stores composition or Session revision. Th
 native callback termination table—first/subsequent `setMarkedText`, `insertText`,
 `unmarkText`, Escape,
 undo/redo, synchronized commands, focus loss, and explicit flush—is the implementation
-criterion in [#76](https://github.com/hot666666/Slopad/issues/76). It is implemented only
+criterion in [#76](https://github.com/hot666666/SlopadEditor/issues/76). It is implemented only
 after real installed-IME delivery, including Apple's built-in Korean 2-set, is proven in
 the product path.
 

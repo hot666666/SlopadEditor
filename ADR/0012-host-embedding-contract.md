@@ -77,7 +77,7 @@ that decision, which is what keeps it a notification rather than a hook.
   archive graph, not a `SlopadCoreModel` product or blanket re-export. It has no Session,
   AppKit, storage, or lifecycle owner. A host still owns when to call either codec and all
   file/DB/cloud/autosave/conflict/retry/error policy. The archive product is decided but not
-  yet implemented; [issue #78](https://github.com/hot666666/Slopad/issues/78) tracks that
+  yet implemented; [issue #78](https://github.com/hot666666/SlopadEditor/issues/78) tracks that
   implementation.
 - **Host-owned scrolling.** A genuine second layout mode changes viewport ownership, which
   is engine-adjacent. Documented instead; remains a roadmap item.
@@ -103,7 +103,7 @@ epoch/revision, composition, layout, viewport, and TextKit state.
 ### One continuous gate, two ordinary hosts
 
 `Fixtures/DownstreamSwiftUIHost` is the intended companion to
-`Fixtures/DownstreamAppKitHost`. [Issue #69](https://github.com/hot666666/Slopad/issues/69)
+`Fixtures/DownstreamAppKitHost`. [Issue #69](https://github.com/hot666666/SlopadEditor/issues/69)
 established `bash scripts/verify-host-surface.sh` as their canonical continuous ADR 0012
 gate; CI runs that command on every pull request. Each host builds with one product dependency, no
 `@testable`, and no package-only state, so a capability that stops being public breaks at

@@ -132,7 +132,7 @@ Typed Markdown shortcuts are a different path. The internal parser-free
 Identity-preserving native persistence conversion is a separate opt-in product:
 
 ```swift
-.product(name: "SlopadArchive", package: "Slopad")
+.product(name: "SlopadArchive", package: "SlopadEditor")
 ```
 
 ```swift

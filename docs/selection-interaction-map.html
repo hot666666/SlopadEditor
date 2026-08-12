@@ -514,9 +514,9 @@ footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(-
     <div class="contract-grid">
       <article class="panel contract-card"><span class="contract-code">EditorCommandState</span><h3>명령 가능 여부 + mixed 값</h3><p>unavailable / available / after-composition-commit와 mark off/on/mixed. UI switch문을 없앤다.</p></article>
       <article class="panel contract-card"><span class="contract-code">EditorSelectionPresentation</span><h3>geometry fact</h3><p>visible bounds와 focus rect만 Session이 제공. 위/아래 배치와 window clamp는 AppKit 책임.</p></article>
-      <article class="panel contract-card"><span class="contract-code">EditorClipboardPlan</span><h3>clipboard negotiation</h3><p>plain text와 Slopad partial-text/subtree payload를 만든 뒤 AppKit이 NSPasteboard를 읽고 쓴다.</p></article>
+      <article class="panel contract-card"><span class="contract-code">EditorClipboardWritePlan</span><h3>clipboard negotiation</h3><p>plain text와 Slopad partial-text/subtree payload를 만든 뒤 AppKit이 NSPasteboard를 읽고 쓴다. Session의 clipboardWritePlan()이 반환한다.</p></article>
       <article class="panel contract-card"><span class="contract-code">Selection action source</span><h3>비동기 stale 방지</h3><p>link/comment/AI popup은 epoch+revision+exact selection을 pin하고 stale이면 fail closed.</p></article>
-      <article class="panel contract-card"><span class="contract-code">EditorDecorationSnapshot</span><h3>selection 아닌 highlight</h3><p>검색·댓글·spellcheck·remote cursor는 local caret/history를 건드리지 않는 별도 projection.</p></article>
+      <article class="panel contract-card"><span class="contract-code">EditorDecorationSnapshot</span><h3>selection 아닌 highlight</h3><p>검색·댓글·spellcheck·remote cursor는 local caret/history를 건드리지 않는 별도 projection. 아직 미구현 제안이며 소비자가 생길 때 이름과 형태를 정한다.</p></article>
       <article class="panel contract-card"><span class="contract-code">EditorCommandResult</span><h3>하나의 apply owner</h3><p>기존 notApplicable / selection-only / document 결과를 유지. toolbar 전용 command engine은 만들지 않는다.</p></article>
     </div>
 

@@ -201,7 +201,7 @@ composition, layout, viewport, or TextKit state. The embedding app owns files, d
 cloud sync, autosave, conflicts, retries, and error UX. This ADR supplies the Markdown
 identity facts that native-archive persistence must not weaken. The archive product remains
 unimplemented;
-[issue #78](https://github.com/hot666666/Slopad/issues/78) tracks that implementation.
+[issue #78](https://github.com/hot666666/SlopadEditor/issues/78) tracks that implementation.
 
 ## Consequences
 

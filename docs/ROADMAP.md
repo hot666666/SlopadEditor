@@ -62,7 +62,7 @@ bounded tracking issue.
 
 ### P0 — Preserve the continuous ADR 0012 host-surface gate
 
-[#69](https://github.com/hot666666/Slopad/issues/69) implemented the always-run Epic #67
+[#69](https://github.com/hot666666/SlopadEditor/issues/69) implemented the always-run Epic #67
 baseline. [`scripts/verify-host-surface.sh`](../scripts/verify-host-surface.sh) is now the
 canonical gate for both ordinary AppKit and SwiftUI lifecycle fixtures, and CI invokes it
 on every pull request. This is an ongoing boundary constraint, not a feature waiting for
@@ -93,7 +93,7 @@ internals, or development hooks.
   candidate-window behavior, or repeatability. Direct `setMarkedText` tests prove only the
   consumer's callback contract, not installed-input-method delivery.
 - Only after that real UI evidence exists, implement ADR 0014's decided live cross-block
-  replacement through [#76](https://github.com/hot666666/Slopad/issues/76)'s native
+  replacement through [#76](https://github.com/hot666666/SlopadEditor/issues/76)'s native
   callback close table: grouped history, exact cancel/redo restoration, candidate-window
   behavior, and the one committed-revision rule. Do not infer product behavior from direct
   callback injection.

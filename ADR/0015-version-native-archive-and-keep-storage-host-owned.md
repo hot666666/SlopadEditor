@@ -6,9 +6,9 @@ Date: 2026-08-10
 
 Accepted
 
-Decision tracking: [issue #75](https://github.com/hot666666/Slopad/issues/75) owns this ADR
+Decision tracking: [issue #75](https://github.com/hot666666/SlopadEditor/issues/75) owns this ADR
 and its fixed contract. Implementation tracking:
-[issue #78](https://github.com/hot666666/Slopad/issues/78) owns the `SlopadArchive`
+[issue #78](https://github.com/hot666666/SlopadEditor/issues/78) owns the `SlopadArchive`
 product/target, codec, CoreModel validation seams, and downstream fixture.
 
 ## Context
