@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OUTPUT_DIR="${1:-/tmp/slopad-debug-regression}"
+OUTPUT_DIR="${1:-/tmp/slopadeditor-debug-regression}"
 mkdir -p "$OUTPUT_DIR"
 
 export CLANG_MODULE_CACHE_PATH="${CLANG_MODULE_CACHE_PATH:-$PWD/.build/clang-module-cache}"
 mkdir -p "$CLANG_MODULE_CACHE_PATH"
 
-if [[ "${SLOPAD_DEBUG_BUILD:-0}" == "1" || ! -x .build/debug/SlopadDebugApp ]]; then
-  swift build --product SlopadDebugApp
+if [[ "${SLOPAD_DEBUG_BUILD:-0}" == "1" || ! -x .build/debug/SlopadEditorDebugApp ]]; then
+  swift build --product SlopadEditorDebugApp
 fi
 
-if [[ ! -x .build/debug/SlopadDebugApp ]]; then
-  printf 'SlopadDebugApp is not built. Run `swift build --product SlopadDebugApp` first.\n' >&2
+if [[ ! -x .build/debug/SlopadEditorDebugApp ]]; then
+  printf 'SlopadEditorDebugApp is not built. Run `swift build --product SlopadEditorDebugApp` first.\n' >&2
   exit 1
 fi
 
@@ -50,7 +50,7 @@ SCENARIOS=(
 )
 
 for scenario in "${SCENARIOS[@]}"; do
-  scripts/slopad-debug-screenshot.sh "$scenario" "$OUTPUT_DIR/${scenario}.png"
+  scripts/slopadeditor-debug-screenshot.sh "$scenario" "$OUTPUT_DIR/${scenario}.png"
 done
 
 printf 'SlopadEditor debug regression screenshots written to %s\n' "$OUTPUT_DIR"

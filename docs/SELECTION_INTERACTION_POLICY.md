@@ -601,13 +601,13 @@ uses prepared visible-order ranks instead of that full-span traversal.
   The deterministic UI benchmark covers forward/reverse text selection at 100, 1,000, and
   10,000 blocks with empty blocks mixed in.
 - Installed input-method events currently do not reach the composition consumer in
-  `SlopadDebugApp`. Repairing and proving **Apple built-in Korean 2-set** delivery is future
+  `SlopadEditorDebugApp`. Repairing and proving **Apple built-in Korean 2-set** delivery is future
   work in [#71](https://github.com/hot666666/SlopadEditor/issues/71), followed by implementation
   and product verification of the decided live replacement policy. The
   [#76 native composition termination table](https://github.com/hot666666/SlopadEditor/issues/76)
   is its required callback-by-callback criterion; both issues remain open. #72's bounded
   local test stability is not installed-IME, native product input, visual, or device proof.
-- The production `SlopadDebugApp` state harness passes all 18 scenarios, including the
+- The production `SlopadEditorDebugApp` state harness passes all 18 scenarios, including the
   real cross-block text drag and viewport-derived down/up reveal boundaries.
 - Caret review disposition: no change. Direct product use confirmed that AppKit's native
   automatic insertion indicator already has the intended idle and ordinary-input cadence.
@@ -689,7 +689,7 @@ Focused `SlopadEditorAppKitUITests` must enter through the production adapter an
 
 ### Gate 4 — native callback and visual behavior
 
-Build and run `SlopadDebugApp`. The native callback smoke must use synthesized `NSEvent`
+Build and run `SlopadEditorDebugApp`. The native callback smoke must use synthesized `NSEvent`
 delivery through `NSWindow.sendEvent(_:)` and real `NSTextInputClient` callbacks rather
 than calling semantic handlers directly. Manually inspect forward/reverse cross-block
 drag, empty gaps, autoscroll, Escape/Cmd-A, clipboard round trips, caret blink, and Korean
@@ -701,7 +701,7 @@ that consumer, nor that the decided live replacement policy is implemented.
 
 ### Gate 5 — performance and redraw
 
-Build `SlopadUIBenchmarkApp` and add deterministic forward/reverse cross-block drag plus
+Build `SlopadEditorUIBenchmarkApp` and add deterministic forward/reverse cross-block drag plus
 autoscroll scenarios at 100, 1,000, and 10,000 blocks, including empty blocks. Capture the
 benchmark environment and compare repeated runs. Acceptance requires:
 
@@ -721,8 +721,8 @@ git diff --check
 swift build --product SlopadEditorAppKit --quiet
 swift build --product SlopadEditorAppKitTextKit --quiet
 swift build --product SlopadEditorAppKitUI --quiet
-swift build --product SlopadDebugApp --quiet
-swift build --product SlopadUIBenchmarkApp --quiet
+swift build --product SlopadEditorDebugApp --quiet
+swift build --product SlopadEditorUIBenchmarkApp --quiet
 swift build --package-path Fixtures/DownstreamAppKitHost --product DownstreamAppKitHost --quiet
 ```
 
@@ -749,5 +749,5 @@ and downstream-build evidence as separate claims.
    shared Session snapshot/action contracts, with checkbox hit-control priority ahead of
    gutter drag; add a public host projection only when its first real consumer passes ADR
    0012.
-7. Prove the real AppKit path in `SlopadDebugApp`, then run the 100/1,000/10,000-block UI
+7. Prove the real AppKit path in `SlopadEditorDebugApp`, then run the 100/1,000/10,000-block UI
    benchmark gates before claiming completion.

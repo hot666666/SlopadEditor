@@ -28,7 +28,7 @@ two internal owners:
   hit-test geometry, and text-layout-backed measurement.
 
 Native surface code, such as the reusable `SlopadEditorAppKitUI` adapter, receives OS callbacks
-and delegates meaningful editor decisions to `EditorSession`. `SlopadDebugApp` consumes
+and delegates meaningful editor decisions to `EditorSession`. `SlopadEditorDebugApp` consumes
 that adapter as a reference/debug host rather than defining the platform boundary.
 
 ## Consequences

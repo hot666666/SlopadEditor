@@ -958,7 +958,7 @@ if let outputPath = options.outputPath {
 import Darwin
 
 fputs(
-    "Build SlopadSessionBenchmark with -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION\n",
+    "Build SlopadEditorSessionBenchmark with -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION\n",
     stderr
 )
 exit(1)

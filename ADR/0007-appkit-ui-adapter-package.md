@@ -109,9 +109,9 @@ It depends on `SlopadEditorEngine` and `SlopadEditorAppKitTextKit`. It does not 
 ## Consequences
 
 - macOS apps can depend on `SlopadEditorAppKitUI` for a working AppKit editor surface.
-- Debug-only scenario/HUD state stays in `SlopadDebugApp`.
+- Debug-only scenario/HUD state stays in `SlopadEditorDebugApp`.
 - Benchmark-only frame loops, CSV output, and forced display flushes stay in
-  `SlopadUIBenchmarkApp`.
+  `SlopadEditorUIBenchmarkApp`.
 - AppKit visual customization happens through `AppKitBlockChromeRenderer` and theme
   values, not by moving editor semantics or text-pipeline ownership out of
   `EditorSession` and the adapter.

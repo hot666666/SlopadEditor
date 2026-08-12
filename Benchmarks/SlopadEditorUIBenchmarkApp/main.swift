@@ -2,7 +2,7 @@ import AppKit
 import Darwin
 import Foundation
 
-struct SlopadUIBenchmarkApp {
+struct SlopadEditorUIBenchmarkApp {
     @MainActor
     private static var retainedDelegate: UIBenchmarkAppDelegate?
 
@@ -89,7 +89,7 @@ private final class UIBenchmarkAppDelegate: NSObject, NSApplicationDelegate {
         self.window = window
         self.host = host
 
-        SlopadUIBenchmarkApp.layoutBenchmarkWindow(window, host: host)
+        SlopadEditorUIBenchmarkApp.layoutBenchmarkWindow(window, host: host)
         do {
             try UIBenchmarkRunner.run(
                 window: window,
@@ -106,7 +106,7 @@ private final class UIBenchmarkAppDelegate: NSObject, NSApplicationDelegate {
                 )
             )
         } catch {
-            fputs("SlopadUIBenchmarkApp failed: \(error)\n", stderr)
+            fputs("SlopadEditorUIBenchmarkApp failed: \(error)\n", stderr)
             exit(1)
         }
         NSApp.terminate(nil)
@@ -162,4 +162,4 @@ private struct UIBenchmarkCommandLineOptions {
     }
 }
 
-SlopadUIBenchmarkApp.main()
+SlopadEditorUIBenchmarkApp.main()

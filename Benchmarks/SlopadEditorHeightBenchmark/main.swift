@@ -45,7 +45,7 @@ let updateDuration = updateStart.duration(to: ContinuousClock.now)
 let updateVisits = index.visitCount
 #endif
 
-print("SlopadHeightBenchmark")
+print("SlopadEditorHeightBenchmark")
 print("blocks=\(count)")
 print("build=\(buildDuration)")
 #if SLOPAD_TREE_METRICS

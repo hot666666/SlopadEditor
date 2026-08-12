@@ -4,7 +4,7 @@
 
     @MainActor
     final class DebugNativeInputTraceWriter {
-        private static let prefix = "SLOPAD_NATIVE_INPUT_TRACE "
+        private static let prefix = "SLOPADEDITOR_NATIVE_INPUT_TRACE "
 
         private let encoder: JSONEncoder
         private let operatingSystem = ProcessInfo.processInfo.operatingSystemVersionString
@@ -17,10 +17,10 @@
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
             self.encoder = encoder
-            declaredHeadSHA = Self.validatedBuildSHA(environment["SLOPAD_BUILD_SHA"])
+            declaredHeadSHA = Self.validatedBuildSHA(environment["SLOPADEDITOR_BUILD_SHA"])
             sourceState =
                 DebugNativeInputTraceLine.SourceState(
-                    rawValue: environment["SLOPAD_BUILD_STATE"] ?? ""
+                    rawValue: environment["SLOPADEDITOR_BUILD_STATE"] ?? ""
                 ) ?? .unverified
             bundleVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
         }

@@ -47,7 +47,7 @@ or expose the underlying controller.
 Run the reference host:
 
 ```sh
-swift run SlopadDebugApp
+swift run SlopadEditorDebugApp
 ```
 
 <img src="Resources/demo.gif" alt="SlopadEditor debug demo" width="720">
@@ -153,10 +153,10 @@ composition, layout, viewport, TextKit, or storage metadata.
 
 ## Development Surfaces
 
-- `SlopadDebugApp` — reference AppKit host for input, focus, selection, IME, scrolling,
+- `SlopadEditorDebugApp` — reference AppKit host for input, focus, selection, IME, scrolling,
   hit testing, and rendering.
-- `SlopadUIBenchmarkApp` — real AppKit interaction and frame-time harness.
-- `SlopadHeightBenchmark` and `SlopadSessionBenchmark` — focused non-product benchmarks.
+- `SlopadEditorUIBenchmarkApp` — real AppKit interaction and frame-time harness.
+- `SlopadEditorHeightBenchmark` and `SlopadEditorSessionBenchmark` — focused non-product benchmarks.
 - `Fixtures/DownstreamAppKitHost` and `Fixtures/DownstreamSwiftUIHost` — deterministic
   public lifecycle runtime smokes without `@testable` or package access; run both with
   `bash scripts/verify-host-surface.sh`.

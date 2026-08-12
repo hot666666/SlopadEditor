@@ -4,7 +4,7 @@
 
     // MARK: - AppKitNativeInputTraceHandler
 
-    /// Package-only diagnostic transport used by SlopadDebugApp and focused adapter tests.
+    /// Package-only diagnostic transport used by SlopadEditorDebugApp and focused adapter tests.
     ///
     /// The trace is deliberately unavailable to ordinary hosts. It observes the production
     /// AppKit callback path without becoming an editor command or canonical-state source.

@@ -86,7 +86,7 @@ internals, or development hooks.
 
 - Exercise forward/reverse text and structural drags, empty-origin drag, autoscroll,
   Escape/Cmd-A, structured clipboard round trips, and caret/selection chrome manually in
-  `SlopadDebugApp`.
+  `SlopadEditorDebugApp`.
 - Make **Apple's built-in Korean 2-set** installed-IME delivery reproducible through the
   opt-in DebugApp native-input trace. One 2026-08-10 diagnostic session observed a real
   marked update reach the composition consumer; it did not prove commit/cancel lifecycle,

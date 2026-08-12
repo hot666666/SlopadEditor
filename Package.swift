@@ -37,12 +37,12 @@ let package = Package(
             targets: ["SlopadEditorAppKitUI"]
         ),
         .executable(
-            name: "SlopadDebugApp",
-            targets: ["SlopadDebugApp"]
+            name: "SlopadEditorDebugApp",
+            targets: ["SlopadEditorDebugApp"]
         ),
         .executable(
-            name: "SlopadUIBenchmarkApp",
-            targets: ["SlopadUIBenchmarkApp"]
+            name: "SlopadEditorUIBenchmarkApp",
+            targets: ["SlopadEditorUIBenchmarkApp"]
         ),
     ],
     dependencies: [
@@ -119,35 +119,35 @@ let package = Package(
             dependencies: ["SlopadEditorAppKit"]
         ),
         .executableTarget(
-            name: "SlopadHeightBenchmark",
+            name: "SlopadEditorHeightBenchmark",
             dependencies: [
                 "SlopadEditorCoreModel",
                 "SlopadEditorBlockLayout",
             ],
-            path: "Benchmarks/SlopadHeightBenchmark"
+            path: "Benchmarks/SlopadEditorHeightBenchmark"
         ),
         .executableTarget(
-            name: "SlopadSessionBenchmark",
+            name: "SlopadEditorSessionBenchmark",
             dependencies: ["SlopadEditorEngine"],
-            path: "Benchmarks/SlopadSessionBenchmark"
+            path: "Benchmarks/SlopadEditorSessionBenchmark"
         ),
         .executableTarget(
-            name: "SlopadDebugApp",
+            name: "SlopadEditorDebugApp",
             dependencies: [
                 "SlopadEditorEngine",
                 "SlopadEditorAppKitTextKit",
                 "SlopadEditorAppKitUI",
             ],
-            path: "Debug/SlopadDebugApp"
+            path: "Debug/SlopadEditorDebugApp"
         ),
         .executableTarget(
-            name: "SlopadUIBenchmarkApp",
+            name: "SlopadEditorUIBenchmarkApp",
             dependencies: [
                 "SlopadEditorEngine",
                 "SlopadEditorAppKitTextKit",
                 "SlopadEditorAppKitUI",
             ],
-            path: "Benchmarks/SlopadUIBenchmarkApp"
+            path: "Benchmarks/SlopadEditorUIBenchmarkApp"
         ),
         .testTarget(
             name: "SlopadEditorEngineTests",

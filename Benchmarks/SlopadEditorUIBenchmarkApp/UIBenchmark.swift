@@ -653,7 +653,7 @@ final class UIBenchmarkRecorder {
     func summary(blockCount: Int, scenario: String) -> String {
         let frameMilliseconds = samples.map { $0.frameMilliseconds }.sorted()
         guard !frameMilliseconds.isEmpty else {
-            return "SlopadUIBenchmarkApp UI benchmark produced no samples"
+            return "SlopadEditorUIBenchmarkApp UI benchmark produced no samples"
         }
         let averageMs = frameMilliseconds.reduce(0, +) / Double(frameMilliseconds.count)
         let p95Ms = percentile(95, in: frameMilliseconds)
@@ -667,7 +667,7 @@ final class UIBenchmarkRecorder {
         let fps = averageMs > 0 ? 1000.0 / averageMs : 0
         return String(
             format:
-                "SlopadUIBenchmarkApp UI benchmark scenario=%@ blocks=%d frames=%d avgFPS=%.1f avgFrameMs=%.3f p95FrameMs=%.3f avgOperationMs=%.3f over16ms=%d over33ms=%d",
+                "SlopadEditorUIBenchmarkApp UI benchmark scenario=%@ blocks=%d frames=%d avgFPS=%.1f avgFrameMs=%.3f p95FrameMs=%.3f avgOperationMs=%.3f over16ms=%d over33ms=%d",
             scenario,
             blockCount,
             samples.count,
@@ -1213,7 +1213,7 @@ enum UIBenchmarkRunner {
         case .widthResize:
             let width: CGFloat = frame.isMultiple(of: 2) ? 920 : 680
             window.setContentSize(NSSize(width: width, height: 680))
-            SlopadUIBenchmarkApp.layoutBenchmarkWindow(window, host: viewController)
+            SlopadEditorUIBenchmarkApp.layoutBenchmarkWindow(window, host: viewController)
             return "widthResize"
 
         case .pressureRecovery:

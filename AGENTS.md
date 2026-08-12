@@ -84,8 +84,8 @@ UI work must preserve both native behavior and engine semantics.
 
 Use:
 
-* `SlopadDebugApp` for input, focus, selection, IME, scrolling, hit-testing, and rendering changes.
-* `SlopadUIBenchmarkApp` for changes that may affect layout, redraw, caching, frame time, drag/reorder, or large-document interaction.
+* `SlopadEditorDebugApp` for input, focus, selection, IME, scrolling, hit-testing, and rendering changes.
+* `SlopadEditorUIBenchmarkApp` for changes that may affect layout, redraw, caching, frame time, drag/reorder, or large-document interaction.
 
 AppKit-specific behavior belongs in the adapter; semantic editing behavior belongs behind `EditorSession`.
 

@@ -23,8 +23,8 @@ Closes #
 - [ ] Not run
 - [ ] `swift test --quiet`
 - [ ] `swift build --product SlopadEditorAppKitUI --quiet`
-- [ ] `swift build --product SlopadDebugApp --quiet`
-- [ ] `swift build --product SlopadUIBenchmarkApp --quiet`
+- [ ] `swift build --product SlopadEditorDebugApp --quiet`
+- [ ] `swift build --product SlopadEditorUIBenchmarkApp --quiet`
 - [ ] `git diff --check`
 - [ ] Other:
 

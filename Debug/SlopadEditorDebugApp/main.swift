@@ -2,7 +2,7 @@ import AppKit
 import Darwin
 import Foundation
 
-struct SlopadDebugApp {
+struct SlopadEditorDebugApp {
     fileprivate static let defaultWindowSize = NSSize(width: 720, height: 480)
 
     @MainActor
@@ -45,13 +45,13 @@ struct SlopadDebugApp {
 
         guard let screenshotPath = options.screenshotPath else { return }
         fputs(
-            "SlopadDebugApp screenshot scenario=\(options.scenario) path=\(screenshotPath)\n", stderr
+            "SlopadEditorDebugApp screenshot scenario=\(options.scenario) path=\(screenshotPath)\n", stderr
         )
         do {
             try viewController.writeScreenshot(to: screenshotPath)
-            fputs("SlopadDebugApp wrote screenshot\n", stderr)
+            fputs("SlopadEditorDebugApp wrote screenshot\n", stderr)
         } catch {
-            fputs("SlopadDebugApp screenshot failed: \(error)\n", stderr)
+            fputs("SlopadEditorDebugApp screenshot failed: \(error)\n", stderr)
         }
     }
 
@@ -63,10 +63,10 @@ struct SlopadDebugApp {
         guard options.assertState else { return }
         do {
             try viewController.assertScenarioState(options.scenario)
-            fputs("SlopadDebugApp assertion passed scenario=\(options.scenario)\n", stderr)
+            fputs("SlopadEditorDebugApp assertion passed scenario=\(options.scenario)\n", stderr)
         } catch {
             fputs(
-                "SlopadDebugApp assertion failed scenario=\(options.scenario): \(error.localizedDescription)\n",
+                "SlopadEditorDebugApp assertion failed scenario=\(options.scenario): \(error.localizedDescription)\n",
                 stderr
             )
             exit(1)
@@ -124,11 +124,11 @@ private final class DebugAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let viewController = DebugViewController(scenario: options.scenario)
-        SlopadDebugApp.configureNativeInputTrace(for: viewController, options: options)
+        SlopadEditorDebugApp.configureNativeInputTrace(for: viewController, options: options)
         let window = NSWindow(
             contentRect: NSRect(
                 origin: NSPoint(x: 120, y: 120),
-                size: SlopadDebugApp.defaultWindowSize
+                size: SlopadEditorDebugApp.defaultWindowSize
             ),
             styleMask: [.titled, .closable, .resizable, .miniaturizable],
             backing: .buffered,
@@ -144,17 +144,17 @@ private final class DebugAppDelegate: NSObject, NSApplicationDelegate {
 
         guard let screenshotPath = options.screenshotPath else { return }
         fputs(
-            "SlopadDebugApp screenshot scenario=\(options.scenario) path=\(screenshotPath)\n", stderr
+            "SlopadEditorDebugApp screenshot scenario=\(options.scenario) path=\(screenshotPath)\n", stderr
         )
-        SlopadDebugApp.layoutDebugWindow(window, viewController: viewController)
+        SlopadEditorDebugApp.layoutDebugWindow(window, viewController: viewController)
         viewController.performScenario(options.scenario)
-        SlopadDebugApp.assertScenarioIfNeeded(viewController: viewController, options: options)
+        SlopadEditorDebugApp.assertScenarioIfNeeded(viewController: viewController, options: options)
         window.displayIfNeeded()
         do {
             try viewController.writeScreenshot(to: screenshotPath)
-            fputs("SlopadDebugApp wrote screenshot\n", stderr)
+            fputs("SlopadEditorDebugApp wrote screenshot\n", stderr)
         } catch {
-            fputs("SlopadDebugApp screenshot failed: \(error)\n", stderr)
+            fputs("SlopadEditorDebugApp screenshot failed: \(error)\n", stderr)
         }
         if options.autoExit {
             NSApp.terminate(nil)
@@ -194,4 +194,4 @@ private struct DebugOptions {
     }
 }
 
-SlopadDebugApp.main()
+SlopadEditorDebugApp.main()

@@ -18,15 +18,15 @@ can exercise package access without widening regular public API.
 
 ## Decision
 
-Keep `SlopadHeightBenchmark` and `SlopadSessionBenchmark` as executable targets under
+Keep `SlopadEditorHeightBenchmark` and `SlopadEditorSessionBenchmark` as executable targets under
 `Benchmarks/`, but do not list them as SwiftPM products.
 
-Keep `SlopadUIBenchmarkApp` as a named executable product because the standard AppKit UI
+Keep `SlopadEditorUIBenchmarkApp` as a named executable product because the standard AppKit UI
 verification workflow builds and runs it directly. It is still a development harness and
 does not define a reusable library contract.
 
 The reusable library products are `SlopadEditorEngine`, `SlopadEditorAppKitTextKit`, and
-`SlopadEditorAppKitUI`. `SlopadDebugApp` and `SlopadUIBenchmarkApp` are executable products that
+`SlopadEditorAppKitUI`. `SlopadEditorDebugApp` and `SlopadEditorUIBenchmarkApp` are executable products that
 consume those libraries from the outer edge.
 
 ## Consequences
@@ -34,14 +34,14 @@ consume those libraries from the outer edge.
 - Build benchmark executables by target:
 
   ```sh
-  swift build --target SlopadHeightBenchmark --quiet
-  swift build --target SlopadSessionBenchmark --quiet
+  swift build --target SlopadEditorHeightBenchmark --quiet
+  swift build --target SlopadEditorSessionBenchmark --quiet
   ```
 
 - Run benchmark executables by name when needed:
 
   ```sh
-  swift run -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION SlopadSessionBenchmark
+  swift run -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION SlopadEditorSessionBenchmark
   ```
 
 - Do not add benchmark-only types to public API to make benchmark code easier to write.

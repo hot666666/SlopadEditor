@@ -60,8 +60,8 @@ Keep the SwiftPM targets aligned to ownership:
 - `SlopadEditorEngine`: public `EditorSession` facade and orchestration.
 - `SlopadEditorAppKitTextKit`: AppKit/TextKit2 text layout/rendering backend.
 - `SlopadEditorAppKitUI`: reusable AppKit view/controller adapter.
-- `SlopadDebugApp`: AppKit reference/debug host.
-- `SlopadUIBenchmarkApp`: AppKit UI benchmark harness.
+- `SlopadEditorDebugApp`: AppKit reference/debug host.
+- `SlopadEditorUIBenchmarkApp`: AppKit UI benchmark harness.
 
 Use Swift `package` access for cross-target internal interfaces. Use `public` only for
 host-facing Session contracts, public vocabulary, backend seam values, and intentional

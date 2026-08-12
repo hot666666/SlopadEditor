@@ -4,5 +4,5 @@ host-surface:
     bash scripts/verify-host-surface.sh
 
 debug scenario="initial":
-    swift build --product SlopadDebugApp
-    .build/debug/SlopadDebugApp --scenario "{{scenario}}"
+    swift build --product SlopadEditorDebugApp
+    .build/debug/SlopadEditorDebugApp --scenario "{{scenario}}"
