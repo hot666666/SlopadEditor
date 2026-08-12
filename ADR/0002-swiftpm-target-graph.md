@@ -18,7 +18,7 @@ The production dependency graph is:
 flowchart TB
     subgraph Platform["Platform Layer - macOS"]
         AppKitUI["SlopadEditorAppKitUI"]
-        AppKitTextKit["SlopadAppKitTextKit"]
+        AppKitTextKit["SlopadEditorAppKitTextKit"]
     end
 
     subgraph Headless["Headless Engine"]
@@ -58,7 +58,7 @@ Keep the SwiftPM targets aligned to ownership:
   measurement cache, height index owner.
 - `SlopadEditorDataStructure`: pure data structures with no editor vocabulary.
 - `SlopadEngine`: public `EditorSession` facade and orchestration.
-- `SlopadAppKitTextKit`: AppKit/TextKit2 text layout/rendering backend.
+- `SlopadEditorAppKitTextKit`: AppKit/TextKit2 text layout/rendering backend.
 - `SlopadEditorAppKitUI`: reusable AppKit view/controller adapter.
 - `SlopadDebugApp`: AppKit reference/debug host.
 - `SlopadUIBenchmarkApp`: AppKit UI benchmark harness.
@@ -73,7 +73,7 @@ platform host surfaces such as the AppKit controller, style, and chrome contract
 - `SlopadBlockLayout` must not import `SlopadEditorModel`.
 - `SlopadEngine` may compose both owners and translate between semantic change facts and
   layout invalidation facts.
-- `SlopadAppKitTextKit` implements the CoreModel backend seam and must not depend on
+- `SlopadEditorAppKitTextKit` implements the CoreModel backend seam and must not depend on
   `SlopadEngine`; adapting Session render descriptors to TextKit calls belongs to
   `SlopadEditorAppKitUI`.
 - A complete platform replacement adds a sibling adapter that depends on `SlopadEngine`

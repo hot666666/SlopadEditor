@@ -1,5 +1,5 @@
 import CoreGraphics
-import SlopadAppKitTextKit
+import SlopadEditorAppKitTextKit
 import SlopadEngine
 
 // MARK: - Engine Render Descriptor Adaptation

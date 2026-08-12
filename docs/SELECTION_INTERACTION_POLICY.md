@@ -719,7 +719,7 @@ After the executable diff is stable, run the canonical and affected-surface gate
 swift test --quiet
 git diff --check
 swift build --product SlopadEditorAppKit --quiet
-swift build --product SlopadAppKitTextKit --quiet
+swift build --product SlopadEditorAppKitTextKit --quiet
 swift build --product SlopadEditorAppKitUI --quiet
 swift build --product SlopadDebugApp --quiet
 swift build --product SlopadUIBenchmarkApp --quiet

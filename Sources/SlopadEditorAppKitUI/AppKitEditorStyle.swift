@@ -1,4 +1,4 @@
-import SlopadAppKitTextKit
+import SlopadEditorAppKitTextKit
 
 // MARK: - AppKitEditorStyle
 

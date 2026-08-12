@@ -1,7 +1,7 @@
 import AppKit
 import Testing
 
-@testable import SlopadAppKitTextKit
+@testable import SlopadEditorAppKitTextKit
 @testable import SlopadCoreModel
 
 @Suite("TextKit 네이티브 텍스트 탐색")

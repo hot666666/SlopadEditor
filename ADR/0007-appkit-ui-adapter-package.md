@@ -55,7 +55,7 @@ flowchart TB
         Chrome["AppKitBlockChromeRenderer + theme<br/>background · border · gutter · marker"]
         FragmentPass["Adapter-owned TextKit2 fragment pass<br/>effective live composition included"]
         FeedbackPass["Adapter-owned selection · caret feedback"]
-        AppKitTextKit["SlopadAppKitTextKit"]
+        AppKitTextKit["SlopadEditorAppKitTextKit"]
 
         Chrome -.->|"clipped and isolated"| AppKitUI
         AppKitUI -->|"always follows chrome"| FragmentPass
@@ -103,7 +103,7 @@ the AppKit backend alone resolves them to `NSFont`, `NSColor`, and attributed-te
 no-render batching helpers are not public host contracts. They use package access only
 when debug or benchmark targets require them; otherwise they remain internal or private.
 
-It depends on `SlopadEngine` and `SlopadAppKitTextKit`. It does not expose `EditorModel`,
+It depends on `SlopadEngine` and `SlopadEditorAppKitTextKit`. It does not expose `EditorModel`,
 `BlockLayout`, canonical `Document`, layout cache, or height-index storage.
 
 ## Consequences

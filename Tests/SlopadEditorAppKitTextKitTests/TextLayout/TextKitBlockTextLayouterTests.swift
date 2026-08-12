@@ -1,6 +1,6 @@
 import Testing
 
-@testable import SlopadAppKitTextKit
+@testable import SlopadEditorAppKitTextKit
 @testable import SlopadCoreModel
 
 @Suite("TextKit 블록 텍스트 레이아웃")

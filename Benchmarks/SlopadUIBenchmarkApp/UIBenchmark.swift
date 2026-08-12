@@ -1,7 +1,7 @@
 import AppKit
 import Darwin
 import Foundation
-import SlopadAppKitTextKit
+import SlopadEditorAppKitTextKit
 import SlopadEditorAppKitUI
 import SlopadEngine
 

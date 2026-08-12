@@ -34,7 +34,7 @@ Ownership:
 * `TextLayout` — text measurement and text geometry
 * `SlopadEngine` / `EditorSession` — orchestration and editor semantics
 * `SlopadEditorAppKitUI` — AppKit input/drawing/focus/scroll adapter
-* `SlopadAppKitTextKit` — TextKit2 backend
+* `SlopadEditorAppKitTextKit` — TextKit2 backend
 * `SlopadEditorDataStructure` — editor-independent data structures
 
 Guardrails:

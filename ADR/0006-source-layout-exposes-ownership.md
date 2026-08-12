@@ -55,7 +55,7 @@ Target-specific placement:
     selection, composition, interaction, geometry, and layout.
 - `Sources/SlopadEditorDataStructure`
   - Pure data structures only. No editor, block, layout, or platform vocabulary.
-- `Sources/SlopadAppKitTextKit`
+- `Sources/SlopadEditorAppKitTextKit`
   - TextKit2 backend implementation and interop only.
 - `Sources/SlopadEditorAppKitUI`
   - Public controller, style consumption, and chrome contract remain easy to identify.

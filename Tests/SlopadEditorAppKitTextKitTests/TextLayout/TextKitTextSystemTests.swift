@@ -1,6 +1,6 @@
 import Testing
 
-@testable import SlopadAppKitTextKit
+@testable import SlopadEditorAppKitTextKit
 
 @Suite("TextKit text system 조립")
 struct TextKitTextSystemTests {

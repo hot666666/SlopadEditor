@@ -26,7 +26,7 @@ The production targets form these direct dependency layers:
 | Host facade | `SlopadEditorSwiftUI` | SwiftUI lifecycle over the curated AppKit facade |
 | Host facade | `SlopadEditorAppKit` | One-product/one-import ordinary macOS surface |
 | Platform adapter | `SlopadEditorAppKitUI` | AppKit callbacks, native input, drawing, focus, scroll, surface sync |
-| Text backend | `SlopadAppKitTextKit` | TextKit2 implementation of the text-layout capability seam |
+| Text backend | `SlopadEditorAppKitTextKit` | TextKit2 implementation of the text-layout capability seam |
 | Orchestration | `SlopadEngine` | Public `EditorSession` and editor semantics across owners |
 | Canonical owner | `SlopadEditorModel` | Document, selection, commands, transactions, history |
 | Derived owner | `SlopadBlockLayout` | Visibility, block geometry, hit/reveal facts, caches, height index |
@@ -46,7 +46,7 @@ The dependency graph enforces four important absences:
 
 - `SlopadEditorModel` and `SlopadBlockLayout` do not import each other;
   `EditorSession` coordinates them.
-- `SlopadAppKitTextKit` does not import the engine. Runtime calls arrive through
+- `SlopadEditorAppKitTextKit` does not import the engine. Runtime calls arrive through
   `BlockTextLayoutProtocol` capabilities defined in `SlopadCoreModel`.
 - `SlopadEditorMarkdown` does not import the engine. A caller explicitly decides when decoded
   block inputs enter a document transaction.
@@ -142,7 +142,7 @@ caret/selection geometry, marked text, and navigation based on the same effectiv
 bounded eviction. Cache identity follows measurement request values and style, not a
 loosely related revision convention.
 
-For custom adapters importing `SlopadAppKitTextKit` directly, `TextKitTextSystem` is the
+For custom adapters importing `SlopadEditorAppKitTextKit` directly, `TextKitTextSystem` is the
 supported construction boundary. Its public `layouter` and `renderer` share one internal
 `TextKitLayoutContext`; their standalone initializers remain internal. This preserves the
 coherent-backend invariant outside the default `AppKitTextSystem` path without exposing
@@ -202,7 +202,7 @@ symbols whose exposure would widen the host contract.
 Symbols that are public in another module are probed only through the facade, and that
 pins only that the facade does not re-export them. SwiftPM gives a downstream target a
 single import path covering every built module, so a host that declared only the
-`SlopadEditorAppKit` product can still write `import SlopadAppKitTextKit` and reach
+`SlopadEditorAppKit` product can still write `import SlopadEditorAppKitTextKit` and reach
 `TextKitTextSystem`; `--explicit-target-dependency-import-check error` does not prevent
 this across packages. Such a host has imported a module it never declared, which review
 catches, but the compiler does not.

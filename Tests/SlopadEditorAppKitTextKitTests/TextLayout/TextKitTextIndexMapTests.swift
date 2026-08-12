@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import SlopadAppKitTextKit
+@testable import SlopadEditorAppKitTextKit
 @testable import SlopadCoreModel
 
 @Suite("TextKit 텍스트 인덱스 맵")

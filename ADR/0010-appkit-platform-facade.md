@@ -9,9 +9,9 @@ Accepted
 ## Context
 
 The default macOS integration is one coherent platform stack: `SlopadEditorAppKitUI` owns the
-native AppKit callback and surface lifecycle while `SlopadAppKitTextKit` supplies the
+native AppKit callback and surface lifecycle while `SlopadEditorAppKitTextKit` supplies the
 matching TextKit2 geometry and drawing backend. Ordinary downstream apps nevertheless had
-to depend on and import `SlopadEngine`, `SlopadEditorAppKitUI`, and `SlopadAppKitTextKit`
+to depend on and import `SlopadEngine`, `SlopadEditorAppKitUI`, and `SlopadEditorAppKitTextKit`
 individually. That exposed assembly details and made low-level engine input and adapter
 plumbing look like the normal host contract.
 
@@ -30,7 +30,7 @@ and existing integrations.
 Add `SlopadEditorAppKit` as the recommended library product and module for ordinary macOS hosts.
 Its target curates public controller, action, style, chrome, document, selection, update,
 and snapshot vocabulary from the existing owners. It depends on `SlopadEditorAppKitUI` and
-`SlopadEngine`; the UI adapter continues to depend on `SlopadAppKitTextKit`, so the product
+`SlopadEngine`; the UI adapter continues to depend on `SlopadEditorAppKitTextKit`, so the product
 assembles the complete default AppKit + TextKit2 stack without adding a runtime owner.
 
 An ordinary host uses one product dependency and one import:
@@ -51,7 +51,7 @@ flowchart LR
     Facade[["SlopadEditorAppKit<br/>curated product and module"]]
     Controller["AppKitEditorViewController<br/>runtime adapter owner"]
     Engine["EditorSession<br/>semantic runtime owner"]
-    TextKit["SlopadAppKitTextKit<br/>coherent text backend"]
+    TextKit["SlopadEditorAppKitTextKit<br/>coherent text backend"]
     Canonical["EditorModel<br/>canonical document owner"]
 
     Host -->|"one dependency and import"| Facade
@@ -89,7 +89,7 @@ The controller's ordinary public input boundary is synchronized and context-free
 This does not narrow the headless extension boundary. `EditorSession.handleInput(_:)`,
 `EditorInputEvent`, `EditorViewport`, and `BlockTextLayoutProtocol` remain public through
 `SlopadEngine` for hosts implementing a complete custom adapter. The
-`SlopadEditorAppKitUI`, `SlopadAppKitTextKit`, and `SlopadEngine` library products also remain
+`SlopadEditorAppKitUI`, `SlopadEditorAppKitTextKit`, and `SlopadEngine` library products also remain
 available as advanced and compatibility seams.
 
 The source migration follows the ownership boundary:

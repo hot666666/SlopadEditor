@@ -29,8 +29,8 @@ let package = Package(
             targets: ["SlopadEditorSwiftUI"]
         ),
         .library(
-            name: "SlopadAppKitTextKit",
-            targets: ["SlopadAppKitTextKit"]
+            name: "SlopadEditorAppKitTextKit",
+            targets: ["SlopadEditorAppKitTextKit"]
         ),
         .library(
             name: "SlopadEditorAppKitUI",
@@ -95,14 +95,14 @@ let package = Package(
             ]
         ),
         .target(
-            name: "SlopadAppKitTextKit",
+            name: "SlopadEditorAppKitTextKit",
             dependencies: ["SlopadCoreModel"]
         ),
         .target(
             name: "SlopadEditorAppKitUI",
             dependencies: [
                 "SlopadEngine",
-                "SlopadAppKitTextKit",
+                "SlopadEditorAppKitTextKit",
             ]
         ),
         .target(
@@ -135,7 +135,7 @@ let package = Package(
             name: "SlopadDebugApp",
             dependencies: [
                 "SlopadEngine",
-                "SlopadAppKitTextKit",
+                "SlopadEditorAppKitTextKit",
                 "SlopadEditorAppKitUI",
             ],
             path: "Debug/SlopadDebugApp"
@@ -144,7 +144,7 @@ let package = Package(
             name: "SlopadUIBenchmarkApp",
             dependencies: [
                 "SlopadEngine",
-                "SlopadAppKitTextKit",
+                "SlopadEditorAppKitTextKit",
                 "SlopadEditorAppKitUI",
             ],
             path: "Benchmarks/SlopadUIBenchmarkApp"
@@ -177,10 +177,10 @@ let package = Package(
             resources: [.copy("Fixtures")]
         ),
         .testTarget(
-            name: "SlopadAppKitTextKitTests",
+            name: "SlopadEditorAppKitTextKitTests",
             dependencies: [
                 "SlopadCoreModel",
-                "SlopadAppKitTextKit",
+                "SlopadEditorAppKitTextKit",
             ]
         ),
         .testTarget(

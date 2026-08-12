@@ -87,7 +87,7 @@ require_equal "AppKit lifecycle fixture declares more than one product dependenc
     "$(count_matches '\.product\(name:' "$appkit_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadEditorAppKitUI|SlopadAppKitTextKit|SlopadEditorSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadEditorAppKitUI|SlopadEditorAppKitTextKit|SlopadEditorSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$appkit_fixture/Package.swift"; then
     echo "AppKit lifecycle fixture manifest bypasses the SlopadEditorAppKit facade" >&2
     exit 1
@@ -101,7 +101,7 @@ require_equal "SwiftUI lifecycle fixture declares more than one product dependen
     "$(count_matches '\.product\(name:' "$swiftui_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadEditorAppKitUI|SlopadAppKitTextKit|SlopadEditorAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadEditorAppKitUI|SlopadEditorAppKitTextKit|SlopadEditorAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$swiftui_fixture/Package.swift"; then
     echo "SwiftUI lifecycle fixture manifest bypasses the SlopadEditorSwiftUI facade" >&2
     exit 1
@@ -376,7 +376,7 @@ done
 # The probes above import the facade, so what they pin is "this symbol is not re-exported
 # through the supported product". For a symbol that is public in another module that is the
 # entire claim available: SwiftPM gives the downstream target one `-I` covering every built
-# module, so `import SlopadAppKitTextKit` compiles in a target that only declared the
+# module, so `import SlopadEditorAppKitTextKit` compiles in a target that only declared the
 # SlopadEditorAppKit product, and `--explicit-target-dependency-import-check error` does not stop
 # it across packages. Reaching that symbol still costs the host an explicit import of a
 # module it never declared, which is visible in review, but the compiler does not forbid it.

@@ -4,7 +4,7 @@ import Foundation
 import SlopadCoreModel
 import Testing
 
-@testable import SlopadAppKitTextKit
+@testable import SlopadEditorAppKitTextKit
 
 // MARK: - Prepared layout reuse
 

@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import SlopadAppKitTextKit
+@testable import SlopadEditorAppKitTextKit
 @testable import SlopadCoreModel
 
 @Suite("TextRange와 NSRange 변환")
