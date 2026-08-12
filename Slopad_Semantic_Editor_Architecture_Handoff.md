@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > **이 문서는 근거 기록이지 작업 지시서가 아니다.**
 >
-> 작업 지시의 SSOT는 [`docs/ROADMAP.md`](docs/ROADMAP.md)와 [`ADR/`](ADR/), 그리고 [Epic #23](https://github.com/hot666666/Slopad/issues/23)이다.
+> 작업 지시의 SSOT는 [`docs/ROADMAP.md`](docs/ROADMAP.md)와 [`ADR/`](ADR/), 그리고 [Epic #23](https://github.com/hot666666/SlopadEditor/issues/23)이다.
 > 이 문서는 그 결론에 이르게 된 배경과 논거를 남기기 위해 유지한다.
 >
 > - **정정 기준일:** 2026-08-07
@@ -34,7 +34,7 @@
 - **작성 기준일:** 2026-08-07
 - **주 대상:** Slopad를 분석·개선하는 후속 Agent 및 개발자
 - **관련 저장소:**
-  - Slopad: <https://github.com/hot666666/Slopad>
+  - Slopad: <https://github.com/hot666666/SlopadEditor>
   - BlockEditorKit: <https://github.com/hot666666/BlockEditorKit>
 - **핵심 참고 구현:**
   - ProseMirror: <https://prosemirror.net/>
@@ -198,14 +198,14 @@ squash merge이므로 `git log origin/main..origin/claude/epic8`은 비어 있�
 
 관련 PR:
 
-- Platform·Engine 경계 정리: <https://github.com/hot666666/Slopad/pull/7>
-- Session epoch: <https://github.com/hot666666/Slopad/pull/15>
-- Focus contract: <https://github.com/hot666666/Slopad/pull/16>
-- Unhandled action: <https://github.com/hot666666/Slopad/pull/17>
-- Content height: <https://github.com/hot666666/Slopad/pull/18>
-- SwiftUI product: <https://github.com/hot666666/Slopad/pull/19>
-- Embedding ADR: <https://github.com/hot666666/Slopad/pull/20>
-- epic8 통합: <https://github.com/hot666666/Slopad/pull/22>
+- Platform·Engine 경계 정리: <https://github.com/hot666666/SlopadEditor/pull/7>
+- Session epoch: <https://github.com/hot666666/SlopadEditor/pull/15>
+- Focus contract: <https://github.com/hot666666/SlopadEditor/pull/16>
+- Unhandled action: <https://github.com/hot666666/SlopadEditor/pull/17>
+- Content height: <https://github.com/hot666666/SlopadEditor/pull/18>
+- SwiftUI product: <https://github.com/hot666666/SlopadEditor/pull/19>
+- Embedding ADR: <https://github.com/hot666666/SlopadEditor/pull/20>
+- epic8 통합: <https://github.com/hot666666/SlopadEditor/pull/22>
 
 **남은 기준선 작업은 baseline 태그를 찍는 것뿐이다.** 통합 자체는 완료되었다.
 
@@ -305,9 +305,9 @@ flowchart TB
 
 관련 파일:
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadSwiftUI/SlopadDocument.swift>
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadSwiftUI/SlopadEditor.swift>
-- <https://github.com/hot666666/Slopad/blob/main/docs/ARCHITECTURE.md>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadSwiftUI/SlopadDocument.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadSwiftUI/SlopadEditor.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/docs/ARCHITECTURE.md>
 
 ---
 
@@ -328,11 +328,11 @@ public struct EditorBlockInput {
 
 관련 파일:
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadCoreModel/Document/EditorBlockInput.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadCoreModel/Document/EditorBlockInput.swift>
 
 내부에는 별도 package-private `Document`가 존재한다.
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadCoreModel/Document/Document.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadCoreModel/Document/Document.swift>
 
 > [!NOTE]
 > **정정 A7.** 원 서술은 `EditorDocument`·`Document`·`[EditorBlockInput]` 세 표현이 authority를 나눠 갖는다고 했지만, **`EditorDocument`라는 타입은 존재하지 않는다.**
@@ -380,7 +380,7 @@ todo
 
 관련 파일:
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadCoreModel/Document/BlockKind.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadCoreModel/Document/BlockKind.swift>
 
 향후 다음 block을 추가할 때마다 core enum이 수정될 수 있다.
 
@@ -423,7 +423,7 @@ DocumentSchema
 
 관련 파일:
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadEditorModel/MarkdownShortcut/EditorModel%2BMarkdownPrefixShortcuts.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadEditorModel/MarkdownShortcut/EditorModel%2BMarkdownPrefixShortcuts.swift>
 
 현재 동작:
 
@@ -469,7 +469,7 @@ InputRule
 
 관련 파일:
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadCoreModel/Interaction/EditorInputEvent.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadCoreModel/Interaction/EditorInputEvent.swift>
 
 목표 구조:
 
@@ -514,11 +514,11 @@ replaceDocument
 
 관련 파일:
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadEditorModel/EditorOperation.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadEditorModel/EditorOperation.swift>
 
 Undo는 전체 before/after document snapshot을 저장한다.
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadEditorModel/History/EditorTransaction.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadEditorModel/History/EditorTransaction.swift>
 
 향후 필요한 구조:
 
@@ -802,7 +802,7 @@ inlineRuns
 
 관련 파일:
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadCoreModel/Document/BlockContent.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadCoreModel/Document/BlockContent.swift>
 
 현재 기반(range 기반 mark)은 구조적으로 재사용 가능하다. 다만 **현재 어휘는 넷뿐이다.**
 
@@ -1334,11 +1334,11 @@ deletionRange
 
 관련 파일:
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadCoreModel/Layout/BlockTextLayoutProtocol.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadCoreModel/Layout/BlockTextLayoutProtocol.swift>
 
 그러나 `BlockLayout`은 이 중 `measure`만 사용한다.
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadBlockLayout/TextLayout/BlockLayout%2BTextMeasurement.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadBlockLayout/TextLayout/BlockLayout%2BTextMeasurement.swift>
 
 현재 의존은 다음과 같다.
 
@@ -1377,9 +1377,9 @@ TextKitBlockRenderer
 
 관련 파일:
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadAppKitTextKit/TextLayout/TextKitBlockTextLayouter.swift>
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadAppKitTextKit/Rendering/TextKitBlockRenderer.swift>
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadAppKitUI/AppKitTextSystem.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadAppKitTextKit/TextLayout/TextKitBlockTextLayouter.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadAppKitTextKit/Rendering/TextKitBlockRenderer.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadAppKitUI/AppKitTextSystem.swift>
 
 각 context는 attributed string 구성, container width 설정, TextKit layout, index map 준비를 별도로 수행할 수 있다.
 
@@ -1387,7 +1387,7 @@ TextKitBlockRenderer
 
 `TextKitLayoutContext`는 단일 `preparedLayoutState`를 보유한다.
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadAppKitTextKit/TextLayout/TextKitLayoutContext.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadAppKitTextKit/TextLayout/TextKitLayoutContext.swift>
 
 여러 block을 순회하면 다음 형태가 될 수 있다.
 
@@ -1414,7 +1414,7 @@ blockChromeSignature
 
 관련 파일:
 
-- <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadBlockLayout/TextLayout/TextLayoutCache.swift>
+- <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadBlockLayout/TextLayout/TextLayoutCache.swift>
 
 이는 scalar measurement cache에는 유효하지만, geometry와 rendering까지 공유하는 명시적인 common layout key는 아니다.
 
@@ -1820,7 +1820,7 @@ Agent가 Markdown 문자열 전체를 다시 작성하게 하는 경로보다 se
 # 15. 단계별 작업 순서
 
 > [!IMPORTANT]
-> **이 Phase 목록은 대체되었다.** 실제 작업 순서는 [Epic #23](https://github.com/hot666666/Slopad/issues/23)과 [`docs/ROADMAP.md`](docs/ROADMAP.md)를 따른다.
+> **이 Phase 목록은 대체되었다.** 실제 작업 순서는 [Epic #23](https://github.com/hot666666/SlopadEditor/issues/23)과 [`docs/ROADMAP.md`](docs/ROADMAP.md)를 따른다.
 >
 > 주요 차이 셋:
 >
@@ -2114,19 +2114,19 @@ _emphasis_
 
 ## Slopad
 
-- Repository: <https://github.com/hot666666/Slopad>
-- PR #7 Platform/Engine boundary: <https://github.com/hot666666/Slopad/pull/7>
-- Epic #8 Host embedding: <https://github.com/hot666666/Slopad/issues/8>
-- Architecture: <https://github.com/hot666666/Slopad/blob/main/docs/ARCHITECTURE.md>
-- Package graph: <https://github.com/hot666666/Slopad/blob/main/Package.swift>
-- Text backend seam ADR: <https://github.com/hot666666/Slopad/blob/main/ADR/0003-text-layout-backend-seam.md>
-- `BlockTextLayoutProtocol`: <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadCoreModel/Layout/BlockTextLayoutProtocol.swift>
-- `TextKitBlockTextLayouter`: <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadAppKitTextKit/TextLayout/TextKitBlockTextLayouter.swift>
-- `TextKitLayoutContext`: <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadAppKitTextKit/TextLayout/TextKitLayoutContext.swift>
-- `TextKitBlockRenderer`: <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadAppKitTextKit/Rendering/TextKitBlockRenderer.swift>
-- `AppKitTextSystem`: <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadAppKitUI/AppKitTextSystem.swift>
-- `TextLayoutCache`: <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadBlockLayout/TextLayout/TextLayoutCache.swift>
-- Markdown prefix shortcut: <https://github.com/hot666666/Slopad/blob/main/Sources/SlopadEditorModel/MarkdownShortcut/EditorModel%2BMarkdownPrefixShortcuts.swift>
+- Repository: <https://github.com/hot666666/SlopadEditor>
+- PR #7 Platform/Engine boundary: <https://github.com/hot666666/SlopadEditor/pull/7>
+- Epic #8 Host embedding: <https://github.com/hot666666/SlopadEditor/issues/8>
+- Architecture: <https://github.com/hot666666/SlopadEditor/blob/main/docs/ARCHITECTURE.md>
+- Package graph: <https://github.com/hot666666/SlopadEditor/blob/main/Package.swift>
+- Text backend seam ADR: <https://github.com/hot666666/SlopadEditor/blob/main/ADR/0003-text-layout-backend-seam.md>
+- `BlockTextLayoutProtocol`: <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadCoreModel/Layout/BlockTextLayoutProtocol.swift>
+- `TextKitBlockTextLayouter`: <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadAppKitTextKit/TextLayout/TextKitBlockTextLayouter.swift>
+- `TextKitLayoutContext`: <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadAppKitTextKit/TextLayout/TextKitLayoutContext.swift>
+- `TextKitBlockRenderer`: <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadAppKitTextKit/Rendering/TextKitBlockRenderer.swift>
+- `AppKitTextSystem`: <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadAppKitUI/AppKitTextSystem.swift>
+- `TextLayoutCache`: <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadBlockLayout/TextLayout/TextLayoutCache.swift>
+- Markdown prefix shortcut: <https://github.com/hot666666/SlopadEditor/blob/main/Sources/SlopadEditorModel/MarkdownShortcut/EditorModel%2BMarkdownPrefixShortcuts.swift>
 
 ## BlockEditorKit
 

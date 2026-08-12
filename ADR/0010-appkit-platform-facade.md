@@ -36,7 +36,7 @@ assembles the complete default AppKit + TextKit2 stack without adding a runtime 
 An ordinary host uses one product dependency and one import:
 
 ```swift
-.product(name: "SlopadAppKit", package: "Slopad")
+.product(name: "SlopadAppKit", package: "SlopadEditor")
 ```
 
 ```swift

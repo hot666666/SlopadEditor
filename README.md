@@ -28,7 +28,7 @@ requires Swift 6.2 or later because the opt-in `SlopadMarkdown` product pins
 Ordinary macOS hosts should depend on the curated facade:
 
 ```swift
-.product(name: "SlopadAppKit", package: "Slopad")
+.product(name: "SlopadAppKit", package: "SlopadEditor")
 ```
 
 ```swift
@@ -109,7 +109,7 @@ Markdown is an input/output format, never the canonical model. Whole-document co
 is opt-in:
 
 ```swift
-.product(name: "SlopadMarkdown", package: "Slopad")
+.product(name: "SlopadMarkdown", package: "SlopadEditor")
 ```
 
 ```swift

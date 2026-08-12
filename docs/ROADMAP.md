@@ -11,7 +11,7 @@ orders.
 
 ## Current Baseline
 
-[Epic #23](https://github.com/hot666666/Slopad/issues/23) is complete. Its
+[Epic #23](https://github.com/hot666666/SlopadEditor/issues/23) is complete. Its
 [completion page](epic-23-status.html) records historical integration evidence. The
 implemented baseline includes the headless Session/model/layout split, the curated AppKit
 and SwiftUI host surfaces, coherent TextKit2 capabilities and bounded prepared-layout
@@ -135,7 +135,7 @@ priority, and no public model internals.
 - The embedding app owns files, databases, cloud sync, autosave, conflict resolution,
   retry, and error UX. `SlopadArchive` owns neither storage nor lifecycle policy.
 - Add GFM table support only after the Core table vocabulary in
-  [#50](https://github.com/hot666666/Slopad/issues/50) has a real owner and invariants.
+  [#50](https://github.com/hot666666/SlopadEditor/issues/50) has a real owner and invariants.
 
 Exit: Markdown import/export behavior is explicit, diagnostics reach product UX, and the
 host retains all native archive storage policy.

@@ -12,13 +12,13 @@ let package = Package(
         .macOS(.v14)
     ],
     dependencies: [
-        .package(name: "Slopad", path: "../..")
+        .package(name: "SlopadEditor", path: "../..")
     ],
     targets: [
         .executableTarget(
             name: "DownstreamSwiftUIHost",
             dependencies: [
-                .product(name: "SlopadSwiftUI", package: "Slopad")
+                .product(name: "SlopadSwiftUI", package: "SlopadEditor")
             ]
         )
     ]

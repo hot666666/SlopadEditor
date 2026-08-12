@@ -8,13 +8,13 @@ let package = Package(
         .macOS(.v14)
     ],
     dependencies: [
-        .package(name: "Slopad", path: "../..")
+        .package(name: "SlopadEditor", path: "../..")
     ],
     targets: [
         .executableTarget(
             name: "DownstreamAppKitHost",
             dependencies: [
-                .product(name: "SlopadAppKit", package: "Slopad")
+                .product(name: "SlopadAppKit", package: "SlopadEditor")
             ]
         )
     ]

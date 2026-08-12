@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "Slopad",
+    name: "SlopadEditor",
     platforms: [
         .macOS(.v14)
     ],
