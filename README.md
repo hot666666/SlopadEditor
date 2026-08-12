@@ -56,7 +56,7 @@ swift run SlopadDebugApp
 
 | Target | Owns | Must not own |
 | --- | --- | --- |
-| `SlopadEditorModel` | Canonical block tree, selection, commands, transactions, history | Layout, viewport, native state |
+| `SlopadEditorDocumentModel` | Canonical block tree, selection, commands, transactions, history | Layout, viewport, native state |
 | `SlopadEditorBlockLayout` | Visible order, block geometry, hit/reveal facts, height index, text-layout cache | Canonical mutation, platform callbacks |
 | `SlopadEngine` | `EditorSession`, composition/runtime overlays, owner coordination, snapshots | Duplicate document or layout state |
 | `SlopadEditorAppKitTextKit` | Coherent TextKit2 measurement, geometry, navigation, deletion, attributed content | Editing semantics, native input host |
@@ -125,7 +125,7 @@ semantics but decode creates fresh `BlockID`s.
 
 Typed Markdown shortcuts are a different path. The internal parser-free
 `SlopadEditorMarkdownInputRules` target supplies bounded prefix and inline pattern data, while
-`SlopadEditorModel` owns trigger gating, canonical application, and undo semantics.
+`SlopadEditorDocumentModel` owns trigger gating, canonical application, and undo semantics.
 
 ## Native Archive
 

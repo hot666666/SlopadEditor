@@ -26,7 +26,7 @@ preserve canonical identity so separately stored references can reattach to the 
 blocks.
 
 The native representation still must not become another document owner. The live
-canonical block tree and mutation invariants remain owned by `SlopadEditorModel`; a codec
+canonical block tree and mutation invariants remain owned by `SlopadEditorDocumentModel`; a codec
 only transforms an immutable complete projection. Files, URLs, databases, cloud records,
 encryption, autosave, conflicts, recovery, retries, atomic replacement, application
 document identity, and storage revisions differ by host and have no editor-semantic owner
@@ -246,7 +246,7 @@ well-typed mark list that is not canonical maps to
 ### One selection-independent canonical validation seam
 
 `SlopadCoreModel` owns the canonical input invariant because both
-`SlopadEditorModel` document replacement and the CoreModel-only archive target need the
+`SlopadEditorDocumentModel` document replacement and the CoreModel-only archive target need the
 same answer. The implementation extracts a package-level, selection-independent seam:
 
 ```swift
@@ -355,7 +355,7 @@ Session epoch/revision, and composition runtime begin with the new Session lifec
 
 The archive bytes, decoded DTOs, and host persistence records are representations of the
 one canonical document, not independently mutable document stores. All editing continues
-through `SlopadEditorModel` transactions after load. Neither the codec nor the host storage
+through `SlopadEditorDocumentModel` transactions after load. Neither the codec nor the host storage
 layer acquires command, invariant, selection, or history ownership.
 
 ## Consequences

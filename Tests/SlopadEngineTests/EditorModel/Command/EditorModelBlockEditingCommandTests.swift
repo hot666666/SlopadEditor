@@ -1,7 +1,7 @@
 import Testing
 
 import SlopadCoreModel
-import SlopadEditorModel
+import SlopadEditorDocumentModel
 
 @Suite("EditorModel 블록 편집 명령")
 struct EditorModelBlockEditingCommandTests {

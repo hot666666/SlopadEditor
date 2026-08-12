@@ -35,7 +35,7 @@ body:
         - GitHub workflow
         - SlopadEditorAppKitUI
         - SlopadEngine / EditorSession
-        - SlopadEditorModel
+        - SlopadEditorDocumentModel
         - SlopadEditorBlockLayout
         - SlopadCoreModel
         - SlopadEditorAppKitTextKit

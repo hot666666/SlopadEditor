@@ -1,5 +1,5 @@
 import SlopadCoreModel
-import SlopadEditorModel
+import SlopadEditorDocumentModel
 
 // MARK: - Slash Command Runtime
 

@@ -2,7 +2,7 @@ import SlopadCoreModel
 import SlopadEditorMarkdown
 import Testing
 
-@testable import SlopadEditorModel
+@testable import SlopadEditorDocumentModel
 
 @Suite("inline Markdown 입력 규칙 decoder 교차 검증")
 struct MarkdownInputRuleDecoderParityTests {

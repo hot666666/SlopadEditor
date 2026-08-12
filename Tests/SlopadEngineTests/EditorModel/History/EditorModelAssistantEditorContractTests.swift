@@ -1,7 +1,7 @@
 import Testing
 
 import SlopadCoreModel
-@testable import SlopadEditorModel
+@testable import SlopadEditorDocumentModel
 
 @Suite("AssistantEditorContract EditorModel document replacement")
 struct EditorModelAssistantEditorContractTests {

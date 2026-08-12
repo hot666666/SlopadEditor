@@ -1,7 +1,7 @@
 import SlopadCoreModel
 import Testing
 
-@testable import SlopadEditorModel
+@testable import SlopadEditorDocumentModel
 
 @Suite("inline Markdown 입력 규칙")
 struct InlineMarkdownInputRuleTests {

@@ -1,5 +1,5 @@
 import SlopadCoreModel
-import SlopadEditorModel
+import SlopadEditorDocumentModel
 import Testing
 
 @Suite("EditorModel 블록 kind 명령")

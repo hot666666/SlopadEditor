@@ -1,7 +1,7 @@
 import SlopadCoreModel
 import Testing
 
-@testable import SlopadEditorModel
+@testable import SlopadEditorDocumentModel
 
 // MARK: - EditorCommandResult
 

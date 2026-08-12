@@ -44,7 +44,7 @@ Target-specific placement:
 - `Sources/SlopadEngine/Session`
   - Root: `EditorSession`, public snapshot/update/render output values, and thin public
     facade entrypoints.
-- `Sources/SlopadEditorModel`
+- `Sources/SlopadEditorDocumentModel`
   - Root: `EditorModel`, package entrypoints consumed by Session, and cross-target
     semantic change facts.
 - `Sources/SlopadEditorBlockLayout`

@@ -1,6 +1,6 @@
 import SlopadEditorBlockLayout
 import SlopadCoreModel
-import SlopadEditorModel
+import SlopadEditorDocumentModel
 
 // MARK: - Block Drag
 

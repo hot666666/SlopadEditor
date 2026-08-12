@@ -1,4 +1,4 @@
-import SlopadEditorModel
+import SlopadEditorDocumentModel
 
 // MARK: - EditorSession Benchmark
 

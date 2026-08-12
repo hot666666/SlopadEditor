@@ -57,7 +57,7 @@ that decision, which is what keeps it a notification rather than a hook.
 - `EditorSessionEpoch`, carried on `EditorDocumentSnapshot` and `EditorUpdate`.
 - `setFocused(_:)`, `isFocused`, `onFocusChange`.
 - `onUnhandledAction`.
-- `AppKitEditorAction.clearSelection` and `SlopadEditorModel.clearSelection()`. Escape
+- `AppKitEditorAction.clearSelection` and `SlopadEditorDocumentModel.clearSelection()`. Escape
   escalates one level per press, so "no selection" through it requires knowing both the
   current selection mode and the escalation order (test 1), and the escape emulation a host
   writes instead takes the responder back on the ordinary action path — stolen focus while

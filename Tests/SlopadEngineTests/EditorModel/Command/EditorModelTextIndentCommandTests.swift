@@ -1,7 +1,7 @@
 import Testing
 
 import SlopadCoreModel
-import SlopadEditorModel
+import SlopadEditorDocumentModel
 
 @Suite("EditorModel 텍스트 들여쓰기 명령")
 struct EditorModelTextIndentCommandTests {

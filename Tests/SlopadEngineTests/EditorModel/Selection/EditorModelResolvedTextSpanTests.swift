@@ -1,7 +1,7 @@
 import SlopadCoreModel
 import Testing
 
-@testable import SlopadEditorModel
+@testable import SlopadEditorDocumentModel
 
 @Suite("EditorModel canonical text span order cache")
 struct EditorModelResolvedTextSpanTests {

@@ -22,7 +22,7 @@ platform-native views and event APIs stay outside the engine target.
 `EditorSession` is the public host-facing facade. It owns runtime orchestration and calls
 two internal owners:
 
-- `SlopadEditorModel` for canonical document state, selection, command application,
+- `SlopadEditorDocumentModel` for canonical document state, selection, command application,
   transaction/history, and semantic changes.
 - `SlopadEditorBlockLayout` for visible order, block geometry, layout invalidation, reveal,
   hit-test geometry, and text-layout-backed measurement.

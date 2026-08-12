@@ -1,7 +1,7 @@
 import Testing
 
 import SlopadCoreModel
-import SlopadEditorModel
+import SlopadEditorDocumentModel
 
 @Suite("EditorModel 마크다운 prefix shortcut 적용")
 struct EditorModelMarkdownPrefixShortcutApplicationTests {

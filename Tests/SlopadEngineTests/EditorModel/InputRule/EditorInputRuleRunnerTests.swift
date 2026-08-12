@@ -2,7 +2,7 @@ import SlopadCoreModel
 import SlopadEditorMarkdownInputRules
 import Testing
 
-@testable import SlopadEditorModel
+@testable import SlopadEditorDocumentModel
 
 // MARK: - EditorInputRuleRunner
 

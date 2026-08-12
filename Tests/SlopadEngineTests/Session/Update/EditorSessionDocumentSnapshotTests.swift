@@ -2,7 +2,7 @@ import Testing
 
 @testable import SlopadEngine
 import SlopadCoreModel
-import SlopadEditorModel
+import SlopadEditorDocumentModel
 
 @Suite("에디터 세션 canonical document snapshot")
 struct EditorSessionDocumentSnapshotTests {

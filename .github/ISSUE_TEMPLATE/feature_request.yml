@@ -28,7 +28,7 @@ body:
         - Needs owner decision
         - SlopadEditorAppKitUI
         - SlopadEngine / EditorSession
-        - SlopadEditorModel
+        - SlopadEditorDocumentModel
         - SlopadEditorBlockLayout
         - SlopadCoreModel
         - SlopadEditorAppKitTextKit

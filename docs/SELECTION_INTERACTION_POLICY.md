@@ -292,8 +292,8 @@ projections with different costs and owners:
 
 | Projection | Owner | Lifetime and cost | Consumers |
 | --- | --- | --- | --- |
-| Canonical selection | `SlopadEditorModel` | Persistent editing state; O(1) `TextPosition` endpoints | Commands, history, document context |
-| Resolved command span | `SlopadEditorModel`, requested by Session | Ephemeral command/preflight value; may traverse O(K) affected blocks | Delete, replace, format, copy, Enter, indent |
+| Canonical selection | `SlopadEditorDocumentModel` | Persistent editing state; O(1) `TextPosition` endpoints | Commands, history, document context |
+| Resolved command span | `SlopadEditorDocumentModel`, requested by Session | Ephemeral command/preflight value; may traverse O(K) affected blocks | Delete, replace, format, copy, Enter, indent |
 | Visible selection presentation | `EditorSession` coordinating BlockLayout/TextLayout | Viewport-scoped O(V + G) projection | AppKit painting, toolbar geometry facts, accessibility |
 
 Do not turn `EditorSelectedContent` into the live selection owner. It is a public,
@@ -309,8 +309,8 @@ below the host contract. Widen only when a real host consumer passes ADR 0012's 
 test; Epic #67 found no such consumer for command state.
 
 ```swift
-// SlopadEditorModel: normalized semantic input to one command.
-// Sources/SlopadEditorModel/Selection/ResolvedTextSpan.swift
+// SlopadEditorDocumentModel: normalized semantic input to one command.
+// Sources/SlopadEditorDocumentModel/Selection/ResolvedTextSpan.swift
 package struct ResolvedTextSpan: Sendable {
     package let selection: TextSelection   // original direction retained
     package let start: TextPosition        // canonical earlier endpoint
@@ -560,8 +560,8 @@ The old-policy sites were migrated under their existing owners:
 | [`EditorSession+RenderDamage.swift`](../Sources/SlopadEngine/Session/EditorSession+RenderDamage.swift) | Computes selection damage only from visible ranks; it no longer materializes the full `TN` span per pointer update. |
 | [`EditorSession+ClipboardWritePlan.swift`](../Sources/SlopadEngine/Session/Selection/EditorSession+ClipboardWritePlan.swift) | Produces versioned text-slice or block-subtree payloads and a kind-aware plain fallback. |
 | [`EditorSession+CommandInput.swift`](../Sources/SlopadEngine/Session/InputRouting/EditorSession+CommandInput.swift) | Routes `TN` typing, deletion, Enter, formatting, indentation, Escape, Cmd-A, and structured paste through shared model semantics. |
-| [`EditorModel+TextContentCommands.swift`](../Sources/SlopadEditorModel/Command/EditorModel+TextContentCommands.swift) | Replaces normalized cross-block spans, preserves the earlier endpoint, promotes removed-endpoint descendants, and records one transaction. |
-| [`EditorModel+StructuredPasteCommands.swift`](../Sources/SlopadEditorModel/Command/EditorModel+StructuredPasteCommands.swift) | Applies fresh-ID structured forests using root-aware open-edge merging while preserving endpoint and middle subtrees. |
+| [`EditorModel+TextContentCommands.swift`](../Sources/SlopadEditorDocumentModel/Command/EditorModel+TextContentCommands.swift) | Replaces normalized cross-block spans, preserves the earlier endpoint, promotes removed-endpoint descendants, and records one transaction. |
+| [`EditorModel+StructuredPasteCommands.swift`](../Sources/SlopadEditorDocumentModel/Command/EditorModel+StructuredPasteCommands.swift) | Applies fresh-ID structured forests using root-aware open-edge merging while preserving endpoint and middle subtrees. |
 | [`AppKitEditorViewController.swift`](../Sources/SlopadEditorAppKitUI/AppKitEditorViewController.swift) | Classifies the origin once, keeps text/block drag modes distinct, and continues text selection during autoscroll. |
 | [`AppKitActiveInputController.swift`](../Sources/SlopadEditorAppKitUI/AppKitActiveInputController.swift) | Negotiates typed plus plain clipboard representations, fail-closed paste fallback, and cut-after-write-success. |
 | Session/AppKit tests and UI benchmark | Cover forward/reverse `TN`, empty and atomic blocks, native text/gutter event paths, autoscroll, structured clipboard, direct callback-contract composition, exact undo, and 100/1,000/10,000-block projection. They do not prove installed-IME delivery or the unimplemented live IME policy. |
@@ -652,8 +652,8 @@ test cannot substitute for a native callback, visual, or performance claim.
 
 The EditorModel-owned suites in `Tests/SlopadEngineTests/EditorModel` must cover forward
 and reverse `TN` for replacement, Backspace/Delete, Enter, Shift-Enter, formatting,
-indent/outdent, and undo/redo. There is no separate `SlopadEditorModelTests` target;
-`SlopadEditorModel` is exercised through the `SlopadEngineTests` target, which declares it
+indent/outdent, and undo/redo. There is no separate `SlopadEditorDocumentModelTests` target;
+`SlopadEditorDocumentModel` is exercised through the `SlopadEngineTests` target, which declares it
 as a direct dependency. Assertions must include:
 
 - exact document DFS post-image, surviving `BlockID`/kind/parent, and fresh pasted IDs;

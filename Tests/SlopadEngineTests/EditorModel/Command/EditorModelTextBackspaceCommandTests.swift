@@ -1,7 +1,7 @@
 import Testing
 
 import SlopadCoreModel
-import SlopadEditorModel
+import SlopadEditorDocumentModel
 
 @Suite("EditorModel text Backspace 키 명령")
 struct EditorModelTextBackspaceCommandTests {

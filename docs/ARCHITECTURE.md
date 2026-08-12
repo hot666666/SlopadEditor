@@ -28,7 +28,7 @@ The production targets form these direct dependency layers:
 | Platform adapter | `SlopadEditorAppKitUI` | AppKit callbacks, native input, drawing, focus, scroll, surface sync |
 | Text backend | `SlopadEditorAppKitTextKit` | TextKit2 implementation of the text-layout capability seam |
 | Orchestration | `SlopadEngine` | Public `EditorSession` and editor semantics across owners |
-| Canonical owner | `SlopadEditorModel` | Document, selection, commands, transactions, history |
+| Canonical owner | `SlopadEditorDocumentModel` | Document, selection, commands, transactions, history |
 | Derived owner | `SlopadEditorBlockLayout` | Visibility, block geometry, hit/reveal facts, caches, height index |
 | Format syntax | `SlopadEditorMarkdownInputRules` | Internal immutable bounded typed-input patterns |
 | Format codec | `SlopadEditorMarkdown` | Opt-in stateless whole-document decode and encode |
@@ -44,7 +44,7 @@ product or broadly re-export its vocabulary. See
 
 The dependency graph enforces four important absences:
 
-- `SlopadEditorModel` and `SlopadEditorBlockLayout` do not import each other;
+- `SlopadEditorDocumentModel` and `SlopadEditorBlockLayout` do not import each other;
   `EditorSession` coordinates them.
 - `SlopadEditorAppKitTextKit` does not import the engine. Runtime calls arrive through
   `BlockTextLayoutProtocol` capabilities defined in `SlopadCoreModel`.
@@ -64,8 +64,8 @@ interchangeable.
 
 | Lifetime | Owner | Examples | Rule |
 | --- | --- | --- | --- |
-| Canonical document | `SlopadEditorModel` stores types defined in `SlopadCoreModel` | block tree/order, `BlockID`, kind, text, inline marks | Changes only through validated model transactions |
-| Canonical editing state | `SlopadEditorModel` | caret/text/block selection, stored marks, history | Platform callbacks request transitions; they do not mutate it directly |
+| Canonical document | `SlopadEditorDocumentModel` stores types defined in `SlopadCoreModel` | block tree/order, `BlockID`, kind, text, inline marks | Changes only through validated model transactions |
+| Canonical editing state | `SlopadEditorDocumentModel` | caret/text/block selection, stored marks, history | Platform callbacks request transitions; they do not mutate it directly |
 | Session runtime | `EditorSession` | live composition, composition selection, slash query/source revision, drag/navigation context | Cleared or invalidated when its exact source state no longer matches |
 | Platform runtime | `SlopadEditorAppKitUI` | responder, native marked range, scroll position, overlay widgets | Must converge on Session facts without becoming semantics |
 | Derived layout | `SlopadEditorBlockLayout` and text backend | visible order, y/height index, prepared text layout, hit/caret/selection geometry | Rebuildable from canonical plus runtime inputs; never persisted as document state |
@@ -212,7 +212,7 @@ catches, but the compiler does not.
 Markdown has two deliberately separate entry points:
 
 - `SlopadEditorMarkdownInputRules` contains parser-free bounded prefix/inline patterns linked
-  into ordinary editing. `SlopadEditorModel` owns trigger classification, candidate
+  into ordinary editing. `SlopadEditorDocumentModel` owns trigger classification, candidate
   evaluation, canonical mutation, and undo.
 - `SlopadEditorMarkdown` is an opt-in whole-document codec. It accepts/returns public
   `[EditorBlockInput]` values and depends on `swift-markdown`; it owns no editor runtime.

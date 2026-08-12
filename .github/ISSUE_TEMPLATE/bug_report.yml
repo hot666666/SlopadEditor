@@ -57,7 +57,7 @@ body:
         - Unknown / needs triage
         - SlopadEditorAppKitUI
         - SlopadEngine / EditorSession
-        - SlopadEditorModel
+        - SlopadEditorDocumentModel
         - SlopadEditorBlockLayout
         - SlopadCoreModel
         - SlopadEditorAppKitTextKit

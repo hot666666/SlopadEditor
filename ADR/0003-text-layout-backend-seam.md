@@ -25,7 +25,7 @@ and cache policy inside `SlopadEditorBlockLayout/TextLayout`.
 `SlopadEditorAppKitTextKit` is the current AppKit/TextKit2 backend. It implements the seam and
 provides fragment layout, geometry, attributed-content, and drawing helpers to the
 default `SlopadEditorAppKitUI` adapter. TextKit2 types do not belong in `SlopadEngine`,
-`SlopadEditorModel`, or `SlopadEditorBlockLayout`.
+`SlopadEditorDocumentModel`, or `SlopadEditorBlockLayout`.
 
 The seam anchors a coherent geometry contract, not a height-only service or high-level
 paint hook. `EditorSession` owns the live composition overlay and supplies it to

@@ -76,7 +76,7 @@ let package = Package(
             name: "SlopadEditorDataStructure"
         ),
         .target(
-            name: "SlopadEditorModel",
+            name: "SlopadEditorDocumentModel",
             dependencies: ["SlopadCoreModel", "SlopadEditorMarkdownInputRules"]
         ),
         .target(
@@ -90,7 +90,7 @@ let package = Package(
             name: "SlopadEngine",
             dependencies: [
                 "SlopadCoreModel",
-                "SlopadEditorModel",
+                "SlopadEditorDocumentModel",
                 "SlopadEditorBlockLayout",
             ]
         ),
@@ -154,7 +154,7 @@ let package = Package(
             dependencies: [
                 "SlopadCoreModel",
                 "SlopadEditorDataStructure",
-                "SlopadEditorModel",
+                "SlopadEditorDocumentModel",
                 "SlopadEditorBlockLayout",
                 "SlopadEngine",
                 "SlopadEditorMarkdown",

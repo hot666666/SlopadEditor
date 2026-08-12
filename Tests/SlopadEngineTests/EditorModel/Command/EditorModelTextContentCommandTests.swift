@@ -1,7 +1,7 @@
 import Testing
 
 import SlopadCoreModel
-import SlopadEditorModel
+import SlopadEditorDocumentModel
 
 // EditorModelTextContentCommandTests.swift는 단일 블록 텍스트 삽입/교체/삭제 명령을 검증합니다.
 // 마크다운 prefix shortcut은 insertText 후속 처리이므로 별도 테스트 파일에서 검증합니다.

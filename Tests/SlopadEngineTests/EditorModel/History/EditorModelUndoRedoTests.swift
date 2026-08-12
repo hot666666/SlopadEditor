@@ -1,7 +1,7 @@
 import Testing
 
 import SlopadCoreModel
-@testable import SlopadEditorModel
+@testable import SlopadEditorDocumentModel
 
 // EditorModelUndoRedoTests.swift는 undo/redo stack 정책과 snapshot 복원 동작을 검증합니다.
 // 개별 command 동작은 기반 블록/텍스트 콘텐츠/키보드 테스트에서 검증하고, 여기서는 snapshot 복원과 stack 예산만 봅니다.
