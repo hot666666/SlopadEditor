@@ -331,10 +331,10 @@ positive_probe SlopadEditorAppKit AppKitEditorAction \
 positive_probe SlopadEditorAppKit AppKitEditorViewController \
     "$appkit_swiftc" "$appkit_import_path" "$appkit_target" "$appkit_sdk" \
     "$appkit_frameworks" "$appkit_system_imports" "$appkit_swift_version"
-positive_probe SlopadEditorSwiftUI SlopadEditor \
+positive_probe SlopadEditorSwiftUI SlopadEditorView \
     "$swiftui_swiftc" "$swiftui_import_path" "$swiftui_target" "$swiftui_sdk" \
     "$swiftui_frameworks" "$swiftui_system_imports" "$swiftui_swift_version"
-positive_probe SlopadEditorSwiftUI SlopadEditorModel \
+positive_probe SlopadEditorSwiftUI SlopadEditorViewModel \
     "$swiftui_swiftc" "$swiftui_import_path" "$swiftui_target" "$swiftui_sdk" \
     "$swiftui_frameworks" "$swiftui_system_imports" "$swiftui_swift_version"
 

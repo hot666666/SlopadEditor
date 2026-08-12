@@ -1,7 +1,7 @@
 import SlopadEditorAppKit
 import SwiftUI
 
-// MARK: - SlopadEditor
+// MARK: - SlopadEditorView
 
 /// A SwiftUI view that embeds the editor as an ordinary subview.
 ///
@@ -20,11 +20,11 @@ import SwiftUI
 /// It stays deliberately thin: lifecycle wiring and observable projection only. Anything
 /// that decides what an edit *means* belongs in `EditorSession`.
 @MainActor
-public struct SlopadEditor: NSViewControllerRepresentable {
+public struct SlopadEditorView: NSViewControllerRepresentable {
     // MARK: - Configuration
 
-    private let model: SlopadEditorModel
-    private let document: SlopadDocument?
+    private let model: SlopadEditorViewModel
+    private let document: SlopadEditorDocument?
     private var style = AppKitEditorStyle()
     private var focusBinding: FocusState<Bool>.Binding?
     private var committedChangeAction: (() -> Void)?
@@ -34,7 +34,7 @@ public struct SlopadEditor: NSViewControllerRepresentable {
     ///   - model: The observable projection to drive. Hold it in `@State`.
     ///   - document: The document to show. A `nil` document mounts an empty editor, so a
     ///     host can render before its content has loaded.
-    public init(model: SlopadEditorModel, document: SlopadDocument?) {
+    public init(model: SlopadEditorViewModel, document: SlopadEditorDocument?) {
         self.model = model
         self.document = document
     }
@@ -45,7 +45,7 @@ public struct SlopadEditor: NSViewControllerRepresentable {
     ///
     /// Selection, scrolling, layout and live composition updates do not call it, which is
     /// what keeps a host's save scheduling off the typing path.
-    public func onCommittedChange(_ action: @escaping () -> Void) -> SlopadEditor {
+    public func onCommittedChange(_ action: @escaping () -> Void) -> SlopadEditorView {
         var copy = self
         copy.committedChangeAction = action
         return copy
@@ -55,7 +55,7 @@ public struct SlopadEditor: NSViewControllerRepresentable {
     /// it, `false` to leave the editor's default handling in place.
     public func onUnhandledAction(
         _ action: @escaping (AppKitEditorAction) -> Bool
-    ) -> SlopadEditor {
+    ) -> SlopadEditorView {
         var copy = self
         copy.unhandledActionHandler = action
         return copy
@@ -65,14 +65,14 @@ public struct SlopadEditor: NSViewControllerRepresentable {
     ///
     /// This shadows SwiftUI's `focused(_:)` on purpose: SwiftUI's focus system does not
     /// reach into an AppKit first responder, so the two sides are synchronized explicitly.
-    public func focused(_ binding: FocusState<Bool>.Binding) -> SlopadEditor {
+    public func focused(_ binding: FocusState<Bool>.Binding) -> SlopadEditorView {
         var copy = self
         copy.focusBinding = binding
         return copy
     }
 
     /// Sets the text system configuration.
-    public func editorStyle(_ style: AppKitEditorStyle) -> SlopadEditor {
+    public func editorStyle(_ style: AppKitEditorStyle) -> SlopadEditorView {
         var copy = self
         copy.style = style
         return copy
@@ -140,24 +140,24 @@ public struct SlopadEditor: NSViewControllerRepresentable {
         /// The identity currently mounted. Comparing against it is the identity guard.
         var appliedDocumentID: AnyHashable?
         /// The most recent view value, so callbacks registered once still see fresh state.
-        var editor: SlopadEditor?
-        private let model: SlopadEditorModel
+        var editor: SlopadEditorView?
+        private let model: SlopadEditorViewModel
 
-        init(model: SlopadEditorModel) {
+        init(model: SlopadEditorViewModel) {
             self.model = model
         }
 
         /// Decides whether an incoming document is a different document.
         ///
-        /// Compares identity, never contents. A host rebuilds its `SlopadDocument` on every
+        /// Compares identity, never contents. A host rebuilds its `SlopadEditorDocument` on every
         /// body evaluation, so a value comparison would report a replacement on every pass
         /// and take the caret, the undo stack and any live composition with it.
-        func shouldReplaceDocument(with document: SlopadDocument?) -> Bool {
+        func shouldReplaceDocument(with document: SlopadEditorDocument?) -> Bool {
             guard let document else { return false }
             return appliedDocumentID != document.id
         }
 
-        func bind(controller: AppKitEditorViewController, editor: SlopadEditor) {
+        func bind(controller: AppKitEditorViewController, editor: SlopadEditorView) {
             self.editor = editor
 
             controller.onUpdate = { [weak self] update in
@@ -199,20 +199,20 @@ public struct SlopadEditor: NSViewControllerRepresentable {
 
 // MARK: - Preview
 
-#Preview("SlopadEditor Save/Interaction PoC") {
+#Preview("SlopadEditorView Save/Interaction PoC") {
 	SlopadEditorPoC()
 		.frame(width: 680, height: 500)
 }
 
 private struct SlopadEditorPoC: View {
-	@State private var editorModel = SlopadEditorModel()
-	@State private var document = SlopadDocument(
+	@State private var editorModel = SlopadEditorViewModel()
+	@State private var document = SlopadEditorDocument(
 		id: "slopad.editor.poc",
 		blocks: [
 			EditorBlockInput(
 				id: "p-1",
 				kind: .heading(level: .h1),
-				content: BlockContent(text: "SlopadEditor SwiftUI Preview PoC")
+				content: BlockContent(text: "SlopadEditorView SwiftUI Preview PoC")
 			),
 			EditorBlockInput(
 				id: "p-2",
@@ -256,31 +256,31 @@ private struct SlopadEditorPoC: View {
 	var body: some View {
 		VStack(spacing: 10) {
 			VStack(alignment: .leading, spacing: 4) {
-				SlopadEditor(
+				SlopadEditorView(
 					model: editorModel,
 					document: document
 				)
 				.onCommittedChange {
 					editorModel.commitComposition()
 					guard let snapshot = editorModel.documentSnapshot else {
-						print("[SlopadEditor PoC] save skipped: snapshot is nil")
+						print("[SlopadEditorView PoC] save skipped: snapshot is nil")
 						return
 					}
 					let summary = snapshot.blocks.enumerated().map { index, block in
 						"\(index + 1). \(block.kind) - \(block.id) - \(block.content.text)"
 					}
-					print("[SlopadEditor PoC] SAVE revision=\(snapshot.revision.rawValue), epoch=\(snapshot.epoch)")
-					print("[SlopadEditor PoC] blocks:")
+					print("[SlopadEditorView PoC] SAVE revision=\(snapshot.revision.rawValue), epoch=\(snapshot.epoch)")
+					print("[SlopadEditorView PoC] blocks:")
 					for line in summary {
 						print("  \(line)")
 					}
 				}
 				.onUnhandledAction { action in
-					print("[SlopadEditor PoC] unhandledAction = \(String(describing: action))")
+					print("[SlopadEditorView PoC] unhandledAction = \(String(describing: action))")
 					return false
 				}
 				.onChange(of: editorModel.documentRevision) { _, revision in
-					print("[SlopadEditor PoC] revision changed => \(revision?.rawValue.description ?? "nil")")
+					print("[SlopadEditorView PoC] revision changed => \(revision?.rawValue.description ?? "nil")")
 				}
 				// firstResponder를 다른 뷰에 뺏긴 경우. 에디터는 포커스 변화를 보고만 하고,
 				// 남은 선택을 어떻게 할지는 호스트 정책이다. 이 PoC는 해제하는 쪽을 택한다.
@@ -290,7 +290,7 @@ private struct SlopadEditorPoC: View {
 				}
 				.frame(maxWidth: .infinity, minHeight: 220, maxHeight: 280, alignment: .top)
 			}
-			.accessibilityLabel("SlopadEditor Preview")
+			.accessibilityLabel("SlopadEditorView Preview")
 			.background(.thinMaterial)
 			.clipShape(RoundedRectangle(cornerRadius: 8))
 
@@ -322,7 +322,7 @@ private struct SlopadEditorPoC: View {
 
 			HStack {
 				Button("샘플 재적재(문서 교체)") {
-					document = SlopadDocument(
+					document = SlopadEditorDocument(
 						id: UUID(),
 						blocks: [
 							EditorBlockInput(

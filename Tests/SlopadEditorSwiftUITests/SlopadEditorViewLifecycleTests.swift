@@ -13,14 +13,14 @@ struct SlopadEditorLifecycleTests {
     @Test("같은 id로 document를 다시 만들어도 교체하지 않는다")
     func rebuildingTheSameDocumentIsNotAReplacement() {
         // Given: 선언형 호스트는 body 평가마다 SlopadDocument를 새로 만든다.
-        let model = SlopadEditorModel()
-        let coordinator = SlopadEditor.Coordinator(model: model)
-        let first = SlopadDocument(id: "record-1", blocks: blocks("A"))
+        let model = SlopadEditorViewModel()
+        let coordinator = SlopadEditorView.Coordinator(model: model)
+        let first = SlopadEditorDocument(id: "record-1", blocks: blocks("A"))
         coordinator.appliedDocumentID = first.id
 
         // When: 값은 다르지만 identity가 같은 인스턴스가 들어온다.
-        let rebuilt = SlopadDocument(id: "record-1", blocks: blocks("A"))
-        let rebuiltWithDifferentContent = SlopadDocument(id: "record-1", blocks: blocks("B"))
+        let rebuilt = SlopadEditorDocument(id: "record-1", blocks: blocks("A"))
+        let rebuiltWithDifferentContent = SlopadEditorDocument(id: "record-1", blocks: blocks("B"))
 
         // Then: 값 비교였다면 여기서 caret·undo stack·IME 조합이 날아간다.
         #expect(!coordinator.shouldReplaceDocument(with: rebuilt))
@@ -30,21 +30,21 @@ struct SlopadEditorLifecycleTests {
     @Test("id가 바뀌면 교체한다")
     func changingIdentityReplacesTheDocument() {
         // Given
-        let model = SlopadEditorModel()
-        let coordinator = SlopadEditor.Coordinator(model: model)
-        coordinator.appliedDocumentID = SlopadDocument(id: "record-1", blocks: blocks("A")).id
+        let model = SlopadEditorViewModel()
+        let coordinator = SlopadEditorView.Coordinator(model: model)
+        coordinator.appliedDocumentID = SlopadEditorDocument(id: "record-1", blocks: blocks("A")).id
 
         // When / Then
-        let other = SlopadDocument(id: "record-2", blocks: blocks("A"))
+        let other = SlopadEditorDocument(id: "record-2", blocks: blocks("A"))
         #expect(coordinator.shouldReplaceDocument(with: other))
     }
 
     @Test("document가 없으면 교체하지 않는다")
     func absentDocumentIsNotAReplacement() {
         // Given: 호스트 콘텐츠가 아직 로드되지 않은 상태.
-        let model = SlopadEditorModel()
-        let coordinator = SlopadEditor.Coordinator(model: model)
-        coordinator.appliedDocumentID = SlopadDocument(id: "record-1", blocks: blocks("A")).id
+        let model = SlopadEditorViewModel()
+        let coordinator = SlopadEditorView.Coordinator(model: model)
+        coordinator.appliedDocumentID = SlopadEditorDocument(id: "record-1", blocks: blocks("A")).id
 
         // When / Then
         #expect(!coordinator.shouldReplaceDocument(with: nil))
@@ -53,13 +53,13 @@ struct SlopadEditorLifecycleTests {
     @Test("서로 다른 타입의 id는 섞이지 않는다")
     func identitiesOfDifferentTypesDoNotCollide() {
         // Given
-        let model = SlopadEditorModel()
-        let coordinator = SlopadEditor.Coordinator(model: model)
-        coordinator.appliedDocumentID = SlopadDocument(id: 1, blocks: blocks("A")).id
+        let model = SlopadEditorViewModel()
+        let coordinator = SlopadEditorView.Coordinator(model: model)
+        coordinator.appliedDocumentID = SlopadEditorDocument(id: 1, blocks: blocks("A")).id
 
         // When / Then: Int 1과 String "1"은 다른 문서다.
-        #expect(coordinator.shouldReplaceDocument(with: SlopadDocument(id: "1", blocks: blocks("A"))))
-        #expect(!coordinator.shouldReplaceDocument(with: SlopadDocument(id: 1, blocks: blocks("A"))))
+        #expect(coordinator.shouldReplaceDocument(with: SlopadEditorDocument(id: "1", blocks: blocks("A"))))
+        #expect(!coordinator.shouldReplaceDocument(with: SlopadEditorDocument(id: 1, blocks: blocks("A"))))
     }
 
     // MARK: - Committed Change Filtering
@@ -147,7 +147,7 @@ struct SlopadEditorLifecycleTests {
     @Test("documentSnapshot은 mount 전 nil, mount 후 값이다")
     func snapshotFollowsMounting() {
         // Given
-        let model = SlopadEditorModel()
+        let model = SlopadEditorViewModel()
         #expect(model.documentSnapshot == nil)
 
         // When
@@ -247,15 +247,15 @@ private func blocks(_ text: String) -> [EditorBlockInput] {
 /// A coordinator bound to a real controller, which is what `makeNSViewController` produces.
 @MainActor
 private final class MountedEditor {
-    let model: SlopadEditorModel
+    let model: SlopadEditorViewModel
     let controller: AppKitEditorViewController
-    let coordinator: SlopadEditor.Coordinator
+    let coordinator: SlopadEditorView.Coordinator
     let window: NSWindow
-    private var editor: SlopadEditor
+    private var editor: SlopadEditorView
 
-    init(model: SlopadEditorModel = SlopadEditorModel()) {
+    init(model: SlopadEditorViewModel = SlopadEditorViewModel()) {
         self.model = model
-        let document = SlopadDocument(id: "record-1", blocks: blocks("A"))
+        let document = SlopadEditorDocument(id: "record-1", blocks: blocks("A"))
         controller = AppKitEditorViewController(
             blocks: document.blocks,
             selection: .caret(blockID: "block", offset: 1)
@@ -270,8 +270,8 @@ private final class MountedEditor {
         )
         window.contentViewController = controller
         controller.view.layoutSubtreeIfNeeded()
-        editor = SlopadEditor(model: model, document: document)
-        coordinator = SlopadEditor.Coordinator(model: model)
+        editor = SlopadEditorView(model: model, document: document)
+        coordinator = SlopadEditorView.Coordinator(model: model)
         coordinator.appliedDocumentID = document.id
         coordinator.bind(controller: controller, editor: editor)
         model.attach(controller)

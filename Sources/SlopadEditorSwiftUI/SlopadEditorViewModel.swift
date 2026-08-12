@@ -1,7 +1,7 @@
 import Observation
 import SlopadEditorAppKit
 
-// MARK: - SlopadEditorModel
+// MARK: - SlopadEditorViewModel
 
 /// The observable projection of one mounted editor.
 ///
@@ -15,7 +15,7 @@ import SlopadEditorAppKit
 /// how selection moves; if that appears, the `EditorSession` boundary has regressed.
 @Observable
 @MainActor
-public final class SlopadEditorModel {
+public final class SlopadEditorViewModel {
     // MARK: - Observable State
 
     /// Identifies the mounted Session. It changes when the document is replaced.
@@ -44,7 +44,7 @@ public final class SlopadEditorModel {
 
     // MARK: - Private State
 
-    /// The mounted controller. `SlopadEditor` owns its lifetime; this is a back-reference.
+    /// The mounted controller. `SlopadEditorView` owns its lifetime; this is a back-reference.
     private weak var controller: AppKitEditorViewController?
 
     // MARK: - Init

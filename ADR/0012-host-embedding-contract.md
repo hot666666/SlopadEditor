@@ -65,7 +65,7 @@ that decision, which is what keeps it a notification rather than a hook.
   engine decision (test 3). What remains selected after focus moves away stays host policy;
   the editor reports focus and offers the transition, it does not pick one.
 - `contentHeight`, `onContentHeightChange`.
-- `SlopadEditorSwiftUI`: `SlopadEditor`, `SlopadEditorModel`, `SlopadDocument`.
+- `SlopadEditorSwiftUI`: `SlopadEditorView`, `SlopadEditorViewModel`, `SlopadEditorDocument`.
 
 ### What the test excluded
 

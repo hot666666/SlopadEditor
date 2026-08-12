@@ -1,8 +1,8 @@
 import SlopadEditorAppKit
 
-// MARK: - SlopadDocument
+// MARK: - SlopadEditorDocument
 
-/// The document a host hands to ``SlopadEditor``, and the identity that decides when the
+/// The document a host hands to ``SlopadEditorView``, and the identity that decides when the
 /// editor is showing a different one.
 ///
 /// `id` is the whole reason this is a type rather than a bare `[EditorBlockInput]`. A
@@ -12,7 +12,7 @@ import SlopadEditorAppKit
 ///
 /// Only blocks cross this boundary. Turning a stored format — a string, JSON, a file — into
 /// blocks is the host's codec, and no string, format, or codec type appears in this API.
-public struct SlopadDocument: Identifiable {
+public struct SlopadEditorDocument: Identifiable {
     /// Identifies which document this is. The editor replaces its content when this
     /// changes and leaves it alone when it does not.
     public let id: AnyHashable
