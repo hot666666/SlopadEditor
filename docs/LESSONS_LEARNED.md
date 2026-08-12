@@ -1,6 +1,6 @@
 # Lessons Learned
 
-This document records repeated failure patterns from Slopad work, especially patterns
+This document records repeated failure patterns from SlopadEditor work, especially patterns
 that prevented a task from succeeding in one pass. It is not the source of truth for the
 current structure. Use `README.md` for the short structural map, `docs/ARCHITECTURE.md`
 for the detailed ownership and extension philosophy, `AGENTS.md` for terminology and
@@ -146,7 +146,7 @@ Next time:
 ### Importing External Architecture Names Directly
 
 Symptom: names such as `view`, `plugin`, `operation`, `use case`, or `repository` from
-ProseMirror, CodeMirror, Slate, Lexical, or Clean Architecture are copied into Slopad
+ProseMirror, CodeMirror, Slate, Lexical, or Clean Architecture are copied into SlopadEditor
 folders.
 
 Cause: external material was used as a template instead of a validator.
@@ -154,7 +154,7 @@ Cause: external material was used as a template instead of a validator.
 Next time:
 
 - Extract principles from external references only.
-- Translate them into Slopad through owner and call-path evidence inside the
+- Translate them into SlopadEditor through owner and call-path evidence inside the
   `UI -> Public API -> Session -> EditorModel / BlockLayout` structure.
 - Do not import names without source/call-site evidence.
 

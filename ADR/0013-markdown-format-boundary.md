@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-Slopad has no external dependencies. `Package.swift` declares none, and every target is
+SlopadEditor has no external dependencies. `Package.swift` declares none, and every target is
 built from sources in this repository. Adding a Markdown parser changes that, and two
 questions have to be answered before any adapter code exists — issue #29, blocking #30.
 
@@ -32,13 +32,13 @@ Taken against `swift-markdown` 0.8.0 with a probe package rather than estimated.
 | Probed version | `swift-markdown` 0.8.0, released 2026-05-07 |
 | Resolved transitive version | `swift-cmark` 0.8.0 — a C library (cmark-gfm) |
 | Upstream manifest | `swift-tools-version:6.2`; its targets explicitly use Swift 5 mode |
-| Slopad manifest | `swift-tools-version:6.0` — unchanged; its targets currently compile in Swift 6 mode |
+| SlopadEditor manifest | `swift-tools-version:6.0` — unchanged; its targets currently compile in Swift 6 mode |
 | Cold build | 109 files, ~10s on an 8-core arm64 machine |
 | `Sendable` | **`Document` and `Markup` do not conform.** What is allowed is narrower than "clean" — see below |
 
 The one real constraint is not in the table's first column. `swift-markdown`'s manifest is
-`6.2`, so **once #30 adds it, the toolchain building Slopad must be Swift 6.2 or later** even
-though Slopad's own tools version stays at 6.0. That is the minimum-toolchain answer #29
+`6.2`, so **once #30 adds it, the toolchain building SlopadEditor must be Swift 6.2 or later** even
+though SlopadEditor's own tools version stays at 6.0. That is the minimum-toolchain answer #29
 asked for; this docs-only PR does not change the current build graph.
 
 ### What the `Sendable` result actually is
@@ -63,7 +63,7 @@ client target, the boundary is:
 So a parser value can be held and used inside one isolation domain, and region isolation can
 move a disconnected local value once. It cannot satisfy a `Sendable` API or be shared
 arbitrarily across domains. `swift-markdown` 0.8.0 itself explicitly selects Swift 5 mode;
-Slopad's targets compile in Swift 6 mode, so the adapter is a Swift 6 client of a Swift 5
+SlopadEditor's targets compile in Swift 6 mode, so the adapter is a Swift 6 client of a Swift 5
 dependency.
 
 This independently supports the isolation rule below. Parsing and conversion execute inside
@@ -107,10 +107,10 @@ source; raising the exact requirement is a deliberate reviewed change. A downstr
 that requires an incompatible exact version will fail dependency resolution; that is the
 accepted cost of preventing an unreviewed pre-1.0 minor update. A root
 `Package.resolved` still records the selected transitive graph, but it is not the pin: each
-downstream fixture or host is its own resolution root and does not inherit Slopad's lockfile.
+downstream fixture or host is its own resolution root and does not inherit SlopadEditor's lockfile.
 
 That propagation is intentional. Once #30 adds the package dependency, every host resolving
-Slopad must resolve and parse `swift-markdown`'s manifest, so those roots need a Swift
+SlopadEditor must resolve and parse `swift-markdown`'s manifest, so those roots need a Swift
 6.2-or-later toolchain even if their own manifest uses an older tools version. Only a host
 that selects the opt-in `SlopadMarkdown` product needs to build and link its Markdown and C
 targets. #30 updates the README requirement when that package-graph change lands.

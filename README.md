@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="Resources/Icon.png" alt="Slopad icon" width="300" height="300">
+  <img src="Resources/Icon.png" alt="SlopadEditor icon" width="300" height="300">
 </p>
 
-<h1 align="center">Slopad</h1>
+<h1 align="center">SlopadEditor</h1>
 
 <p align="center">
   A headless native block editor engine for Swift, with a production AppKit/TextKit2 path.
@@ -15,7 +15,7 @@
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2563eb">
 </p>
 
-Slopad is a work-in-progress block editor project. Its reusable foundation is
+SlopadEditor is a work-in-progress block editor project. Its reusable foundation is
 `SlopadEngine`: the canonical document is a tree of blocks, the engine owns editing
 meaning, and platform adapters own native input, drawing, focus, and scrolling.
 
@@ -50,7 +50,7 @@ Run the reference host:
 swift run SlopadDebugApp
 ```
 
-<img src="Resources/demo.gif" alt="Slopad debug demo" width="720">
+<img src="Resources/demo.gif" alt="SlopadEditor debug demo" width="720">
 
 ## Architecture at a Glance
 

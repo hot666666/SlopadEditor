@@ -55,7 +55,7 @@ struct AppKitActiveInputControllerCommandTests {
         }
     }
 
-    @Test("copy selector는 Slopad typed payload와 plain text를 함께 쓴다")
+    @Test("copy selector는 SlopadEditor typed payload와 plain text를 함께 쓴다")
     func writesStructuredAndPlainClipboardRepresentations() throws {
         // Given
         let payload = EditorClipboardPayload(

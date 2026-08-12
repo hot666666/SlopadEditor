@@ -8,7 +8,7 @@ Accepted, amended 2026-07-16
 
 ## Context
 
-Slopad needs benchmark executables for layout/index/storage work. These executables use
+SlopadEditor needs benchmark executables for layout/index/storage work. These executables use
 release builds, instrumentation flags, local CSV output, and sometimes package-internal
 SPI. They are part of the development and regression workflow, not the library surface
 that downstream users should depend on.

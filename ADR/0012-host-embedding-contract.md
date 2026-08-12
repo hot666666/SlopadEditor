@@ -95,7 +95,7 @@ format target may transform core block values outside the facade: `SlopadMarkdow
 for whole-document Markdown, and ADR 0015's `SlopadArchive` will do so for the versioned
 native archive after its implementation. Neither changes who owns storage.
 
-This keeps Slopad from acquiring a second canonical model by way of a convenience format.
+This keeps SlopadEditor from acquiring a second canonical model by way of a convenience format.
 The archive contract is deliberately narrower than `EditorDocumentSnapshot`: version plus
 canonical blocks only. It excludes selection, undo/history, operation journal,
 epoch/revision, composition, layout, viewport, and TextKit state.

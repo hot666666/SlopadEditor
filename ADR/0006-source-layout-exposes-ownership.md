@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-Slopad has several layers that intentionally expose a small interface to other callers:
+SlopadEditor has several layers that intentionally expose a small interface to other callers:
 public host-facing surface, package-only owner interfaces between SwiftPM targets, and
 target-internal implementation details.
 

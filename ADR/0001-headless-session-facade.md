@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-Slopad is intended to be a native block editor engine, not an AppKit wrapper, `NSTextView`
+SlopadEditor is intended to be a native block editor engine, not an AppKit wrapper, `NSTextView`
 subclass, or document-store-only library. Platform hosts need to send keyboard, pointer,
 selection, IME/composition, reveal, hit-test, and render requests into the engine without
 owning the editor semantics themselves.

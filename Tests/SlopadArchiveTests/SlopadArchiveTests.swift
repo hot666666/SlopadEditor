@@ -4,7 +4,7 @@ import Testing
 
 @testable import SlopadArchive
 
-@Suite("Slopad native archive")
+@Suite("SlopadEditor native archive")
 struct SlopadArchiveTests {
     @Test("공개 alias는 CoreModel 값과 type identity를 유지한다")
     func publicAliasesAreTypeIdentical() {

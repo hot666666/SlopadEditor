@@ -1,5 +1,5 @@
 name = "high_risk_worker"
-description = "Implements Slopad changes involving concurrency, IME, canonical state, TextKit, performance, or cross-layer contracts."
+description = "Implements SlopadEditor changes involving concurrency, IME, canonical state, TextKit, performance, or cross-layer contracts."
 model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"

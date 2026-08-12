@@ -9,7 +9,7 @@ Accepted. Amended 2026-08-08 — see "Amendment: narrow contracts, one backend".
 ## Context
 
 Block height is not a fixed property. It depends on text content, available width, style,
-line fragments, inline marks, and platform text shaping behavior. Slopad currently proves
+line fragments, inline marks, and platform text shaping behavior. SlopadEditor currently proves
 this path with TextKit2, but the engine is not supposed to be tied to AppKit/TextKit.
 
 The text layout path must support more than height measurement: caret rects, selection

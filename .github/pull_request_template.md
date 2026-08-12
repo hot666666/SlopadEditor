@@ -42,6 +42,6 @@ Closes #
 - [ ] Tests or verification cover the changed behavior.
 - [ ] Public declaration changes were reviewed against ADR 0012; every widening passes its
       three-part test and has a real downstream call site, or this PR does not widen the surface.
-- [ ] Ordinary AppKit/SwiftUI fixtures still use one Slopad product/import with no internal bypass.
+- [ ] Ordinary AppKit/SwiftUI fixtures still use one SlopadEditor product/import with no internal bypass.
 - [ ] Documentation was updated, or no documentation change is needed.
 - [ ] Dependencies are merged, or this PR is intentionally stacked and marked as blocked.

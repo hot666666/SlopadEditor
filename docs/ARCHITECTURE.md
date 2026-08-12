@@ -1,6 +1,6 @@
 # Architecture
 
-This document is the text reference for Slopad's current ownership and runtime contracts.
+This document is the text reference for SlopadEditor's current ownership and runtime contracts.
 [`Package.swift`](../Package.swift) is the compiler-enforced dependency graph, current
 source and tests define what the code does, and [ADRs](../ADR/README.md) explain durable
 choices. The [interactive architecture map](slopad-architecture-map.html) is the visual
@@ -16,7 +16,7 @@ callbacks, drawing, pasteboard negotiation, and autoscroll.
 
 ## System Shape
 
-Slopad is a headless native block editor. Its canonical document is a tree of blocks;
+SlopadEditor is a headless native block editor. Its canonical document is a tree of blocks;
 Markdown and HTML are formats at the edge, not the editor model.
 
 The production targets form these direct dependency layers:

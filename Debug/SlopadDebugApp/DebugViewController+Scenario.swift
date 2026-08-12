@@ -954,7 +954,7 @@ extension DebugViewController {
 
 private enum BasicUseFixture {
     static let title = BlockID("title")
-    static let titleText = "Slopad"
+    static let titleText = "SlopadEditor"
     static let bodyText = "Hello world."
 
     static func makeBlocks() -> [EditorBlockInput] {
@@ -979,7 +979,7 @@ private enum DebugSeedFixture {
     static let code = BlockID()
     static let tail = BlockID()
 
-    static let titleText = "Slopad AppKit using TextKit2"
+    static let titleText = "SlopadEditor AppKit using TextKit2"
     static let introText =
         "Click this paragraph, type, and watch the native surface route editing while passive blocks stay rendered."
     static let todoText =

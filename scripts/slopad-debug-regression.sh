@@ -53,4 +53,4 @@ for scenario in "${SCENARIOS[@]}"; do
   scripts/slopad-debug-screenshot.sh "$scenario" "$OUTPUT_DIR/${scenario}.png"
 done
 
-printf 'Slopad debug regression screenshots written to %s\n' "$OUTPUT_DIR"
+printf 'SlopadEditor debug regression screenshots written to %s\n' "$OUTPUT_DIR"

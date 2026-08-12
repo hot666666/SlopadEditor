@@ -34,7 +34,7 @@ struct SlopadDebugApp {
             backing: .buffered,
             defer: false
         )
-        window.title = "Slopad Debug"
+        window.title = "SlopadEditor Debug"
         window.contentViewController = viewController
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -134,7 +134,7 @@ private final class DebugAppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "Slopad Debug"
+        window.title = "SlopadEditor Debug"
         window.contentViewController = viewController
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

@@ -1,6 +1,6 @@
 import SlopadCoreModel
 
-/// Stateless Markdown conversion into Slopad's canonical block-input vocabulary.
+/// Stateless Markdown conversion into SlopadEditor's canonical block-input vocabulary.
 public enum SlopadMarkdown {
     /// Decodes Markdown without retaining or exposing parser state.
     ///

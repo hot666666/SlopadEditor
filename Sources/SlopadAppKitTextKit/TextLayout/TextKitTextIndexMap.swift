@@ -3,7 +3,7 @@ import SlopadCoreModel
 
 // MARK: - TextKitTextIndexMap
 
-/// A request-local map between Slopad grapheme boundaries and TextKit UTF-16 boundaries.
+/// A request-local map between SlopadEditor grapheme boundaries and TextKit UTF-16 boundaries.
 ///
 /// The map is built in one pass when a layout request is prepared. Lookups then avoid
 /// repeatedly scanning a String prefix for every caret, hit-test, and navigation operation.

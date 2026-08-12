@@ -81,7 +81,7 @@ private final class UIBenchmarkAppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "Slopad UI Benchmark"
+        window.title = "SlopadEditor UI Benchmark"
         window.contentViewController = host.editorViewController
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

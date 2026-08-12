@@ -7,7 +7,7 @@ public typealias BlockContent = SlopadCoreModel.BlockContent
 public typealias TextRange = SlopadCoreModel.TextRange
 public typealias EditorBlockInput = SlopadCoreModel.EditorBlockInput
 
-/// A synchronous, stateless conversion between canonical block inputs and Slopad's native archive.
+/// A synchronous, stateless conversion between canonical block inputs and SlopadEditor's native archive.
 public enum SlopadArchive {
     public static func encode(
         _ blocks: [EditorBlockInput]

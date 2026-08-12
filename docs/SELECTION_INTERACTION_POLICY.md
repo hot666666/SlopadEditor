@@ -33,13 +33,13 @@ When a type name here disagrees with source, source wins and this document is th
 
 | Label | Meaning |
 | --- | --- |
-| **Target** | Normative Slopad behavior agreed for implementation |
+| **Target** | Normative SlopadEditor behavior agreed for implementation |
 | **Notion observed** | Reproduced directly in the connected Notion Playground on 2026-08-09 |
 | **User confirmed** | Supplied screenshots or an explicit product rule from this design review |
-| **Implemented** | Current Slopad source and owner-level tests implement the rule |
+| **Implemented** | Current SlopadEditor source and owner-level tests implement the rule |
 | **Settled decision** | Product choice fixed during this review and normative for implementation |
 
-Notion is reference evidence, not Slopad's state owner. Pointer-origin behavior could not
+Notion is reference evidence, not SlopadEditor's state owner. Pointer-origin behavior could not
 be driven reliably by browser automation inside Notion's contenteditable surface, so
 those rows use the supplied screenshots and explicit user confirmation. Keyboard,
 clipboard, formatting, deletion, nesting, Escape, and Cmd-A rows were exercised directly.
@@ -231,7 +231,7 @@ earlier block as survivor, empty-survivor behavior, and single-step paste replac
 
 ### Unselected children of a removed endpoint
 
-Slopad promotes `B`'s unselected children to `B.parentID`. A live Notion test produced a
+SlopadEditor promotes `B`'s unselected children to `B.parentID`. A live Notion test produced a
 different result:
 
 ```text
@@ -242,7 +242,7 @@ B (root, selected text removed)     ├─ B.child.1
   └─ B.child.2
 ```
 
-Notion reparents those children under the surviving earlier block `A`; Slopad deliberately
+Notion reparents those children under the surviving earlier block `A`; SlopadEditor deliberately
 does not. Promotion preserves the unselected subtree at the removed endpoint's structural
 level and avoids making the surviving text block an implicit new parent. The repair is part
 of the same transaction as the range replacement.
@@ -432,7 +432,7 @@ declared in
 There is no type named `EditorClipboardPlan`.
 
 The plan is an ephemeral value, not a second document model. The adapter writes a
-versioned Slopad pasteboard type together with ordinary plain text. Slopad does not add an
+versioned SlopadEditor pasteboard type together with ordinary plain text. SlopadEditor does not add an
 implicit HTML/RTF or Markdown-import path here. Canonical tree repair and insertion belong
 to model commands.
 
@@ -524,7 +524,7 @@ Text selection and block selection need different structured payloads:
 | `B` | Deduplicated selected roots and each complete subtree in canonical DFS order | Kind-aware DFS line projection; empty blocks remain empty lines and relative hierarchy stays in the structured payload |
 
 Notion used a partial multi-text payload for `TN` and a different whole-block payload for
-`B`. Slopad follows its open-edge merge behavior while retaining its own canonical model:
+`B`. SlopadEditor follows its open-edge merge behavior while retaining its own canonical model:
 
 - A structured `B` payload pasted at a block boundary inserts complete copied blocks.
 - The same payload pasted inside destination text absorbs the first copied block into the
@@ -536,8 +536,8 @@ Notion used a partial multi-text payload for `TN` and a different whole-block pa
   behavior when the source mode was text selection.
 - A structured paste mints fresh `BlockID`s and preserves only relative hierarchy.
 
-Copy writes the versioned Slopad structured representation and an ordinary plain-text
-fallback. Paste chooses a valid supported Slopad representation first, then plain text.
+Copy writes the versioned SlopadEditor structured representation and an ordinary plain-text
+fallback. Paste chooses a valid supported SlopadEditor representation first, then plain text.
 Invalid, unsupported-version, or oversized structured data fails closed to plain text.
 If encoding a structured copy exceeds the 8 MiB cap, Copy and Cut deliberately write only
 the ordinary plain-text representation; Cut mutates only after that plain write succeeds.
@@ -578,7 +578,7 @@ uses prepared visible-order ranks instead of that full-span traversal.
 | `D2` | Deleting every selected block leaves the first selected block as an empty paragraph with `C(0)`. |
 | `D3` | Printable/IME input is ignored in `B`; paste is intentional replacement; inline marks cover all selected text-capable blocks and leave `B` active. |
 | `D4` | `TN` Enter and Shift-Enter are delete-then-split and delete-then-soft-break; `B` Enter enters text at the first block's end and `B` Shift-Enter is a no-op. |
-| `D5` | Clipboard uses typed Slopad text-slice/block-subtree payloads plus plain text, with the Notion-style open-edge rules above and no automatic Markdown decode. |
+| `D5` | Clipboard uses typed SlopadEditor text-slice/block-subtree payloads plus plain text, with the Notion-style open-edge rules above and no automatic Markdown decode. |
 | `D6` | Undo/redo restores exact selection mode, anchor/focus direction, offsets, and affinity. |
 | `D7` | `B` Shift-Right enters first-character `T1`, Shift-Left is a no-op; `TN` indent/outdent acts on every touched block; atomic and collapsed subtree content participates logically and uses block tint when it has no text geometry. |
 
@@ -614,7 +614,7 @@ uses prepared visible-order ranks instead of that full-span traversal.
   The currently unreachable installed-IME composition path is not a reason to add
   speculative composition-specific caret suppression; validate it after native delivery
   and composition semantics are implemented.
-- Collapsed subtrees remain a P4 feature because Slopad has no collapse state yet. D7 is
+- Collapsed subtrees remain a P4 feature because SlopadEditor has no collapse state yet. D7 is
   the forward-compatible rule that feature must obey. Shared toolbar mixed-value and
   availability projection remains P2 and is not a second selection owner.
 
@@ -678,8 +678,8 @@ Focused `SlopadAppKitUITests` must enter through the production adapter and asse
 
 - text-lane drag remains `T1/TN`; structural-margin drag remains `B`;
 - focus-block native selection synchronization does not collapse canonical `TN`;
-- copy writes both the versioned Slopad type and `.string`;
-- paste prefers a valid supported Slopad payload, falls back on invalid/newer/oversized
+- copy writes both the versioned SlopadEditor type and `.string`;
+- paste prefers a valid supported SlopadEditor payload, falls back on invalid/newer/oversized
   data, and never auto-decodes plain Markdown-looking text;
 - a failed required pasteboard write prevents Cut deletion;
 - the focused `C` uses AppKit's native automatic insertion-indicator cadence and

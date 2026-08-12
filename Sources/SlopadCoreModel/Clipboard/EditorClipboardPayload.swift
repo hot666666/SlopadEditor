@@ -1,6 +1,6 @@
 // MARK: - Editor Clipboard Payload
 
-/// Slopad's versioned, format-neutral clipboard representation.
+/// SlopadEditor's versioned, format-neutral clipboard representation.
 ///
 /// The pasteboard adapter serializes this value at the edge. Canonical mutation still
 /// happens in `EditorModel`; this payload is not a second document model.

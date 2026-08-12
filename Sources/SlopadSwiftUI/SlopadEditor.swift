@@ -212,7 +212,7 @@ private struct SlopadEditorPoC: View {
 			EditorBlockInput(
 				id: "p-1",
 				kind: .heading(level: .h1),
-				content: BlockContent(text: "Slopad SwiftUI Preview PoC")
+				content: BlockContent(text: "SlopadEditor SwiftUI Preview PoC")
 			),
 			EditorBlockInput(
 				id: "p-2",

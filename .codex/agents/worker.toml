@@ -1,5 +1,5 @@
 name = "worker"
-description = "Implements narrow, well-defined Slopad changes after ownership and acceptance criteria are settled."
+description = "Implements narrow, well-defined SlopadEditor changes after ownership and acceptance criteria are settled."
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"

@@ -30,7 +30,7 @@ canonical block tree and mutation invariants remain owned by `SlopadEditorModel`
 only transforms an immutable complete projection. Files, URLs, databases, cloud records,
 encryption, autosave, conflicts, recovery, retries, atomic replacement, application
 document identity, and storage revisions differ by host and have no editor-semantic owner
-inside Slopad.
+inside SlopadEditor.
 
 One current Core behavior makes the decoder boundary especially important.
 `BlockContent.init(from:)` constructs `BlockContent`, whose initializer clamps mark ranges,
@@ -276,7 +276,7 @@ contracts, not public host APIs and not a generic CoreModel helper bucket.
 ### Version evolution and migration
 
 `SlopadArchive` owns wire-version recognition and pure in-memory migration. A host must not
-inspect a version and recreate Slopad's canonical migration rules in file, database, or
+inspect a version and recreate SlopadEditor's canonical migration rules in file, database, or
 cloud code.
 
 - A decoder rejects versions above its latest supported version as

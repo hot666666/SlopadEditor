@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Entry point for agents working in Slopad.
+Entry point for agents working in SlopadEditor.
 
 ## Read First
 
@@ -25,7 +25,7 @@ When source and an intent document disagree about *intent*, that is a planning d
 
 ## Architecture Rules
 
-Slopad is a headless native block editor engine. The canonical document is a block tree; Markdown/HTML are input/output formats, not the model.
+SlopadEditor is a headless native block editor engine. The canonical document is a block tree; Markdown/HTML are input/output formats, not the model.
 
 Ownership:
 

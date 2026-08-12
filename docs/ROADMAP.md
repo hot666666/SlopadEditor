@@ -1,7 +1,7 @@
 # ROADMAP
 
 This document contains only unfinished product direction, priority, and exit criteria.
-Current source and tests define what Slopad does today. [Architecture](ARCHITECTURE.md),
+Current source and tests define what SlopadEditor does today. [Architecture](ARCHITECTURE.md),
 the [architecture map](slopad-architecture-map.html), and the ADRs define established
 boundaries; the active tracking issue defines the executable work order.
 

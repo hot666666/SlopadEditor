@@ -48,4 +48,4 @@ for scenario in "${SCENARIOS[@]}"; do
     --auto-exit
 done
 
-printf 'Slopad debug state regression passed with screenshots in %s\n' "$OUTPUT_DIR"
+printf 'SlopadEditor debug state regression passed with screenshots in %s\n' "$OUTPUT_DIR"

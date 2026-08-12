@@ -1,6 +1,6 @@
 # Loop Request Template
 
-Use this template when asking for a bounded Slopad work loop.
+Use this template when asking for a bounded SlopadEditor work loop.
 
 A loop is not just a longer prompt. It is a repeated cycle of:
 
