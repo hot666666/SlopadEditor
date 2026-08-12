@@ -1,6 +1,6 @@
 @_exported import SlopadEditorCoreModel
 
-// MARK: - SlopadEngineExports
+// MARK: - SlopadEditorEngineExports
 
 public typealias BlockDropTarget = SlopadEditorCoreModel.BlockDropTarget
 public typealias BlockHitRegion = SlopadEditorCoreModel.BlockHitRegion

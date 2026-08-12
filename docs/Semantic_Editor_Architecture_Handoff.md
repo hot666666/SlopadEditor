@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > **이 문서는 근거 기록이지 작업 지시서가 아니다.**
 >
-> 작업 지시의 SSOT는 [`docs/ROADMAP.md`](docs/ROADMAP.md)와 [`ADR/`](ADR/), 그리고 [Epic #23](https://github.com/hot666666/SlopadEditor/issues/23)이다.
+> 작업 지시의 SSOT는 [`docs/ROADMAP.md`](ROADMAP.md)와 [`ADR/`](../ADR/), 그리고 [Epic #23](https://github.com/hot666666/SlopadEditor/issues/23)이다.
 > 이 문서는 그 결론에 이르게 된 배경과 논거를 남기기 위해 유지한다.
 >
 > - **정정 기준일:** 2026-08-07
@@ -1820,7 +1820,7 @@ Agent가 Markdown 문자열 전체를 다시 작성하게 하는 경로보다 se
 # 15. 단계별 작업 순서
 
 > [!IMPORTANT]
-> **이 Phase 목록은 대체되었다.** 실제 작업 순서는 [Epic #23](https://github.com/hot666666/SlopadEditor/issues/23)과 [`docs/ROADMAP.md`](docs/ROADMAP.md)를 따른다.
+> **이 Phase 목록은 대체되었다.** 실제 작업 순서는 [Epic #23](https://github.com/hot666666/SlopadEditor/issues/23)과 [`docs/ROADMAP.md`](ROADMAP.md)를 따른다.
 >
 > 주요 차이 셋:
 >

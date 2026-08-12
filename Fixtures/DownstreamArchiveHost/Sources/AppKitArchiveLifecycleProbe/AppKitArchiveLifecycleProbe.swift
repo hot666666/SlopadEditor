@@ -447,7 +447,7 @@ private struct AppKitArchiveLifecycleProbe {
     static func main() async throws {
         _ = NSApplication.shared
         let storageURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("SlopadDownstreamArchiveHost", isDirectory: true)
+            .appendingPathComponent("SlopadEditorDownstreamArchiveHost", isDirectory: true)
             .appendingPathComponent("document.slopad")
         try? FileManager.default.removeItem(at: storageURL)
 
@@ -634,7 +634,7 @@ private struct AppKitArchiveLifecycleProbe {
     private static func runFailedCommitProbe() async throws {
         let fileManager = FileManager.default
         let failureDestination = fileManager.temporaryDirectory
-            .appendingPathComponent("SlopadDownstreamArchiveHost", isDirectory: true)
+            .appendingPathComponent("SlopadEditorDownstreamArchiveHost", isDirectory: true)
             .appendingPathComponent("forced-final-commit-failure.slopad")
         try? fileManager.removeItem(at: failureDestination)
         defer { try? fileManager.removeItem(at: failureDestination) }

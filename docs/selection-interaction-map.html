@@ -709,7 +709,7 @@ const scenarios = [
     id:"children",
     title:"삭제된 endpoint의 자식 승격",
     short:"D1 · settled tree repair",
-    description:"Notion과 달리 Slopad는 B의 미선택 자식을 B.parent로 승격한다. 생존 A를 암묵적인 새 부모로 만들지 않는다.",
+    description:"Notion과 달리 SlopadEditor는 B의 미선택 자식을 B.parent로 승격한다. 생존 A를 암묵적인 새 부모로 만들지 않는다.",
     before:`<div class="doc-block">A · prefix</div><div class="doc-block"><span class="text-selected">B · all selected</span></div><div class="doc-block" style="margin-left:28px">↳ B.child.1</div><div class="doc-block" style="margin-left:28px">↳ B.child.2</div>`,
     after:`<div class="doc-block">A · prefix</div><div class="doc-block">B.child.1 · promoted</div><div class="doc-block">B.child.2 · promoted</div><p class="logical">SlopadEditor: parent = removed B.parent · one transaction</p>`,
     evidence:["observed","user","target"]

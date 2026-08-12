@@ -143,7 +143,7 @@ Version 1 is UTF-8 JSON with exactly two top-level members:
       "parentID": null,
       "kind": { "type": "heading", "level": 1 },
       "content": {
-        "text": "Slopad",
+        "text": "SlopadEditor",
         "marks": [
           {
             "kind": { "type": "strong" },

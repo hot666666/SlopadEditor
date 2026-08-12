@@ -1,6 +1,7 @@
 # Rename Migration Plan
 
-Status: in progress. Stages 0-3 complete.
+Status: **complete.** Every stage has landed and `scripts/verify-naming.sh` is sealed
+as a CI gate. Kept as the record of how the migration ran and what it cost.
 
 Target scheme: [ADR 0016](../ADR/0016-name-the-package-slopadeditor-and-reserve-slopad-for-the-app.md).
 That record fixes *what* the names become; this document owns *how the tree gets there

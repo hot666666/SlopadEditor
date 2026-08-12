@@ -12,8 +12,11 @@
 # verify-host-surface.sh failed closed against correctly renamed fixtures. A checker can
 # hold a stale name exactly as easily as the files it checks.
 #
+# The migration is complete, so the default mode is now a gate: any occurrence outside the
+# documented allowlist fails. `--strict` is retained as an alias and does the same thing.
+#
 # Usage:
-#   bash scripts/verify-naming.sh            # summary; exit 0 unless a sealed stage regressed
+#   bash scripts/verify-naming.sh            # gate; fails if any occurrence remains
 #   bash scripts/verify-naming.sh --all      # additionally list every remaining file
 #   bash scripts/verify-naming.sh --strict   # additionally fail while any occurrence remains
 
@@ -65,7 +68,7 @@ is_allowed() {
         # Point-in-time record of the state before the migration.
         docs/ARCHITECTURE_AUDIT_*.md) return 0 ;;
         # Historical background record, explicitly not a work order (AGENTS.md).
-        Slopad_Semantic_Editor_Architecture_Handoff.md) return 0 ;;
+        docs/Semantic_Editor_Architecture_Handoff.md) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -124,8 +127,7 @@ for script in scripts/verify-host-surface.sh scripts/verify-archive-surface.sh; 
     fi
 done
 
-if ((strict == 1)); then
-    echo "strict: failing while any occurrence remains" >&2
-    exit 1
-fi
-exit 0
+# SEALED. The migration finished, so any occurrence outside the allowlist is a regression
+# rather than remaining work.
+echo "the migration is complete; a new occurrence is a regression, not remaining work" >&2
+exit 1

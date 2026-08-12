@@ -12,7 +12,7 @@ struct SlopadEditorLifecycleTests {
 
     @Test("같은 id로 document를 다시 만들어도 교체하지 않는다")
     func rebuildingTheSameDocumentIsNotAReplacement() {
-        // Given: 선언형 호스트는 body 평가마다 SlopadDocument를 새로 만든다.
+        // Given: 선언형 호스트는 body 평가마다 SlopadEditorDocument를 새로 만든다.
         let model = SlopadEditorViewModel()
         let coordinator = SlopadEditorView.Coordinator(model: model)
         let first = SlopadEditorDocument(id: "record-1", blocks: blocks("A"))
