@@ -1,6 +1,6 @@
 import Testing
 
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import SlopadEditorDocumentModel
 
 @Suite("EditorModel structural Backspace 키 명령")

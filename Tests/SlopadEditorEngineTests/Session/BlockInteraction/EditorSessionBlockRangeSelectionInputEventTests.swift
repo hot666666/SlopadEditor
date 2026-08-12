@@ -1,7 +1,7 @@
 import Testing
 
 @testable import SlopadEditorEngine
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("에디터 세션 블록 range 선택 입력 이벤트")
 struct EditorSessionBlockRangeSelectionInputEventTests {

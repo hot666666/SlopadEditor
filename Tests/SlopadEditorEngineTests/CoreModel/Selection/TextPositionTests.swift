@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("TextPosition 값")
 struct TextPositionTests {

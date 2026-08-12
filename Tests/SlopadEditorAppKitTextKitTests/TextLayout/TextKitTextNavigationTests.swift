@@ -2,7 +2,7 @@ import AppKit
 import Testing
 
 @testable import SlopadEditorAppKitTextKit
-@testable import SlopadCoreModel
+@testable import SlopadEditorCoreModel
 
 @Suite("TextKit 네이티브 텍스트 탐색")
 struct TextKitTextNavigationTests {

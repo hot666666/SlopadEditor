@@ -76,7 +76,7 @@ concurrency design.
 ### The dependency lives behind one target
 
 `SlopadEditorMarkdown` is a separate, opt-in library product and target. Its target depends on
-`SlopadCoreModel` and on the `Markdown` product from `swift-markdown`; it is not folded into
+`SlopadEditorCoreModel` and on the `Markdown` product from `swift-markdown`; it is not folded into
 `SlopadEditorEngine`, `SlopadEditorAppKit`, or `SlopadEditorSwiftUI`.
 
 Its public surface is expressed entirely in core vocabulary — `EditorBlockInput`,
@@ -193,7 +193,7 @@ The persistence source of truth is now decided: a versioned native archive, not 
 Markdown remains explicit whole-document import/export and therefore keeps its fresh-ID and
 syntax-normalization contract.
 [ADR 0015](0015-version-native-archive-and-keep-storage-host-owned.md) defines
-`SlopadEditorArchive` as an opt-in pure codec whose target depends only on `SlopadCoreModel`; its
+`SlopadEditorArchive` as an opt-in pure codec whose target depends only on `SlopadEditorCoreModel`; its
 public facade exposes only the ADR's curated, type-identical archive aliases, not a
 CoreModel product. It encodes a format version and canonical blocks, including their
 identities, but never selection, undo/history, operation journal, epoch/revision,

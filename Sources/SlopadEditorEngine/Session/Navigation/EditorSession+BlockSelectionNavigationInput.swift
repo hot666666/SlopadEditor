@@ -1,5 +1,5 @@
 import SlopadEditorBlockLayout
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 // MARK: - Block Selection Navigation Input
 

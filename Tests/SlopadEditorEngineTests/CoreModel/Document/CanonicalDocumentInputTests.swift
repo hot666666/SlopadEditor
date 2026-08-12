@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import Testing
 
 @Suite("selection-independent canonical document input validation")

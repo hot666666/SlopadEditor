@@ -1,5 +1,5 @@
 @testable import SlopadEditorEngine
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 func sessionBlockSelection(_ selection: EditorSelection) -> BlockSelection? {
     guard case .blocks(let blockSelection) = selection else { return nil }

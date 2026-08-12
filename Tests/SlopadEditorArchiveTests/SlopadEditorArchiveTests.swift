@@ -1,5 +1,5 @@
 import Foundation
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import Testing
 
 @testable import SlopadEditorArchive
@@ -23,11 +23,11 @@ struct SlopadEditorArchiveTests {
         )
 
         // When
-        let coreID: SlopadCoreModel.BlockID = archiveID
-        let coreKind: SlopadCoreModel.BlockKind = archiveKind
-        let coreContent: SlopadCoreModel.BlockContent = archiveContent
-        let coreRange: SlopadCoreModel.TextRange = archiveRange
-        let coreInput: SlopadCoreModel.EditorBlockInput = archiveInput
+        let coreID: SlopadEditorCoreModel.BlockID = archiveID
+        let coreKind: SlopadEditorCoreModel.BlockKind = archiveKind
+        let coreContent: SlopadEditorCoreModel.BlockContent = archiveContent
+        let coreRange: SlopadEditorCoreModel.TextRange = archiveRange
+        let coreInput: SlopadEditorCoreModel.EditorBlockInput = archiveInput
 
         // Then
         #expect(coreID == archiveID)

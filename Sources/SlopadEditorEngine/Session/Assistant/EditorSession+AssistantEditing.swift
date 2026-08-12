@@ -1,5 +1,5 @@
 import SlopadEditorBlockLayout
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import SlopadEditorDocumentModel
 
 // MARK: - Assistant Editing Contract

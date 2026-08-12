@@ -180,7 +180,7 @@ surface and prove which workload each storage mode owns.
 - array-like storage for full rebuild/read-mostly snapshots
 - RBTree-like storage for structural-mutation-heavy snapshots
 
-Do not expose storage selection through `EditorSession`, `SlopadCoreModel`, or
+Do not expose storage selection through `EditorSession`, `SlopadEditorCoreModel`, or
 host-facing API.
 
 ## AppKit UI Follow-Up Measurement

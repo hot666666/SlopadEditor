@@ -1,4 +1,4 @@
-@testable import SlopadCoreModel
+@testable import SlopadEditorCoreModel
 import Testing
 
 @Suite("텍스트 범위")

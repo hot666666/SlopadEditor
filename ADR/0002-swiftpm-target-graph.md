@@ -28,7 +28,7 @@ flowchart TB
     end
 
     subgraph Foundation["Foundation & Data"]
-        CoreModel["SlopadCoreModel"]
+        CoreModel["SlopadEditorCoreModel"]
         DataStructure["SlopadEditorDataStructure"]
     end
 
@@ -51,7 +51,7 @@ ownership.
 
 Keep the SwiftPM targets aligned to ownership:
 
-- `SlopadCoreModel`: public vocabulary, backend seam values, package canonical document
+- `SlopadEditorCoreModel`: public vocabulary, backend seam values, package canonical document
   values.
 - `SlopadEditorDocumentModel`: semantic document/selection/command/history owner.
 - `SlopadEditorBlockLayout`: layout projection, visible order, invalidation, geometry, text
@@ -79,7 +79,7 @@ platform host surfaces such as the AppKit controller, style, and chrome contract
 - A complete platform replacement adds a sibling adapter that depends on `SlopadEditorEngine`
   and a coherent backend. It does not add platform dependencies to the engine or turn the
   default AppKit chrome hook into a renderer seam.
-- `SlopadCoreModel` is not a shared helper bucket. A value belongs there only when it is
+- `SlopadEditorCoreModel` is not a shared helper bucket. A value belongs there only when it is
   public vocabulary, a backend seam value, or package canonical document state.
 - Any new public/package surface needs producer, consumer, invariant, and dependency
   direction evidence.

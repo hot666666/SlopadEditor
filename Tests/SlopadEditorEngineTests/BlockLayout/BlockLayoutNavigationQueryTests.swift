@@ -1,7 +1,7 @@
 import Testing
 
 @testable import SlopadEditorBlockLayout
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("BlockLayout 이동 조회")
 struct BlockLayoutNavigationQueryTests {

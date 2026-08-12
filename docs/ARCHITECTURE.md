@@ -33,12 +33,12 @@ The production targets form these direct dependency layers:
 | Format syntax | `SlopadEditorMarkdownInputRules` | Internal immutable bounded typed-input patterns |
 | Format codec | `SlopadEditorMarkdown` | Opt-in stateless whole-document decode and encode |
 | Format codec | `SlopadEditorArchive` | Opt-in stateless versioned native archive encode and decode |
-| Contracts | `SlopadCoreModel` | Public vocabulary and genuine package cross-target contracts |
+| Contracts | `SlopadEditorCoreModel` | Public vocabulary and genuine package cross-target contracts |
 | Storage | `SlopadEditorDataStructure` | Editor-independent data structures |
 
 `SlopadEditorArchive` is an opt-in synchronous pure codec whose target depends only on
-`SlopadCoreModel`. Its public facade uses Swift 6 `public import` for declaration legality
-and exposes only five type-identical archive aliases; it does not make `SlopadCoreModel` a
+`SlopadEditorCoreModel`. Its public facade uses Swift 6 `public import` for declaration legality
+and exposes only five type-identical archive aliases; it does not make `SlopadEditorCoreModel` a
 product or broadly re-export its vocabulary. See
 [ADR 0015](../ADR/0015-version-native-archive-and-keep-storage-host-owned.md).
 
@@ -47,7 +47,7 @@ The dependency graph enforces four important absences:
 - `SlopadEditorDocumentModel` and `SlopadEditorBlockLayout` do not import each other;
   `EditorSession` coordinates them.
 - `SlopadEditorAppKitTextKit` does not import the engine. Runtime calls arrive through
-  `BlockTextLayoutProtocol` capabilities defined in `SlopadCoreModel`.
+  `BlockTextLayoutProtocol` capabilities defined in `SlopadEditorCoreModel`.
 - `SlopadEditorMarkdown` does not import the engine. A caller explicitly decides when decoded
   block inputs enter a document transaction.
 - `SlopadEditorArchive` likewise does not import the engine or a storage provider. It
@@ -64,7 +64,7 @@ interchangeable.
 
 | Lifetime | Owner | Examples | Rule |
 | --- | --- | --- | --- |
-| Canonical document | `SlopadEditorDocumentModel` stores types defined in `SlopadCoreModel` | block tree/order, `BlockID`, kind, text, inline marks | Changes only through validated model transactions |
+| Canonical document | `SlopadEditorDocumentModel` stores types defined in `SlopadEditorCoreModel` | block tree/order, `BlockID`, kind, text, inline marks | Changes only through validated model transactions |
 | Canonical editing state | `SlopadEditorDocumentModel` | caret/text/block selection, stored marks, history | Platform callbacks request transitions; they do not mutate it directly |
 | Session runtime | `EditorSession` | live composition, composition selection, slash query/source revision, drag/navigation context | Cleared or invalidated when its exact source state no longer matches |
 | Platform runtime | `SlopadEditorAppKitUI` | responder, native marked range, scroll position, overlay widgets | Must converge on Session facts without becoming semantics |
@@ -73,7 +73,7 @@ interchangeable.
 | Persistence projection | `EditorDocumentSnapshot` | complete canonical DFS block inputs and Session epoch/revision | Full-tree read; excludes selection, layout, viewport, scroll, and composition |
 | Review context | `EditorDocumentContextSnapshot` | full document, exact selection, selected content, opaque source | Short-lived CAS authority used only by `applyDocumentPatch(_:)` |
 
-Canonical value definitions living in `SlopadCoreModel` do not make that target the
+Canonical value definitions living in `SlopadEditorCoreModel` do not make that target the
 mutation owner. Likewise, a complete TextKit prepared graph is a derived cache entry, not
 canonical editor state.
 
@@ -228,17 +228,17 @@ when to import/export and how to present unsupported input. See
 
 ## Native Archive Boundary
 
-`SlopadEditorArchive` v1 is a separate opt-in `SlopadCoreModel`-only codec over UTF-8 JSON
+`SlopadEditorArchive` v1 is a separate opt-in `SlopadEditorCoreModel`-only codec over UTF-8 JSON
 `Data`. Its envelope contains `formatVersion` and the complete canonical preorder blocks
 only. It preserves IDs, parent/root/sibling order, kinds, text, and inline marks; it excludes
 selection, history, operation journal, external reference payloads, epoch/revision,
 composition, layout, viewport, and TextKit state.
 
-The target internally depends on `SlopadCoreModel`, and files declaring public signatures
-use Swift 6 `public import SlopadCoreModel`. The archive module itself declares only
+The target internally depends on `SlopadEditorCoreModel`, and files declaring public signatures
+use Swift 6 `public import SlopadEditorCoreModel`. The archive module itself declares only
 typealiases for `BlockID`, `BlockKind`, `BlockContent`, `TextRange`, and
 `EditorBlockInput`; nested kind/mark vocabulary remains reachable through those aliases.
-There is no `SlopadCoreModel` product, Engine dependency, copied wrapper model, or blanket
+There is no `SlopadEditorCoreModel` product, Engine dependency, copied wrapper model, or blanket
 `@_exported import`. All archive signatures and associated error values use those exact
 aliases, so blocks obtained through any UI or Engine facade are type-identical and need no
 conversion.

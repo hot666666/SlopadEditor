@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 // MARK: - Incremental Layout Pass
 

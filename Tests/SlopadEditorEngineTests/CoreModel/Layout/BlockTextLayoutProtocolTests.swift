@@ -1,6 +1,6 @@
 import Testing
 
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("블록 텍스트 레이아웃 프로토콜")
 struct BlockTextLayoutProtocolTests {

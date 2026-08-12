@@ -28,7 +28,7 @@ development direction.
   native surface that collects OS callbacks, forwards them as engine input, and draws
   engine snapshots.
 - `EditorSession` became the host-facing facade, `SlopadEditorDocumentModel` the semantic editing
-  owner, `SlopadEditorBlockLayout` the layout projection owner, and `SlopadCoreModel` the public
+  owner, `SlopadEditorBlockLayout` the layout projection owner, and `SlopadEditorCoreModel` the public
   vocabulary plus package canonical value owner.
 - The SwiftPM target graph now prevents `SlopadEditorDocumentModel` and `SlopadEditorBlockLayout` from
   importing each other. `Session` translates semantic results into layout requests.
@@ -52,7 +52,7 @@ Next time:
 - First write down the type's fact, owner, producer, consumer, and invariant.
 - Add a new folder only when the read intent for surviving owner-local helpers is clear.
 
-### Using `SlopadCoreModel` as a Common Bucket
+### Using `SlopadEditorCoreModel` as a Common Bucket
 
 Symptom: reducer, policy, layout cache, projection helper, or tree-aware document helper
 types are moved into CoreModel just because several targets use them.
@@ -132,7 +132,7 @@ Next time:
 ### Pushing Complexity Elsewhere After a Deletion Experiment
 
 Symptom: a type disappears, but the same invariant spreads into `Session`,
-`SlopadCoreModel`, the demo host, test support, or multiple call sites.
+`SlopadEditorCoreModel`, the demo host, test support, or multiple call sites.
 
 Cause: deletion itself was treated as the success criterion.
 

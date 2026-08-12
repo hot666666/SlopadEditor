@@ -1,5 +1,5 @@
 internal import Markdown
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 struct MarkdownDecoder {
     struct Result {

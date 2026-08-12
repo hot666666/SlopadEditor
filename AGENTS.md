@@ -43,7 +43,7 @@ Guardrails:
 * Platform adapters must not own editor semantics or canonical state.
 * `EditorModel` must not own or call `BlockLayout`; `EditorSession` coordinates them.
 * IME/composition, layout, viewport, TextKit geometry, and render state are not canonical document state.
-* `SlopadCoreModel` is shared contract vocabulary, not a generic helper/projection bucket.
+* `SlopadEditorCoreModel` is shared contract vocabulary, not a generic helper/projection bucket.
 * Add public/cross-target types only when they represent a real contract or invariant.
 * Use `public` for host API, `package` for genuine cross-target contracts, and internal access otherwise.
 

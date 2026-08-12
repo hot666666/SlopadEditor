@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-import SlopadCoreModel
+import SlopadEditorCoreModel
 @testable import SlopadEditorEngine
 
 @Suite("AssistantEditorContract 세션 문서 context와 patch")

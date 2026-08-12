@@ -1,6 +1,6 @@
 import Testing
 
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import SlopadEditorDocumentModel
 
 @Suite("EditorModel 블록 outdent 명령")

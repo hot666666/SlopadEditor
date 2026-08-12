@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 /// Stateless Markdown conversion into SlopadEditor's canonical block-input vocabulary.
 public enum SlopadEditorMarkdown {

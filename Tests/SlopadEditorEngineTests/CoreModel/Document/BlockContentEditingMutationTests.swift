@@ -1,6 +1,6 @@
 import Testing
 
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("BlockContent editing mutation 동작")
 struct BlockContentEditingMutationTests {

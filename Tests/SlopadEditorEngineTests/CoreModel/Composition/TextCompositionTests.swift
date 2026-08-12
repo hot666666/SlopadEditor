@@ -1,6 +1,6 @@
 import Testing
 
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("텍스트 조합")
 struct TextCompositionTests {

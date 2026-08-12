@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 // MARK: - Text Measurement
 

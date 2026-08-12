@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import Testing
 
 @testable import SlopadEditorBlockLayout

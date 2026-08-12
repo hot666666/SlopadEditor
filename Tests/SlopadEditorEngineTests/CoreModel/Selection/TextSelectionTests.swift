@@ -1,6 +1,6 @@
 import Testing
 
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("TextSelection 값")
 struct TextSelectionTests {

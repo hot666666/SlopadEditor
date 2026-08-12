@@ -1,5 +1,5 @@
 @testable import SlopadEditorBlockLayout
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 func orderedMarkerBlock(
     id: BlockID,

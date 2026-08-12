@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 enum ArchiveV1EncodingBudgetError: Error, Equatable {
     case exceeded(blockID: BlockID)

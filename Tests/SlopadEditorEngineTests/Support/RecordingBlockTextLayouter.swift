@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 // Stays on the composed protocol: `EditorSession.init` takes the whole seam, because a
 // backend adopts all four capabilities. Only doubles that never reach Session can be

@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 struct RecordedTextNavigationRequest: Equatable {
     let selection: TextSelection

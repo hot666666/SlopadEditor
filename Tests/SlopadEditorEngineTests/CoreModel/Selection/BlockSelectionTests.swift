@@ -1,6 +1,6 @@
 import Testing
 
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("BlockSelection 값")
 struct BlockSelectionTests {

@@ -44,23 +44,23 @@ fail closed before any normalizing core initializer runs.
 ### One opt-in pure codec, no storage abstraction
 
 Add `SlopadEditorArchive` as a separate opt-in library product and target. Its target dependency
-is only `SlopadCoreModel`; Foundation contributes `Data`. Source files that declare the
-public codec API use Swift 6 `public import SlopadCoreModel` so the underlying public types
+is only `SlopadEditorCoreModel`; Foundation contributes `Data`. Source files that declare the
+public codec API use Swift 6 `public import SlopadEditorCoreModel` so the underlying public types
 are legal in public declarations, then the archive module curates exactly these aliases:
 
 ```swift
-public import SlopadCoreModel
+public import SlopadEditorCoreModel
 
-public typealias BlockID = SlopadCoreModel.BlockID
-public typealias BlockKind = SlopadCoreModel.BlockKind
-public typealias BlockContent = SlopadCoreModel.BlockContent
-public typealias TextRange = SlopadCoreModel.TextRange
-public typealias EditorBlockInput = SlopadCoreModel.EditorBlockInput
+public typealias BlockID = SlopadEditorCoreModel.BlockID
+public typealias BlockKind = SlopadEditorCoreModel.BlockKind
+public typealias BlockContent = SlopadEditorCoreModel.BlockContent
+public typealias TextRange = SlopadEditorCoreModel.TextRange
+public typealias EditorBlockInput = SlopadEditorCoreModel.EditorBlockInput
 ```
 
 Nested public vocabulary such as block-kind payloads and inline-mark kinds remains reachable
 through its aliased parent type; it does not receive another top-level alias. This is a
-curated archive facade, not a `SlopadCoreModel` product or a blanket
+curated archive facade, not a `SlopadEditorCoreModel` product or a blanket
 `@_exported import`. `SlopadEditorArchive` does not copy or wrap these values, require
 `SlopadEditorEngine`, or make Session, AppKit, SwiftUI, TextKit, filesystem APIs, URLs, databases,
 and storage providers dependencies or public vocabulary.
@@ -128,7 +128,7 @@ Only `Data`, the five curated `SlopadEditorArchive` aliases above, and archive-o
 cross this public boundary. Public signatures and associated error values use those exact
 aliases. `EditorSession`, `EditorDocumentSnapshot`, epoch, revision, selection,
 AppKit/SwiftUI/TextKit types, `URL`, database/storage protocols, raw
-`SlopadCoreModel` imports, and package-only `Document`/`Block` types do not.
+`SlopadEditorCoreModel` imports, and package-only `Document`/`Block` types do not.
 
 ### Version 1 wire contract
 
@@ -245,7 +245,7 @@ well-typed mark list that is not canonical maps to
 
 ### One selection-independent canonical validation seam
 
-`SlopadCoreModel` owns the canonical input invariant because both
+`SlopadEditorCoreModel` owns the canonical input invariant because both
 `SlopadEditorDocumentModel` document replacement and the CoreModel-only archive target need the
 same answer. The implementation extracts a package-level, selection-independent seam:
 
@@ -373,7 +373,7 @@ layer acquires command, invariant, selection, or history ownership.
 - The same fixture proves host lifecycle integration separately. Its lifecycle target/source may
   additionally import exactly one public UI facade plus `SlopadEditorArchive`, passes the
   facade's type-identical `snapshot.blocks` directly to the codec, and never imports raw
-  `SlopadEditorEngine`, `SlopadCoreModel`, or package-only types. If both probes live in one
+  `SlopadEditorEngine`, `SlopadEditorCoreModel`, or package-only types. If both probes live in one
   fixture package, they remain separate targets/sources with distinct product dependencies
   and import audits. Neither ordinary AppKit/SwiftUI lifecycle fixtures nor the Markdown
   fixture gains an archive dependency.

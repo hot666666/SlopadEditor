@@ -30,7 +30,7 @@ body:
         - SlopadEditorEngine / EditorSession
         - SlopadEditorDocumentModel
         - SlopadEditorBlockLayout
-        - SlopadCoreModel
+        - SlopadEditorCoreModel
         - SlopadEditorAppKitTextKit
         - SlopadEditorDataStructure
         - Debug or benchmark target

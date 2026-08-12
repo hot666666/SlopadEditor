@@ -1,7 +1,7 @@
 import Testing
 
 @testable import SlopadEditorBlockLayout
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("visible block index projection 동작")
 struct VisibleBlockIndexTests {

@@ -1,7 +1,7 @@
 import Testing
 
 @testable import SlopadEditorEngine
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("에디터 세션 시각 줄 네비게이션")
 struct EditorSessionVisualLineNavigationTests {

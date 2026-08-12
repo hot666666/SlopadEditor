@@ -192,7 +192,7 @@ Goal-based
 - Current symptom, friction, cleanup pressure, or user-facing failure: text measurement helpers may be placed by folder name instead of producer/consumer ownership.
 - Why this matters to the app/user/workflow: misplaced helpers make later layout changes harder to verify and easier to route through the wrong module.
 - Suspected owner: `SlopadEditorBlockLayout`
-- Known constraints: keep `BlockTextLayoutProtocol` in `SlopadCoreModel`.
+- Known constraints: keep `BlockTextLayoutProtocol` in `SlopadEditorCoreModel`.
 - Known unknowns: whether `TextLayoutCache` is a reusable boundary or only an implementation detail.
 
 ## Owner Boundary & Human Gate

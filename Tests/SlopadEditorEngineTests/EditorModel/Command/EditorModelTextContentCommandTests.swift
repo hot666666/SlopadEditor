@@ -1,6 +1,6 @@
 import Testing
 
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import SlopadEditorDocumentModel
 
 // EditorModelTextContentCommandTests.swift는 단일 블록 텍스트 삽입/교체/삭제 명령을 검증합니다.

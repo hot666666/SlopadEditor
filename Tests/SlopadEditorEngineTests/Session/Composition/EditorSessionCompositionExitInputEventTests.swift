@@ -1,7 +1,7 @@
 import Testing
 
 @testable import SlopadEditorEngine
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("에디터 세션 조합 종료 입력 이벤트")
 struct EditorSessionCompositionExitInputEventTests {

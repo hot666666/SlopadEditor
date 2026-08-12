@@ -1,7 +1,7 @@
 import AppKit
 import Dispatch
 import Foundation
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 // MARK: - TextKitLayoutContext
 
@@ -131,7 +131,7 @@ final class TextKitLayoutContext: @unchecked Sendable {
                 )
                 let textRange = layoutIndexMap.textRange(for: line.characterRange)?
                     .clamped(to: canonicalIndexMap.graphemeCount)
-                    ?? SlopadCoreModel.TextRange.point(0)
+                    ?? SlopadEditorCoreModel.TextRange.point(0)
                 fragments.append(
                     LineFragmentSnapshot(
                         blockID: request.blockID,
@@ -179,7 +179,7 @@ final class TextKitLayoutContext: @unchecked Sendable {
     }
 
     func selectionRects(
-        for range: SlopadCoreModel.TextRange,
+        for range: SlopadEditorCoreModel.TextRange,
         request: BlockMeasureRequest,
         style: TextKitEditorStyle
     ) -> [CGRect] {
@@ -356,7 +356,7 @@ final class TextKitLayoutContext: @unchecked Sendable {
         containing position: TextPosition,
         request: BlockMeasureRequest,
         style: TextKitEditorStyle
-    ) -> SlopadCoreModel.TextRange? {
+    ) -> SlopadEditorCoreModel.TextRange? {
         guard position.blockID == request.blockID else { return nil }
         guard !request.text.isEmpty else { return .point(0) }
 
@@ -394,7 +394,7 @@ final class TextKitLayoutContext: @unchecked Sendable {
         destination: TextNavigationDestination,
         request: BlockMeasureRequest,
         style: TextKitEditorStyle
-    ) -> SlopadCoreModel.TextRange? {
+    ) -> SlopadEditorCoreModel.TextRange? {
         lock.lock()
         defer { lock.unlock() }
 
@@ -544,7 +544,7 @@ final class TextKitLayoutContext: @unchecked Sendable {
         prepared: TextKitPreparedLayoutState
     ) -> CGRect? {
         let nsOffset = indexMap.nsRange(
-            clamping: SlopadCoreModel.TextRange.point(position.offset)
+            clamping: SlopadEditorCoreModel.TextRange.point(position.offset)
         ).location
         guard
             let location = prepared.textContentStorage.location(
@@ -576,7 +576,7 @@ final class TextKitLayoutContext: @unchecked Sendable {
     }
 
     private func nsTextRange(
-        for range: SlopadCoreModel.TextRange,
+        for range: SlopadEditorCoreModel.TextRange,
         indexMap: TextKitTextIndexMap,
         prepared: TextKitPreparedLayoutState
     ) -> NSTextRange? {

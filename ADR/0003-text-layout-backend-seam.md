@@ -18,7 +18,7 @@ same block-local text layout facts.
 
 ## Decision
 
-Keep the public text layout seam in `SlopadCoreModel/Layout` as
+Keep the public text layout seam in `SlopadEditorCoreModel/Layout` as
 `BlockTextLayoutProtocol` and related value types. Keep block-local request construction
 and cache policy inside `SlopadEditorBlockLayout/TextLayout`.
 
@@ -127,7 +127,7 @@ Consequences added by this amendment:
   Standalone layouter and renderer initializers are internal so a downstream adapter
   cannot accidentally assemble a split backend.
 - Do not create a SwiftPM target per capability. The protocols live where the seam already
-  lived, in `SlopadCoreModel/Layout`.
+  lived, in `SlopadEditorCoreModel/Layout`.
 - Caret and selection rectangles arrive through the Session snapshot (issue #35), resolved
   in document coordinates so an adapter draws rather than asks. `EditorSession` memoizes them
   across the adapter's surface-convergence renders, which run many times per paint.

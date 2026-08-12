@@ -1,5 +1,5 @@
 @testable import SlopadEditorEngine
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 extension EditorSession {
     var document: Document {

@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 struct DeterministicBlockTextLayouter: BlockTextLayoutProtocol, Sendable {
     var lineHeight: Double

@@ -1,7 +1,7 @@
 import Testing
 
 @testable import SlopadEditorBlockLayout
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("TextLayout cache 정책")
 struct TextLayoutCacheTests {

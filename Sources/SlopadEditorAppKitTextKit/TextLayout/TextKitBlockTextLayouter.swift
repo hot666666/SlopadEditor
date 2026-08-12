@@ -1,7 +1,7 @@
 import AppKit
 import CoreGraphics
 import Foundation
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 // MARK: - TextKitBlockTextLayouter
 
@@ -101,7 +101,7 @@ public struct TextKitBlockTextLayouter: BlockTextLayoutProtocol, Sendable {
     }
 
     public func selectionRects(
-        for range: SlopadCoreModel.TextRange,
+        for range: SlopadEditorCoreModel.TextRange,
         in request: BlockMeasureRequest
     )
         -> [EditorRect]
@@ -151,7 +151,7 @@ public struct TextKitBlockTextLayouter: BlockTextLayoutProtocol, Sendable {
     public func wordRange(
         containing position: TextPosition,
         in request: BlockMeasureRequest
-    ) -> SlopadCoreModel.TextRange? {
+    ) -> SlopadEditorCoreModel.TextRange? {
         layoutContext.wordRange(containing: position, request: request, style: style)
     }
 
@@ -160,7 +160,7 @@ public struct TextKitBlockTextLayouter: BlockTextLayoutProtocol, Sendable {
         direction: TextNavigationDirection,
         destination: TextNavigationDestination,
         in request: BlockMeasureRequest
-    ) -> SlopadCoreModel.TextRange? {
+    ) -> SlopadEditorCoreModel.TextRange? {
         layoutContext.deletionRange(
             for: selection,
             direction: direction,

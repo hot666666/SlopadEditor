@@ -1,7 +1,7 @@
 import CoreGraphics
 import Dispatch
 import Foundation
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import Testing
 
 @testable import SlopadEditorAppKitTextKit
@@ -383,8 +383,8 @@ struct TextKitPreparedLayoutTests {
         let selectionRects: [EditorRect]
         let hitTest: TextHitTestResult?
         let navigation: TextNavigationResolution
-        let wordRange: SlopadCoreModel.TextRange?
-        let deletionRange: SlopadCoreModel.TextRange?
+        let wordRange: SlopadEditorCoreModel.TextRange?
+        let deletionRange: SlopadEditorCoreModel.TextRange?
         let drawBytes: [UInt8]
     }
 

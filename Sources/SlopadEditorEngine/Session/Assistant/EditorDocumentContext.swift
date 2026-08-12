@@ -1,5 +1,5 @@
 import Foundation
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 // MARK: - Editor Document Source
 

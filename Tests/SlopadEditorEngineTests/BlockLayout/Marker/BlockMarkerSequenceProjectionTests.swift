@@ -1,5 +1,5 @@
 @testable import SlopadEditorBlockLayout
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import Testing
 
 @Suite("블록 마커 시퀀스 projection")

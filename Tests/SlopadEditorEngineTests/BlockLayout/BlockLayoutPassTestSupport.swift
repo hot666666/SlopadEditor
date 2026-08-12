@@ -1,5 +1,5 @@
 @testable import SlopadEditorBlockLayout
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 typealias BlockLayoutTestInput = (
     contentSnapshot: EffectiveDocumentSnapshot,

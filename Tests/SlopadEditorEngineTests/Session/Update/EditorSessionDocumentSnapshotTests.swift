@@ -1,7 +1,7 @@
 import Testing
 
 @testable import SlopadEditorEngine
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import SlopadEditorDocumentModel
 
 @Suite("에디터 세션 canonical document snapshot")

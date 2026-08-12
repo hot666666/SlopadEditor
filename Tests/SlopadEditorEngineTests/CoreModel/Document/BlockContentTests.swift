@@ -1,5 +1,5 @@
 import Foundation
-@testable import SlopadCoreModel
+@testable import SlopadEditorCoreModel
 import Testing
 
 @Suite("블록 텍스트 콘텐츠")

@@ -1,5 +1,5 @@
 @testable import SlopadEditorEngine
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import Testing
 
 @Suite("EditorUpdate invalidation 계산")

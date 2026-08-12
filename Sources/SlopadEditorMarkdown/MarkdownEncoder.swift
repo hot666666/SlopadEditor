@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 /// Deterministic, fail-closed conversion from the core block tree to Markdown.
 ///

@@ -1,7 +1,7 @@
 import Testing
 
 @testable import SlopadEditorEngine
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("에디터 세션 structural 증분 레이아웃")
 struct EditorSessionIncrementalStructuralLayoutTests {

@@ -1,7 +1,7 @@
 import Testing
 
 @testable import SlopadEditorBlockLayout
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("BlockLayout geometry pass 검증")
 struct BlockLayoutGeometryPassTests {

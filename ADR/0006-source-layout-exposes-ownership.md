@@ -50,7 +50,7 @@ Target-specific placement:
 - `Sources/SlopadEditorBlockLayout`
   - Root: `BlockLayout`, package entrypoints consumed by Session, and package geometry or
     invalidation outputs when another target needs them.
-- `Sources/SlopadCoreModel`
+- `Sources/SlopadEditorCoreModel`
   - Folders hold public vocabulary and backend seam values by domain: document, text,
     selection, composition, interaction, geometry, and layout.
 - `Sources/SlopadEditorDataStructure`

@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 func makeFlatDocument(_ blocks: [Block]) -> Document {
     var document = Document()

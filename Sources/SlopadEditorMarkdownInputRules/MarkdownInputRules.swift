@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 private extension TextRange {
     func offset(by amount: Int) -> TextRange {

@@ -57,7 +57,7 @@ transport but not `Decodable`, so a host cannot decode unchecked projection comb
 `EditorDocumentPatch` remains the public host-constructed input.
 
 The patch is a full post-image rather than public operation objects. Before mutation,
-`SlopadCoreModel` validates non-empty input, unique IDs, canonical `BlockContent` marks,
+`SlopadEditorCoreModel` validates non-empty input, unique IDs, canonical `BlockContent` marks,
 parent existence, absence of cycles, canonical parent-before-child DFS order, and
 selection bounds. Public failures are typed errors, not preconditions. Parent-chain and
 document invariant preorder validation use iterative stacks so an unbounded public

@@ -1,7 +1,7 @@
 import Testing
 
 @testable import SlopadEditorEngine
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("에디터 세션 텍스트 이동 입력 이벤트")
 struct EditorSessionTextMovementInputEventTests {

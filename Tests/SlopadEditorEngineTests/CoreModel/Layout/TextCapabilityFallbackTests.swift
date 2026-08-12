@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import Testing
 
 // MARK: - Capability Fallbacks

@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 struct ArchiveV1Block {
     let rawID: String

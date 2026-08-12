@@ -53,50 +53,50 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "SlopadCoreModel"
+            name: "SlopadEditorCoreModel"
         ),
         // Markdown typed-input syntax is intentionally separate from the opt-in codec. It
         // contains only bounded pattern data and canonical rule effects — no parser target.
         .target(
             name: "SlopadEditorMarkdownInputRules",
-            dependencies: ["SlopadCoreModel"]
+            dependencies: ["SlopadEditorCoreModel"]
         ),
         .target(
             name: "SlopadEditorMarkdown",
             dependencies: [
-                "SlopadCoreModel",
+                "SlopadEditorCoreModel",
                 .product(name: "Markdown", package: "swift-markdown"),
             ]
         ),
         .target(
             name: "SlopadEditorArchive",
-            dependencies: ["SlopadCoreModel"]
+            dependencies: ["SlopadEditorCoreModel"]
         ),
         .target(
             name: "SlopadEditorDataStructure"
         ),
         .target(
             name: "SlopadEditorDocumentModel",
-            dependencies: ["SlopadCoreModel", "SlopadEditorMarkdownInputRules"]
+            dependencies: ["SlopadEditorCoreModel", "SlopadEditorMarkdownInputRules"]
         ),
         .target(
             name: "SlopadEditorBlockLayout",
             dependencies: [
-                "SlopadCoreModel",
+                "SlopadEditorCoreModel",
                 "SlopadEditorDataStructure",
             ]
         ),
         .target(
             name: "SlopadEditorEngine",
             dependencies: [
-                "SlopadCoreModel",
+                "SlopadEditorCoreModel",
                 "SlopadEditorDocumentModel",
                 "SlopadEditorBlockLayout",
             ]
         ),
         .target(
             name: "SlopadEditorAppKitTextKit",
-            dependencies: ["SlopadCoreModel"]
+            dependencies: ["SlopadEditorCoreModel"]
         ),
         .target(
             name: "SlopadEditorAppKitUI",
@@ -121,7 +121,7 @@ let package = Package(
         .executableTarget(
             name: "SlopadHeightBenchmark",
             dependencies: [
-                "SlopadCoreModel",
+                "SlopadEditorCoreModel",
                 "SlopadEditorBlockLayout",
             ],
             path: "Benchmarks/SlopadHeightBenchmark"
@@ -152,7 +152,7 @@ let package = Package(
         .testTarget(
             name: "SlopadEditorEngineTests",
             dependencies: [
-                "SlopadCoreModel",
+                "SlopadEditorCoreModel",
                 "SlopadEditorDataStructure",
                 "SlopadEditorDocumentModel",
                 "SlopadEditorBlockLayout",
@@ -164,7 +164,7 @@ let package = Package(
         .testTarget(
             name: "SlopadEditorMarkdownTests",
             dependencies: [
-                "SlopadCoreModel",
+                "SlopadEditorCoreModel",
                 "SlopadEditorMarkdown",
             ]
         ),
@@ -172,14 +172,14 @@ let package = Package(
             name: "SlopadEditorArchiveTests",
             dependencies: [
                 "SlopadEditorArchive",
-                "SlopadCoreModel",
+                "SlopadEditorCoreModel",
             ],
             resources: [.copy("Fixtures")]
         ),
         .testTarget(
             name: "SlopadEditorAppKitTextKitTests",
             dependencies: [
-                "SlopadCoreModel",
+                "SlopadEditorCoreModel",
                 "SlopadEditorAppKitTextKit",
             ]
         ),

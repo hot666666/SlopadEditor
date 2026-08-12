@@ -1,6 +1,6 @@
 import Foundation
 import SlopadEditorBlockLayout
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 let count = CommandLine.arguments.dropFirst().first.flatMap(Int.init) ?? 100_000
 let index = BlockHeightIndexStorage()

@@ -73,8 +73,8 @@ that decision, which is what keeps it a notification rather than a hook.
   does not widen either facade. `SlopadEditorMarkdown` is the existing opt-in whole-document
   codec. [ADR 0015](0015-version-native-archive-and-keep-storage-host-owned.md) defines
   `SlopadEditorArchive` as another opt-in, pure codec with an internal target dependency only on
-  `SlopadCoreModel`; its public facade exposes exactly five type-identical aliases for the
-  archive graph, not a `SlopadCoreModel` product or blanket re-export. It has no Session,
+  `SlopadEditorCoreModel`; its public facade exposes exactly five type-identical aliases for the
+  archive graph, not a `SlopadEditorCoreModel` product or blanket re-export. It has no Session,
   AppKit, storage, or lifecycle owner. A host still owns when to call either codec and all
   file/DB/cloud/autosave/conflict/retry/error policy. The archive product is decided but not
   yet implemented; [issue #78](https://github.com/hot666666/SlopadEditor/issues/78) tracks that

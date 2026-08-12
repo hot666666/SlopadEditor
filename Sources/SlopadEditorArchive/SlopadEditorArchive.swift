@@ -1,11 +1,11 @@
 import Foundation
-public import SlopadCoreModel
+public import SlopadEditorCoreModel
 
-public typealias BlockID = SlopadCoreModel.BlockID
-public typealias BlockKind = SlopadCoreModel.BlockKind
-public typealias BlockContent = SlopadCoreModel.BlockContent
-public typealias TextRange = SlopadCoreModel.TextRange
-public typealias EditorBlockInput = SlopadCoreModel.EditorBlockInput
+public typealias BlockID = SlopadEditorCoreModel.BlockID
+public typealias BlockKind = SlopadEditorCoreModel.BlockKind
+public typealias BlockContent = SlopadEditorCoreModel.BlockContent
+public typealias TextRange = SlopadEditorCoreModel.TextRange
+public typealias EditorBlockInput = SlopadEditorCoreModel.EditorBlockInput
 
 /// A synchronous, stateless conversion between canonical block inputs and SlopadEditor's native archive.
 public enum SlopadEditorArchive {

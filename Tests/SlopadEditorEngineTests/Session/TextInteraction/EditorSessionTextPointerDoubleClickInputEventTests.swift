@@ -1,7 +1,7 @@
 import Testing
 
 @testable import SlopadEditorEngine
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("에디터 세션 텍스트 포인터 double-click 입력 이벤트")
 struct EditorSessionTextPointerDoubleClickInputEventTests {

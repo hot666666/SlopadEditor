@@ -2,7 +2,7 @@ import Foundation
 import Testing
 
 @testable import SlopadEditorAppKitTextKit
-@testable import SlopadCoreModel
+@testable import SlopadEditorCoreModel
 
 @Suite("TextRange와 NSRange 변환")
 struct TextRangeNSRangeTests {

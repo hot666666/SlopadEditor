@@ -1,5 +1,5 @@
 import Foundation
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import Testing
 
 // MARK: - InlineMark.Kind Coding

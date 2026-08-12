@@ -1,5 +1,5 @@
 @testable import SlopadEditorBlockLayout
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import Testing
 
 @Suite("BlockLayout invalidation 계산")

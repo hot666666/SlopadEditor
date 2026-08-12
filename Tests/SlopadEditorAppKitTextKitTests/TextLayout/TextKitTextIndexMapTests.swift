@@ -2,7 +2,7 @@ import Foundation
 import Testing
 
 @testable import SlopadEditorAppKitTextKit
-@testable import SlopadCoreModel
+@testable import SlopadEditorCoreModel
 
 @Suite("TextKit 텍스트 인덱스 맵")
 struct TextKitTextIndexMapTests {

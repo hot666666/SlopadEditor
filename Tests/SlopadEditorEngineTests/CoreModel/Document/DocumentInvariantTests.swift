@@ -1,4 +1,4 @@
-@testable import SlopadCoreModel
+@testable import SlopadEditorCoreModel
 import Testing
 
 @Suite("문서 불변식")

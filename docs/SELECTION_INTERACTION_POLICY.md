@@ -428,7 +428,7 @@ returning `EditorClipboardWritePlan` — a versioned `EditorClipboardPayload` pl
 `plainText` fallback. The payload's structured content is
 `.textSlice(EditorClipboardTextSlice)` or `.blockSubtrees(EditorClipboardBlockSubtrees)`,
 declared in
-[`EditorClipboardPayload.swift`](../Sources/SlopadCoreModel/Clipboard/EditorClipboardPayload.swift).
+[`EditorClipboardPayload.swift`](../Sources/SlopadEditorCoreModel/Clipboard/EditorClipboardPayload.swift).
 There is no type named `EditorClipboardPlan`.
 
 The plan is an ephemeral value, not a second document model. The adapter writes a

@@ -1,5 +1,5 @@
 import Foundation
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 // MARK: - TextKitTextIndexMap
 
@@ -50,14 +50,14 @@ struct TextKitTextIndexMap: Sendable {
         return utf16OffsetsByGraphemeBoundary[offset]
     }
 
-    func nsRange(clamping range: SlopadCoreModel.TextRange) -> NSRange {
+    func nsRange(clamping range: SlopadEditorCoreModel.TextRange) -> NSRange {
         let clamped = range.clamped(to: graphemeCount)
         let lower = utf16OffsetsByGraphemeBoundary[clamped.lowerBound]
         let upper = utf16OffsetsByGraphemeBoundary[clamped.upperBound]
         return NSRange(location: lower, length: upper - lower)
     }
 
-    func textRange(for range: NSRange) -> SlopadCoreModel.TextRange? {
+    func textRange(for range: NSRange) -> SlopadEditorCoreModel.TextRange? {
         guard
             range.location != NSNotFound,
             range.location >= 0,
@@ -73,7 +73,7 @@ struct TextKitTextIndexMap: Sendable {
             lowerOffset != Self.invalidGraphemeOffset,
             upperOffset != Self.invalidGraphemeOffset
         else { return nil }
-        return SlopadCoreModel.TextRange(lowerOffset, upperOffset)
+        return SlopadEditorCoreModel.TextRange(lowerOffset, upperOffset)
     }
 
     func clampedUTF16Range(_ range: NSRange) -> NSRange? {

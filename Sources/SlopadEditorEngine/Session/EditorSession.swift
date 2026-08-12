@@ -1,6 +1,6 @@
 import Foundation
 import SlopadEditorBlockLayout
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import SlopadEditorDocumentModel
 
 // MARK: - EditorSession

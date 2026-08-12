@@ -1,4 +1,4 @@
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import SlopadEditorMarkdownInputRules
 
 // MARK: - EditorModel

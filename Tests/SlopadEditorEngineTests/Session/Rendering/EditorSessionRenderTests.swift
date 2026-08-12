@@ -1,5 +1,5 @@
 @testable import SlopadEditorEngine
-import SlopadCoreModel
+import SlopadEditorCoreModel
 import Testing
 
 @Suite("에디터 세션 렌더링")

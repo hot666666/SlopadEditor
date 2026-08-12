@@ -1,6 +1,6 @@
 import Testing
 
-import SlopadCoreModel
+import SlopadEditorCoreModel
 @testable import SlopadEditorDocumentModel
 
 @Suite("AssistantEditorContract EditorModel document replacement")

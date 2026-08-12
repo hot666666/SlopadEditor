@@ -1,7 +1,7 @@
 import Testing
 
 @testable import SlopadEditorBlockLayout
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 @Suite("BlockHeightIndexStorage 변경")
 struct BlockHeightIndexStorageMutationTests {

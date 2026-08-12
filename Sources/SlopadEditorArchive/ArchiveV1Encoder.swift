@@ -1,5 +1,5 @@
 import Foundation
-import SlopadCoreModel
+import SlopadEditorCoreModel
 
 enum ArchiveV1Encoder {
     static func encode(

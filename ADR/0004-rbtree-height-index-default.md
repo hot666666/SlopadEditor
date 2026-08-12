@@ -27,7 +27,7 @@ Keep `RBTreeBlockHeightIndexStorage` as the default implementation behind
 `BlockHeightIndexStorage`.
 
 Keep the array storage only as a private experimental compile-time implementation. Do not
-expose storage selection through `EditorSession`, `SlopadCoreModel`, or public host API.
+expose storage selection through `EditorSession`, `SlopadEditorCoreModel`, or public host API.
 
 ## Consequences
 
