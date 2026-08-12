@@ -11,21 +11,21 @@ public typealias EditorBlockInput = SlopadEditorCoreModel.EditorBlockInput
 public enum SlopadEditorArchive {
     public static func encode(
         _ blocks: [EditorBlockInput]
-    ) throws(SlopadArchiveEncodingError) -> Data {
+    ) throws(SlopadEditorArchiveEncodingError) -> Data {
         try encode(blocks, onCanonicalValidation: {})
     }
 
     static func encodeForTesting(
         _ blocks: [EditorBlockInput],
         onCanonicalValidation: () -> Void
-    ) throws(SlopadArchiveEncodingError) -> Data {
+    ) throws(SlopadEditorArchiveEncodingError) -> Data {
         try encode(blocks, onCanonicalValidation: onCanonicalValidation)
     }
 
     private static func encode(
         _ blocks: [EditorBlockInput],
         onCanonicalValidation: () -> Void
-    ) throws(SlopadArchiveEncodingError) -> Data {
+    ) throws(SlopadEditorArchiveEncodingError) -> Data {
         do {
             try ArchiveV1AdmissionPreflight.validate(blocks)
         } catch {
@@ -39,7 +39,7 @@ public enum SlopadEditorArchive {
         do {
             try CanonicalDocumentInput.validate(blocks)
         } catch {
-            throw .canonicalInvariant(SlopadArchiveCanonicalInvariant(error))
+            throw .canonicalInvariant(SlopadEditorArchiveCanonicalInvariant(error))
         }
 
         do {
@@ -54,7 +54,7 @@ public enum SlopadEditorArchive {
 
     public static func decode(
         _ data: Data
-    ) throws(SlopadArchiveDecodingError) -> [EditorBlockInput] {
+    ) throws(SlopadEditorArchiveDecodingError) -> [EditorBlockInput] {
         let root: StrictJSONValue
         do {
             root = try StrictJSONParser.parse(data)
@@ -88,7 +88,7 @@ public enum SlopadEditorArchive {
 
     private static func decodeV1(
         _ envelope: StrictJSONObject
-    ) throws(SlopadArchiveDecodingError) -> [EditorBlockInput] {
+    ) throws(SlopadEditorArchiveDecodingError) -> [EditorBlockInput] {
         let rawBlocks: [ArchiveV1Block]
         do {
             rawBlocks = try ArchiveV1Decoder.decodeBlocks(envelope.required("blocks"))
@@ -109,24 +109,24 @@ public enum SlopadEditorArchive {
         do {
             try CanonicalDocumentInput.validate(blocks)
         } catch {
-            throw .canonicalInvariant(SlopadArchiveCanonicalInvariant(error))
+            throw .canonicalInvariant(SlopadEditorArchiveCanonicalInvariant(error))
         }
         return blocks
     }
 }
 
-public enum SlopadArchiveEncodingError: Error, Hashable, Sendable {
-    case canonicalInvariant(SlopadArchiveCanonicalInvariant)
+public enum SlopadEditorArchiveEncodingError: Error, Hashable, Sendable {
+    case canonicalInvariant(SlopadEditorArchiveCanonicalInvariant)
 }
 
-public enum SlopadArchiveDecodingError: Error, Hashable, Sendable {
+public enum SlopadEditorArchiveDecodingError: Error, Hashable, Sendable {
     case malformedData
     case unsupportedFutureVersion(found: Int, latestSupported: Int)
     case unsupportedPastVersion(found: Int, earliestSupported: Int)
-    case canonicalInvariant(SlopadArchiveCanonicalInvariant)
+    case canonicalInvariant(SlopadEditorArchiveCanonicalInvariant)
 }
 
-public enum SlopadArchiveCanonicalInvariant: Hashable, Sendable {
+public enum SlopadEditorArchiveCanonicalInvariant: Hashable, Sendable {
     case emptyDocument
     case duplicateBlockID(BlockID)
     case invalidContent(blockID: BlockID)
@@ -135,7 +135,7 @@ public enum SlopadArchiveCanonicalInvariant: Hashable, Sendable {
     case noncanonicalDepthFirstOrder
 }
 
-extension SlopadArchiveCanonicalInvariant {
+extension SlopadEditorArchiveCanonicalInvariant {
     fileprivate init(_ error: CanonicalDocumentInputValidationError) {
         switch error {
         case .emptyDocument:

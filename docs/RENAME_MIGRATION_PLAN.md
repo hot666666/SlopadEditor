@@ -28,7 +28,10 @@ Three rules hold at every stage:
    to pin.
 2. **A public product rename and its downstream fixture updates are one commit.** The
    fixtures exist to fail when the host contract moves. They must move with it.
-3. **"Done" is measured, not eyeballed.** `verify-naming.sh` reports what remains, by stage
+3. **The guard is a file like any other.** `verify-naming.sh`'s own allowlist holds
+   directory paths that a module rename invalidates; a stale entry silently stops excluding
+   what it was written to exclude. Re-read it after every stage that moves a directory.
+4. **"Done" is measured, not eyeballed.** `verify-naming.sh` reports what remains, by stage
    category. A stage is complete when its category reaches zero, not when the diff looks
    plausible.
 

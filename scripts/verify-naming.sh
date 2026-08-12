@@ -55,7 +55,7 @@ is_allowed() {
     case "$file" in
         # Archive wire fixture: "Slopad" is the block text of a stored v1 document. Changing
         # it would rewrite the fixture the round-trip test asserts against.
-        Tests/SlopadArchiveTests/Fixtures/*.json) return 0 ;;
+        Tests/SlopadEditorArchiveTests/Fixtures/*.json) return 0 ;;
         # Quotes that fixture verbatim.
         ADR/0015-*.md) return 0 ;;
         # Defines the distinction; necessarily names both sides.

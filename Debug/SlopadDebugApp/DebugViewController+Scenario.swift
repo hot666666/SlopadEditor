@@ -984,7 +984,7 @@ private enum DebugSeedFixture {
         "Click this paragraph, type, and watch the native surface route editing while passive blocks stay rendered."
     static let todoText =
         "Gutter hit region uses an image and selects the block without activating text editing."
-    static let codeText = "let surface = SlopadNativeBlockSurface()"
+    static let codeText = "let surface = SlopadEditorNativeBlockSurface()"
     static let tailText =
         "This lower block should visibly move down when the active paragraph wraps onto more lines."
     static let tailSplitPrefix = "This lower block should visibly move down wh"

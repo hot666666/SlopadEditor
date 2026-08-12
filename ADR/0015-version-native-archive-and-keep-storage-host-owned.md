@@ -91,25 +91,25 @@ The API draft is:
 public enum SlopadEditorArchive {
     public static func encode(
         _ blocks: [EditorBlockInput]
-    ) throws(SlopadArchiveEncodingError) -> Data
+    ) throws(SlopadEditorArchiveEncodingError) -> Data
 
     public static func decode(
         _ data: Data
-    ) throws(SlopadArchiveDecodingError) -> [EditorBlockInput]
+    ) throws(SlopadEditorArchiveDecodingError) -> [EditorBlockInput]
 }
 
-public enum SlopadArchiveEncodingError: Error, Hashable, Sendable {
-    case canonicalInvariant(SlopadArchiveCanonicalInvariant)
+public enum SlopadEditorArchiveEncodingError: Error, Hashable, Sendable {
+    case canonicalInvariant(SlopadEditorArchiveCanonicalInvariant)
 }
 
-public enum SlopadArchiveDecodingError: Error, Hashable, Sendable {
+public enum SlopadEditorArchiveDecodingError: Error, Hashable, Sendable {
     case malformedData
     case unsupportedFutureVersion(found: Int, latestSupported: Int)
     case unsupportedPastVersion(found: Int, earliestSupported: Int)
-    case canonicalInvariant(SlopadArchiveCanonicalInvariant)
+    case canonicalInvariant(SlopadEditorArchiveCanonicalInvariant)
 }
 
-public enum SlopadArchiveCanonicalInvariant: Hashable, Sendable {
+public enum SlopadEditorArchiveCanonicalInvariant: Hashable, Sendable {
     case emptyDocument
     case duplicateBlockID(BlockID)
     case invalidContent(blockID: BlockID)
