@@ -30,7 +30,7 @@ The production targets form these direct dependency layers:
 | Orchestration | `SlopadEngine` | Public `EditorSession` and editor semantics across owners |
 | Canonical owner | `SlopadEditorModel` | Document, selection, commands, transactions, history |
 | Derived owner | `SlopadBlockLayout` | Visibility, block geometry, hit/reveal facts, caches, height index |
-| Format syntax | `SlopadMarkdownInputRules` | Internal immutable bounded typed-input patterns |
+| Format syntax | `SlopadEditorMarkdownInputRules` | Internal immutable bounded typed-input patterns |
 | Format codec | `SlopadMarkdown` | Opt-in stateless whole-document decode and encode |
 | Format codec | `SlopadArchive` | Opt-in stateless versioned native archive encode and decode |
 | Contracts | `SlopadCoreModel` | Public vocabulary and genuine package cross-target contracts |
@@ -211,7 +211,7 @@ catches, but the compiler does not.
 
 Markdown has two deliberately separate entry points:
 
-- `SlopadMarkdownInputRules` contains parser-free bounded prefix/inline patterns linked
+- `SlopadEditorMarkdownInputRules` contains parser-free bounded prefix/inline patterns linked
   into ordinary editing. `SlopadEditorModel` owns trigger classification, candidate
   evaluation, canonical mutation, and undo.
 - `SlopadMarkdown` is an opt-in whole-document codec. It accepts/returns public

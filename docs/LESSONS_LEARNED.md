@@ -210,7 +210,7 @@ though they have different callers, cost, failure policy, and transaction bounda
 
 Next time:
 
-- Keep parser-free pattern data in `SlopadMarkdownInputRules` and let `EditorModel` own
+- Keep parser-free pattern data in `SlopadEditorMarkdownInputRules` and let `EditorModel` own
   gating and atomic application.
 - Keep `SlopadMarkdown` stateless and opt-in over public `[EditorBlockInput]` values.
 - Treat typing syntax and document conversion as two integrations even when they recognize

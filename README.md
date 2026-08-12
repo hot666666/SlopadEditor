@@ -124,7 +124,7 @@ partial document or output is returned. Supported round-trips preserve tree/cont
 semantics but decode creates fresh `BlockID`s.
 
 Typed Markdown shortcuts are a different path. The internal parser-free
-`SlopadMarkdownInputRules` target supplies bounded prefix and inline pattern data, while
+`SlopadEditorMarkdownInputRules` target supplies bounded prefix and inline pattern data, while
 `SlopadEditorModel` owns trigger gating, canonical application, and undo semantics.
 
 ## Native Archive

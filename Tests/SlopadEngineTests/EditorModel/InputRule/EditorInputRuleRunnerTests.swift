@@ -1,5 +1,5 @@
 import SlopadCoreModel
-import SlopadMarkdownInputRules
+import SlopadEditorMarkdownInputRules
 import Testing
 
 @testable import SlopadEditorModel
