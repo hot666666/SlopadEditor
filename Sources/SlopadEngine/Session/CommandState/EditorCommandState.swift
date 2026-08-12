@@ -46,15 +46,19 @@ package enum EditorCommandAction: Hashable, Sendable {
     case outdentBlocks
 }
 
+// Members without `package` are inputs to `toggleState(for:)` and `availability(for:)`
+// rather than facts a consumer reads directly. Adapter chrome asks those accessors so one
+// command-availability policy stays here; widening them would let a consumer re-derive it
+// independently. Declaration order is the memberwise initializer's parameter order.
 package struct EditorCommandState: Hashable, Sendable {
     package let selectionMode: EditorCommandSelectionMode
     package let detail: EditorCommandStateDetail
-    package let inlineStyleAvailability: EditorActionAvailability
+    let inlineStyleAvailability: EditorActionAvailability
     package let clearInlineStylesAvailability: EditorActionAvailability
-    package let inlineStyles: [BlockContent.InlineMark.Kind.CaseIdentity: EditorToggleState]
+    let inlineStyles: [BlockContent.InlineMark.Kind.CaseIdentity: EditorToggleState]
     package let blockKind: EditorMixedValue<BlockKind>
-    package let indentBlocksAvailability: EditorActionAvailability
-    package let outdentBlocksAvailability: EditorActionAvailability
+    let indentBlocksAvailability: EditorActionAvailability
+    let outdentBlocksAvailability: EditorActionAvailability
 
     package func toggleState(
         for kind: BlockContent.InlineMark.Kind
