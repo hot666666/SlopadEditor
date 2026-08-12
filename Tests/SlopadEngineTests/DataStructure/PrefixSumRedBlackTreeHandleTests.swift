@@ -1,6 +1,6 @@
 import Testing
 
-@testable import SlopadDataStructure
+@testable import SlopadEditorDataStructure
 
 @Suite("prefix sum red-black tree 노드 핸들")
 struct PrefixSumRedBlackTreeHandleTests {

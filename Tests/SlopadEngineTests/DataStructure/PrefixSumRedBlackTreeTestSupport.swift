@@ -1,6 +1,6 @@
 import Testing
 
-@testable import SlopadDataStructure
+@testable import SlopadEditorDataStructure
 
 @discardableResult
 func insertEntries<Value>(

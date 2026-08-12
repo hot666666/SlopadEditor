@@ -87,7 +87,7 @@ require_equal "AppKit lifecycle fixture declares more than one product dependenc
     "$(count_matches '\.product\(name:' "$appkit_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadMarkdownInputRules|SlopadMarkdown|SlopadArchive|SlopadDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadAppKitUI|SlopadAppKitTextKit|SlopadSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadCoreModel|SlopadEngine|SlopadMarkdownInputRules|SlopadMarkdown|SlopadArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadAppKitUI|SlopadAppKitTextKit|SlopadSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$appkit_fixture/Package.swift"; then
     echo "AppKit lifecycle fixture manifest bypasses the SlopadAppKit facade" >&2
     exit 1
@@ -101,7 +101,7 @@ require_equal "SwiftUI lifecycle fixture declares more than one product dependen
     "$(count_matches '\.product\(name:' "$swiftui_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadMarkdownInputRules|SlopadMarkdown|SlopadArchive|SlopadDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadAppKitUI|SlopadAppKitTextKit|SlopadAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadCoreModel|SlopadEngine|SlopadMarkdownInputRules|SlopadMarkdown|SlopadArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadAppKitUI|SlopadAppKitTextKit|SlopadAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$swiftui_fixture/Package.swift"; then
     echo "SwiftUI lifecycle fixture manifest bypasses the SlopadSwiftUI facade" >&2
     exit 1

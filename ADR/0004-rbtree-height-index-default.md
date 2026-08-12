@@ -31,7 +31,7 @@ expose storage selection through `EditorSession`, `SlopadCoreModel`, or public h
 
 ## Consequences
 
-- `PrefixSumRedBlackTree` remains a pure data structure in `SlopadDataStructure`.
+- `PrefixSumRedBlackTree` remains a pure data structure in `SlopadEditorDataStructure`.
 - The y/height domain stays owned by `BlockHeightIndexStorage`.
 - Storage comparisons should use both session-level structural benchmarks and AppKit UI
   benchmarks. AppKit FPS alone is not enough to choose the storage default.

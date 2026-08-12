@@ -65,7 +65,10 @@ Every module stage runs the same steps. Deviating from the order is how a step g
    the `SlopadSwiftUI` facade types are namespace enums and structs whose names must track
    their module.
 7. Documents that name the module: `docs/ARCHITECTURE.md`, the relevant ADRs, `README.md`.
-8. Gates, in this order:
+8. `rm -rf Fixtures/*/.build` — each fixture caches a resolved manifest that still points
+   at the old `Sources/<Old>` path, and SwiftPM reports it as `missing inputs` rather than
+   re-resolving. Found while running stage 2.
+9. Gates, in this order:
    ```sh
    swift build --quiet
    swift test --quiet
@@ -76,7 +79,7 @@ Every module stage runs the same steps. Deviating from the order is how a step g
    ```
    Add the product builds and fixture builds from [Testing](TESTING.md) whenever the stage
    touches a public product.
-9. One commit. `git revert` restores a green tree.
+10. One commit. `git revert` restores a green tree.
 
 ## Stages
 

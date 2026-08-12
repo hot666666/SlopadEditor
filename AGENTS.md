@@ -35,7 +35,7 @@ Ownership:
 * `SlopadEngine` / `EditorSession` — orchestration and editor semantics
 * `SlopadAppKitUI` — AppKit input/drawing/focus/scroll adapter
 * `SlopadAppKitTextKit` — TextKit2 backend
-* `SlopadDataStructure` — editor-independent data structures
+* `SlopadEditorDataStructure` — editor-independent data structures
 
 Guardrails:
 

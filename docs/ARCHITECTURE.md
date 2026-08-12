@@ -34,7 +34,7 @@ The production targets form these direct dependency layers:
 | Format codec | `SlopadMarkdown` | Opt-in stateless whole-document decode and encode |
 | Format codec | `SlopadArchive` | Opt-in stateless versioned native archive encode and decode |
 | Contracts | `SlopadCoreModel` | Public vocabulary and genuine package cross-target contracts |
-| Storage | `SlopadDataStructure` | Editor-independent data structures |
+| Storage | `SlopadEditorDataStructure` | Editor-independent data structures |
 
 `SlopadArchive` is an opt-in synchronous pure codec whose target depends only on
 `SlopadCoreModel`. Its public facade uses Swift 6 `public import` for declaration legality

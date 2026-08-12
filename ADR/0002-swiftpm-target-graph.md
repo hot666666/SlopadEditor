@@ -29,7 +29,7 @@ flowchart TB
 
     subgraph Foundation["Foundation & Data"]
         CoreModel["SlopadCoreModel"]
-        DataStructure["SlopadDataStructure"]
+        DataStructure["SlopadEditorDataStructure"]
     end
 
     AppKitUI --> Engine
@@ -56,7 +56,7 @@ Keep the SwiftPM targets aligned to ownership:
 - `SlopadEditorModel`: semantic document/selection/command/history owner.
 - `SlopadBlockLayout`: layout projection, visible order, invalidation, geometry, text
   measurement cache, height index owner.
-- `SlopadDataStructure`: pure data structures with no editor vocabulary.
+- `SlopadEditorDataStructure`: pure data structures with no editor vocabulary.
 - `SlopadEngine`: public `EditorSession` facade and orchestration.
 - `SlopadAppKitTextKit`: AppKit/TextKit2 text layout/rendering backend.
 - `SlopadAppKitUI`: reusable AppKit view/controller adapter.

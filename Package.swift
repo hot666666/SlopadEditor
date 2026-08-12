@@ -73,7 +73,7 @@ let package = Package(
             dependencies: ["SlopadCoreModel"]
         ),
         .target(
-            name: "SlopadDataStructure"
+            name: "SlopadEditorDataStructure"
         ),
         .target(
             name: "SlopadEditorModel",
@@ -83,7 +83,7 @@ let package = Package(
             name: "SlopadBlockLayout",
             dependencies: [
                 "SlopadCoreModel",
-                "SlopadDataStructure",
+                "SlopadEditorDataStructure",
             ]
         ),
         .target(
@@ -153,7 +153,7 @@ let package = Package(
             name: "SlopadEngineTests",
             dependencies: [
                 "SlopadCoreModel",
-                "SlopadDataStructure",
+                "SlopadEditorDataStructure",
                 "SlopadEditorModel",
                 "SlopadBlockLayout",
                 "SlopadEngine",

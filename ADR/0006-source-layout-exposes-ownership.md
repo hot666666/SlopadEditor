@@ -53,7 +53,7 @@ Target-specific placement:
 - `Sources/SlopadCoreModel`
   - Folders hold public vocabulary and backend seam values by domain: document, text,
     selection, composition, interaction, geometry, and layout.
-- `Sources/SlopadDataStructure`
+- `Sources/SlopadEditorDataStructure`
   - Pure data structures only. No editor, block, layout, or platform vocabulary.
 - `Sources/SlopadAppKitTextKit`
   - TextKit2 backend implementation and interop only.

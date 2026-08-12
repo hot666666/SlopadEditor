@@ -1,5 +1,5 @@
 import SlopadCoreModel
-import SlopadDataStructure
+import SlopadEditorDataStructure
 
 // MARK: - RBTreeBlockHeightIndexStorage
 
