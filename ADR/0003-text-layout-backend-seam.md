@@ -24,7 +24,7 @@ and cache policy inside `SlopadBlockLayout/TextLayout`.
 
 `SlopadAppKitTextKit` is the current AppKit/TextKit2 backend. It implements the seam and
 provides fragment layout, geometry, attributed-content, and drawing helpers to the
-default `SlopadAppKitUI` adapter. TextKit2 types do not belong in `SlopadEngine`,
+default `SlopadEditorAppKitUI` adapter. TextKit2 types do not belong in `SlopadEngine`,
 `SlopadEditorModel`, or `SlopadBlockLayout`.
 
 The seam anchors a coherent geometry contract, not a height-only service or high-level

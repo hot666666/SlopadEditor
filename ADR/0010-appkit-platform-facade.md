@@ -8,10 +8,10 @@ Accepted
 
 ## Context
 
-The default macOS integration is one coherent platform stack: `SlopadAppKitUI` owns the
+The default macOS integration is one coherent platform stack: `SlopadEditorAppKitUI` owns the
 native AppKit callback and surface lifecycle while `SlopadAppKitTextKit` supplies the
 matching TextKit2 geometry and drawing backend. Ordinary downstream apps nevertheless had
-to depend on and import `SlopadEngine`, `SlopadAppKitUI`, and `SlopadAppKitTextKit`
+to depend on and import `SlopadEngine`, `SlopadEditorAppKitUI`, and `SlopadAppKitTextKit`
 individually. That exposed assembly details and made low-level engine input and adapter
 plumbing look like the normal host contract.
 
@@ -29,7 +29,7 @@ and existing integrations.
 
 Add `SlopadAppKit` as the recommended library product and module for ordinary macOS hosts.
 Its target curates public controller, action, style, chrome, document, selection, update,
-and snapshot vocabulary from the existing owners. It depends on `SlopadAppKitUI` and
+and snapshot vocabulary from the existing owners. It depends on `SlopadEditorAppKitUI` and
 `SlopadEngine`; the UI adapter continues to depend on `SlopadAppKitTextKit`, so the product
 assembles the complete default AppKit + TextKit2 stack without adding a runtime owner.
 
@@ -89,7 +89,7 @@ The controller's ordinary public input boundary is synchronized and context-free
 This does not narrow the headless extension boundary. `EditorSession.handleInput(_:)`,
 `EditorInputEvent`, `EditorViewport`, and `BlockTextLayoutProtocol` remain public through
 `SlopadEngine` for hosts implementing a complete custom adapter. The
-`SlopadAppKitUI`, `SlopadAppKitTextKit`, and `SlopadEngine` library products also remain
+`SlopadEditorAppKitUI`, `SlopadAppKitTextKit`, and `SlopadEngine` library products also remain
 available as advanced and compatibility seams.
 
 The source migration follows the ownership boundary:

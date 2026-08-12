@@ -26,7 +26,7 @@ body:
       description: Which layer should own the behavior or contract?
       options:
         - Needs owner decision
-        - SlopadAppKitUI
+        - SlopadEditorAppKitUI
         - SlopadEngine / EditorSession
         - SlopadEditorModel
         - SlopadBlockLayout
@@ -82,7 +82,7 @@ body:
       placeholder: |
         - [ ] Focused unit or integration test:
         - [ ] `swift test --quiet`
-        - [ ] `swift build --product SlopadAppKitUI --quiet`
+        - [ ] `swift build --product SlopadEditorAppKitUI --quiet`
     validations:
       required: true
   - type: textarea

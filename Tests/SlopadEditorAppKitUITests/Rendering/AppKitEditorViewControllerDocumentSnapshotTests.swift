@@ -1,7 +1,7 @@
 import Testing
 
 import SlopadEngine
-@testable import SlopadAppKitUI
+@testable import SlopadEditorAppKitUI
 
 @MainActor
 @Suite("AppKit canonical document snapshot")

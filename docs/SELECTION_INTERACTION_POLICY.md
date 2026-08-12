@@ -562,8 +562,8 @@ The old-policy sites were migrated under their existing owners:
 | [`EditorSession+CommandInput.swift`](../Sources/SlopadEngine/Session/InputRouting/EditorSession+CommandInput.swift) | Routes `TN` typing, deletion, Enter, formatting, indentation, Escape, Cmd-A, and structured paste through shared model semantics. |
 | [`EditorModel+TextContentCommands.swift`](../Sources/SlopadEditorModel/Command/EditorModel+TextContentCommands.swift) | Replaces normalized cross-block spans, preserves the earlier endpoint, promotes removed-endpoint descendants, and records one transaction. |
 | [`EditorModel+StructuredPasteCommands.swift`](../Sources/SlopadEditorModel/Command/EditorModel+StructuredPasteCommands.swift) | Applies fresh-ID structured forests using root-aware open-edge merging while preserving endpoint and middle subtrees. |
-| [`AppKitEditorViewController.swift`](../Sources/SlopadAppKitUI/AppKitEditorViewController.swift) | Classifies the origin once, keeps text/block drag modes distinct, and continues text selection during autoscroll. |
-| [`AppKitActiveInputController.swift`](../Sources/SlopadAppKitUI/AppKitActiveInputController.swift) | Negotiates typed plus plain clipboard representations, fail-closed paste fallback, and cut-after-write-success. |
+| [`AppKitEditorViewController.swift`](../Sources/SlopadEditorAppKitUI/AppKitEditorViewController.swift) | Classifies the origin once, keeps text/block drag modes distinct, and continues text selection during autoscroll. |
+| [`AppKitActiveInputController.swift`](../Sources/SlopadEditorAppKitUI/AppKitActiveInputController.swift) | Negotiates typed plus plain clipboard representations, fail-closed paste fallback, and cut-after-write-success. |
 | Session/AppKit tests and UI benchmark | Cover forward/reverse `TN`, empty and atomic blocks, native text/gutter event paths, autoscroll, structured clipboard, direct callback-contract composition, exact undo, and 100/1,000/10,000-block projection. They do not prove installed-IME delivery or the unimplemented live IME policy. |
 
 `ResolvedTextSpan` is the shared command-time owner used by mutation, formatting,
@@ -674,7 +674,7 @@ ranges while command-time operations still visit the complete logical span.
 
 ### Gate 3 — AppKit adapter and pasteboard negotiation
 
-Focused `SlopadAppKitUITests` must enter through the production adapter and assert:
+Focused `SlopadEditorAppKitUITests` must enter through the production adapter and assert:
 
 - text-lane drag remains `T1/TN`; structural-margin drag remains `B`;
 - focus-block native selection synchronization does not collapse canonical `TN`;
@@ -720,7 +720,7 @@ swift test --quiet
 git diff --check
 swift build --product SlopadAppKit --quiet
 swift build --product SlopadAppKitTextKit --quiet
-swift build --product SlopadAppKitUI --quiet
+swift build --product SlopadEditorAppKitUI --quiet
 swift build --product SlopadDebugApp --quiet
 swift build --product SlopadUIBenchmarkApp --quiet
 swift build --package-path Fixtures/DownstreamAppKitHost --product DownstreamAppKitHost --quiet

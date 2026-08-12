@@ -2,7 +2,7 @@ import AppKit
 import Testing
 
 import SlopadEngine
-@testable import SlopadAppKitUI
+@testable import SlopadEditorAppKitUI
 
 @MainActor
 @Suite("AppKit 문서 reset")

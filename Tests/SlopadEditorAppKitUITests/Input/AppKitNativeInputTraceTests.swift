@@ -3,7 +3,7 @@
     import SlopadEngine
     import Testing
 
-    @testable import SlopadAppKitUI
+    @testable import SlopadEditorAppKitUI
 
     @MainActor
     @Suite("AppKit native input trace")

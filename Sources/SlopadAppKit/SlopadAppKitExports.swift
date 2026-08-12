@@ -1,16 +1,16 @@
-public import SlopadAppKitUI
+public import SlopadEditorAppKitUI
 public import SlopadEngine
 
 // MARK: - AppKit Platform Surface
 
-public typealias AppKitEditorViewController = SlopadAppKitUI.AppKitEditorViewController
-public typealias AppKitEditorStyle = SlopadAppKitUI.AppKitEditorStyle
-public typealias AppKitEditorAction = SlopadAppKitUI.AppKitEditorAction
-public typealias AppKitBlockChromeRenderer = SlopadAppKitUI.AppKitBlockChromeRenderer
+public typealias AppKitEditorViewController = SlopadEditorAppKitUI.AppKitEditorViewController
+public typealias AppKitEditorStyle = SlopadEditorAppKitUI.AppKitEditorStyle
+public typealias AppKitEditorAction = SlopadEditorAppKitUI.AppKitEditorAction
+public typealias AppKitBlockChromeRenderer = SlopadEditorAppKitUI.AppKitBlockChromeRenderer
 public typealias AppKitBlockChromeRenderContext =
-    SlopadAppKitUI.AppKitBlockChromeRenderContext
+    SlopadEditorAppKitUI.AppKitBlockChromeRenderContext
 public typealias AppKitDefaultBlockChromeRenderer =
-    SlopadAppKitUI.AppKitDefaultBlockChromeRenderer
+    SlopadEditorAppKitUI.AppKitDefaultBlockChromeRenderer
 
 // MARK: - Host Document Vocabulary
 

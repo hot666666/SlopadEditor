@@ -26,7 +26,7 @@ verification workflow builds and runs it directly. It is still a development har
 does not define a reusable library contract.
 
 The reusable library products are `SlopadEngine`, `SlopadAppKitTextKit`, and
-`SlopadAppKitUI`. `SlopadDebugApp` and `SlopadUIBenchmarkApp` are executable products that
+`SlopadEditorAppKitUI`. `SlopadDebugApp` and `SlopadUIBenchmarkApp` are executable products that
 consume those libraries from the outer edge.
 
 ## Consequences

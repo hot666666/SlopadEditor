@@ -33,7 +33,7 @@ Ownership:
 * `SlopadBlockLayout` — block layout, visibility, hit-test, reveal geometry
 * `TextLayout` — text measurement and text geometry
 * `SlopadEngine` / `EditorSession` — orchestration and editor semantics
-* `SlopadAppKitUI` — AppKit input/drawing/focus/scroll adapter
+* `SlopadEditorAppKitUI` — AppKit input/drawing/focus/scroll adapter
 * `SlopadAppKitTextKit` — TextKit2 backend
 * `SlopadEditorDataStructure` — editor-independent data structures
 

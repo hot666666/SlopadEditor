@@ -3,7 +3,7 @@
     import Testing
 
     import SlopadEngine
-    @testable import SlopadAppKitUI
+    @testable import SlopadEditorAppKitUI
 
     @MainActor
     @Suite("AppKit text system prepared layout 재사용")

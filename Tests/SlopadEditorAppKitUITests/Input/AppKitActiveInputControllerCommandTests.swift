@@ -2,7 +2,7 @@ import AppKit
 import SlopadEngine
 import Testing
 
-@testable import SlopadAppKitUI
+@testable import SlopadEditorAppKitUI
 
 @MainActor
 @Suite("AppKit active input command 전달", .serialized)

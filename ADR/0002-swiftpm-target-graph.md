@@ -17,7 +17,7 @@ The production dependency graph is:
 ```mermaid
 flowchart TB
     subgraph Platform["Platform Layer - macOS"]
-        AppKitUI["SlopadAppKitUI"]
+        AppKitUI["SlopadEditorAppKitUI"]
         AppKitTextKit["SlopadAppKitTextKit"]
     end
 
@@ -59,7 +59,7 @@ Keep the SwiftPM targets aligned to ownership:
 - `SlopadEditorDataStructure`: pure data structures with no editor vocabulary.
 - `SlopadEngine`: public `EditorSession` facade and orchestration.
 - `SlopadAppKitTextKit`: AppKit/TextKit2 text layout/rendering backend.
-- `SlopadAppKitUI`: reusable AppKit view/controller adapter.
+- `SlopadEditorAppKitUI`: reusable AppKit view/controller adapter.
 - `SlopadDebugApp`: AppKit reference/debug host.
 - `SlopadUIBenchmarkApp`: AppKit UI benchmark harness.
 
@@ -75,7 +75,7 @@ platform host surfaces such as the AppKit controller, style, and chrome contract
   layout invalidation facts.
 - `SlopadAppKitTextKit` implements the CoreModel backend seam and must not depend on
   `SlopadEngine`; adapting Session render descriptors to TextKit calls belongs to
-  `SlopadAppKitUI`.
+  `SlopadEditorAppKitUI`.
 - A complete platform replacement adds a sibling adapter that depends on `SlopadEngine`
   and a coherent backend. It does not add platform dependencies to the engine or turn the
   default AppKit chrome hook into a renderer seam.

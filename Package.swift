@@ -33,8 +33,8 @@ let package = Package(
             targets: ["SlopadAppKitTextKit"]
         ),
         .library(
-            name: "SlopadAppKitUI",
-            targets: ["SlopadAppKitUI"]
+            name: "SlopadEditorAppKitUI",
+            targets: ["SlopadEditorAppKitUI"]
         ),
         .executable(
             name: "SlopadDebugApp",
@@ -99,7 +99,7 @@ let package = Package(
             dependencies: ["SlopadCoreModel"]
         ),
         .target(
-            name: "SlopadAppKitUI",
+            name: "SlopadEditorAppKitUI",
             dependencies: [
                 "SlopadEngine",
                 "SlopadAppKitTextKit",
@@ -109,7 +109,7 @@ let package = Package(
             name: "SlopadAppKit",
             dependencies: [
                 "SlopadEngine",
-                "SlopadAppKitUI",
+                "SlopadEditorAppKitUI",
             ]
         ),
         // Layered on top of the AppKit facade rather than folded into it, for the same
@@ -136,7 +136,7 @@ let package = Package(
             dependencies: [
                 "SlopadEngine",
                 "SlopadAppKitTextKit",
-                "SlopadAppKitUI",
+                "SlopadEditorAppKitUI",
             ],
             path: "Debug/SlopadDebugApp"
         ),
@@ -145,7 +145,7 @@ let package = Package(
             dependencies: [
                 "SlopadEngine",
                 "SlopadAppKitTextKit",
-                "SlopadAppKitUI",
+                "SlopadEditorAppKitUI",
             ],
             path: "Benchmarks/SlopadUIBenchmarkApp"
         ),
@@ -184,10 +184,10 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "SlopadAppKitUITests",
+            name: "SlopadEditorAppKitUITests",
             dependencies: [
                 "SlopadEngine",
-                "SlopadAppKitUI",
+                "SlopadEditorAppKitUI",
             ]
         ),
         // SlopadAppKit is a test-only dependency: the tests construct a controller directly

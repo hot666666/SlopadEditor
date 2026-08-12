@@ -2,7 +2,7 @@ import AppKit
 import Testing
 
 import SlopadEngine
-@testable import SlopadAppKitUI
+@testable import SlopadEditorAppKitUI
 
 @MainActor
 @Suite("AppKit 블록 렌더링 경계")

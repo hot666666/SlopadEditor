@@ -36,18 +36,18 @@ fi
 lifecycle_manifest_block="$(sed -n '/name: "AppKitArchiveLifecycleProbe"/,$p' "$fixture/Package.swift")"
 test "$(printf '%s' "$lifecycle_manifest_block" | rg -c 'product\(name: "SlopadEditorArchive"')" = "1"
 test "$(printf '%s' "$lifecycle_manifest_block" | rg -c 'product\(name: "SlopadAppKit"')" = "1"
-if printf '%s' "$lifecycle_manifest_block" | rg 'SlopadCoreModel|SlopadEngine|SlopadEditorSwiftUI|SlopadAppKitUI'; then
+if printf '%s' "$lifecycle_manifest_block" | rg 'SlopadCoreModel|SlopadEngine|SlopadEditorSwiftUI|SlopadEditorAppKitUI'; then
     echo "Lifecycle probe gained a raw product dependency" >&2
     exit 1
 fi
 
-if rg -n 'SlopadCoreModel|SlopadEngine|SlopadAppKit|SlopadEditorSwiftUI|SlopadAppKitUI' \
+if rg -n 'SlopadCoreModel|SlopadEngine|SlopadAppKit|SlopadEditorSwiftUI|SlopadEditorAppKitUI' \
     "$codec_source"; then
     echo "Codec probe bypasses the Archive facade" >&2
     exit 1
 fi
 
-if rg -n 'SlopadCoreModel|SlopadEngine|SlopadEditorSwiftUI|SlopadAppKitUI|@testable|\bpackage\b' \
+if rg -n 'SlopadCoreModel|SlopadEngine|SlopadEditorSwiftUI|SlopadEditorAppKitUI|@testable|\bpackage\b' \
     "$lifecycle_source"; then
     echo "Lifecycle probe bypasses its public facades" >&2
     exit 1

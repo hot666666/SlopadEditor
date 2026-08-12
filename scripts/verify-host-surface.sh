@@ -87,7 +87,7 @@ require_equal "AppKit lifecycle fixture declares more than one product dependenc
     "$(count_matches '\.product\(name:' "$appkit_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadAppKitUI|SlopadAppKitTextKit|SlopadEditorSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadEditorAppKitUI|SlopadAppKitTextKit|SlopadEditorSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$appkit_fixture/Package.swift"; then
     echo "AppKit lifecycle fixture manifest bypasses the SlopadAppKit facade" >&2
     exit 1
@@ -101,7 +101,7 @@ require_equal "SwiftUI lifecycle fixture declares more than one product dependen
     "$(count_matches '\.product\(name:' "$swiftui_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadAppKitUI|SlopadAppKitTextKit|SlopadAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadCoreModel|SlopadEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadEditorAppKitUI|SlopadAppKitTextKit|SlopadAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
     "$swiftui_fixture/Package.swift"; then
     echo "SwiftUI lifecycle fixture manifest bypasses the SlopadEditorSwiftUI facade" >&2
     exit 1
@@ -390,8 +390,8 @@ declared_module_forbidden_symbols=(
     "SlopadEngine:EditorCommandSelectionMode"
     "SlopadEngine:EditorSelectionPresentation"
     "SlopadEngine:EditorVisibleTextSelection"
-    "SlopadAppKitUI:AppKitFloatingFormattingToolbar"
-    "SlopadAppKitUI:AppKitTodoCheckboxControl"
+    "SlopadEditorAppKitUI:AppKitFloatingFormattingToolbar"
+    "SlopadEditorAppKitUI:AppKitTodoCheckboxControl"
     "SlopadBlockLayout:BlockLayout"
 )
 for entry in "${declared_module_forbidden_symbols[@]}"; do

@@ -2,7 +2,7 @@ import AppKit
 import SlopadEngine
 import Testing
 
-@testable import SlopadAppKitUI
+@testable import SlopadEditorAppKitUI
 
 @MainActor
 @Suite("AppKit active input 조합 전달")

@@ -1,6 +1,6 @@
 #if DEBUG
     import Foundation
-    import SlopadAppKitUI
+    import SlopadEditorAppKitUI
 
     @MainActor
     final class DebugNativeInputTraceWriter {

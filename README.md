@@ -37,7 +37,7 @@ import SlopadAppKit
 
 `SlopadAppKit` is a compile-time facade. It exposes the supported controller, actions,
 style, block chrome, snapshots, and document transaction vocabulary, but creates no second
-runtime or state owner. `SlopadAppKitUI`, `SlopadAppKitTextKit`, and `SlopadEngine` remain
+runtime or state owner. `SlopadEditorAppKitUI`, `SlopadAppKitTextKit`, and `SlopadEngine` remain
 available to hosts that intentionally build a complete custom adapter.
 
 SwiftUI hosts use the separate `SlopadEditorSwiftUI` product. It layers declarative lifecycle
@@ -60,7 +60,7 @@ swift run SlopadDebugApp
 | `SlopadBlockLayout` | Visible order, block geometry, hit/reveal facts, height index, text-layout cache | Canonical mutation, platform callbacks |
 | `SlopadEngine` | `EditorSession`, composition/runtime overlays, owner coordination, snapshots | Duplicate document or layout state |
 | `SlopadAppKitTextKit` | Coherent TextKit2 measurement, geometry, navigation, deletion, attributed content | Editing semantics, native input host |
-| `SlopadAppKitUI` | AppKit callback translation, drawing, focus, scrolling, surface synchronization | Canonical mutation or command meaning |
+| `SlopadEditorAppKitUI` | AppKit callback translation, drawing, focus, scrolling, surface synchronization | Canonical mutation or command meaning |
 | `SlopadAppKit` | Curated ordinary-host API | Runtime state |
 | `SlopadEditorSwiftUI` | SwiftUI mounting, identity, focus, observation, lifecycle flush | A second controller or Session |
 | `SlopadEditorMarkdown` | Explicit stateless whole-document decode/encode | Canonical storage, editor runtime |

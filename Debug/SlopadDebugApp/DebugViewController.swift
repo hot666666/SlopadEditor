@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 import SlopadAppKitTextKit
-import SlopadAppKitUI
+import SlopadEditorAppKitUI
 import SlopadEngine
 
 @MainActor

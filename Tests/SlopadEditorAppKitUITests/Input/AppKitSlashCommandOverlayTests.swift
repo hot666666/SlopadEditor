@@ -2,7 +2,7 @@ import AppKit
 import Testing
 
 import SlopadEngine
-@testable import SlopadAppKitUI
+@testable import SlopadEditorAppKitUI
 
 @MainActor
 @Suite("AppKit 슬래시 명령 오버레이")

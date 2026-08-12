@@ -2,7 +2,7 @@ import AppKit
 import SlopadEngine
 import Testing
 
-@testable import SlopadAppKitUI
+@testable import SlopadEditorAppKitUI
 
 @MainActor
 @Suite("AppKit surface sync 재진입")

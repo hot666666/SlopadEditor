@@ -177,7 +177,7 @@ platform-hosted tests and fixtures.
 
 - TextKit2 geometry varies with OS, font, and layout-manager behavior; unit tests should
   assert invariants and real UI paths should cover native interaction.
-- Convenience APIs can pull semantics into `SlopadAppKit`/`SlopadAppKitUI`; apply the
+- Convenience APIs can pull semantics into `SlopadAppKit`/`SlopadEditorAppKitUI`; apply the
   ADR 0012 host-surface test before widening them.
 - A partial text-renderer hook would split measurement, geometry, and drawing. Full text
   replacement requires a coherent adapter/backend pair.

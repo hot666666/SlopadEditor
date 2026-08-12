@@ -2,7 +2,7 @@ import AppKit
 import Testing
 
 import SlopadEngine
-@testable import SlopadAppKitUI
+@testable import SlopadEditorAppKitUI
 
 @MainActor
 @Suite("AssistantEditorContract AppKit 문서 context와 patch")

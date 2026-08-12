@@ -1,7 +1,7 @@
 import AppKit
 import Testing
 
-@testable import SlopadAppKitUI
+@testable import SlopadEditorAppKitUI
 @testable import SlopadEngine
 
 @MainActor

@@ -57,7 +57,7 @@ Target-specific placement:
   - Pure data structures only. No editor, block, layout, or platform vocabulary.
 - `Sources/SlopadAppKitTextKit`
   - TextKit2 backend implementation and interop only.
-- `Sources/SlopadAppKitUI`
+- `Sources/SlopadEditorAppKitUI`
   - Public controller, style consumption, and chrome contract remain easy to identify.
     Native input routing, fragment/feedback drawing, active input, drag autoscroll, and
     surface synchronization helpers remain target-internal unless a real cross-target

@@ -46,7 +46,7 @@ installed input-method delivery require their dedicated AppKit/UI evidence.
 
 | Change surface | Required additional gate |
 | --- | --- |
-| AppKit or public host API | `bash scripts/verify-host-surface.sh`; `swift build --product SlopadAppKit --quiet`; `swift build --product SlopadAppKitTextKit --quiet`; `swift build --product SlopadAppKitUI --quiet` |
+| AppKit or public host API | `bash scripts/verify-host-surface.sh`; `swift build --product SlopadAppKit --quiet`; `swift build --product SlopadAppKitTextKit --quiet`; `swift build --product SlopadEditorAppKitUI --quiet` |
 | UI or runtime input/rendering | `swift build --product SlopadDebugApp --quiet`; exercise the affected native path in `SlopadDebugApp` when the claim is behavioral rather than compile-only |
 | Layout, drawing, cache, frame-time, drag/reorder, or large documents | `swift build --product SlopadUIBenchmarkApp --quiet`; run the affected `SlopadUIBenchmarkApp` scenario and state the benchmark environment and resolution limits |
 | Package or target graph | `swift package dump-package` |
@@ -154,7 +154,7 @@ The fixed minimal regression is:
 
 ```sh
 swift test --quiet --filter \
-  'SlopadAppKitUITests.AppKitTestWindowLifetimeTests/arcOwnedWindowClosesWithoutAppKitRelease'
+  'SlopadEditorAppKitUITests.AppKitTestWindowLifetimeTests/arcOwnedWindowClosesWithoutAppKitRelease'
 ```
 
 On the environment above it passed in 20 independent `swift test` processes (`20/20`, one
