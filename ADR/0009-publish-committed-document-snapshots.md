@@ -21,7 +21,7 @@ keystroke O(document size), even for hosts that debounce persistence.
 
 ## Decision
 
-`SlopadEngine` publishes two related public values:
+`SlopadEditorEngine` publishes two related public values:
 
 - `EditorDocumentRevision` is a monotonically increasing token scoped to one
   `EditorSession`.

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Entry point for agents working in Slopad.
+Entry point for agents working in SlopadEditor.
 
 ## Read First
 
@@ -21,21 +21,19 @@ Two different questions have two different authorities:
 
 When source and an intent document disagree about *intent*, that is a planning defect, not a signal to ignore the document. Correct the document first (or open an issue), then change code. Do not silently follow either side.
 
-`Slopad_Semantic_Editor_Architecture_Handoff.md` is a background record, not a work order.
-
 ## Architecture Rules
 
-Slopad is a headless native block editor engine. The canonical document is a block tree; Markdown/HTML are input/output formats, not the model.
+SlopadEditor is a headless native block editor engine. The canonical document is a block tree; Markdown/HTML are input/output formats, not the model.
 
 Ownership:
 
-* `SlopadEditorModel` — canonical document mutation, selection, commands, history
-* `SlopadBlockLayout` — block layout, visibility, hit-test, reveal geometry
+* `SlopadEditorDocumentModel` — canonical document mutation, selection, commands, history
+* `SlopadEditorBlockLayout` — block layout, visibility, hit-test, reveal geometry
 * `TextLayout` — text measurement and text geometry
-* `SlopadEngine` / `EditorSession` — orchestration and editor semantics
-* `SlopadAppKitUI` — AppKit input/drawing/focus/scroll adapter
-* `SlopadAppKitTextKit` — TextKit2 backend
-* `SlopadDataStructure` — editor-independent data structures
+* `SlopadEditorEngine` / `EditorSession` — orchestration and editor semantics
+* `SlopadEditorAppKitUI` — AppKit input/drawing/focus/scroll adapter
+* `SlopadEditorAppKitTextKit` — TextKit2 backend
+* `SlopadEditorDataStructure` — editor-independent data structures
 
 Guardrails:
 
@@ -43,7 +41,7 @@ Guardrails:
 * Platform adapters must not own editor semantics or canonical state.
 * `EditorModel` must not own or call `BlockLayout`; `EditorSession` coordinates them.
 * IME/composition, layout, viewport, TextKit geometry, and render state are not canonical document state.
-* `SlopadCoreModel` is shared contract vocabulary, not a generic helper/projection bucket.
+* `SlopadEditorCoreModel` is shared contract vocabulary, not a generic helper/projection bucket.
 * Add public/cross-target types only when they represent a real contract or invariant.
 * Use `public` for host API, `package` for genuine cross-target contracts, and internal access otherwise.
 
@@ -84,8 +82,8 @@ UI work must preserve both native behavior and engine semantics.
 
 Use:
 
-* `SlopadDebugApp` for input, focus, selection, IME, scrolling, hit-testing, and rendering changes.
-* `SlopadUIBenchmarkApp` for changes that may affect layout, redraw, caching, frame time, drag/reorder, or large-document interaction.
+* `SlopadEditorDebugApp` for input, focus, selection, IME, scrolling, hit-testing, and rendering changes.
+* `SlopadEditorUIBenchmarkApp` for changes that may affect layout, redraw, caching, frame time, drag/reorder, or large-document interaction.
 
 AppKit-specific behavior belongs in the adapter; semantic editing behavior belongs behind `EditorSession`.
 

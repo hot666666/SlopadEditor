@@ -8,14 +8,14 @@ let package = Package(
         .macOS(.v14)
     ],
     dependencies: [
-        .package(name: "Slopad", path: "../..")
+        .package(name: "SlopadEditor", path: "../..")
     ],
     targets: [
         .executableTarget(
             name: "DownstreamMarkdownHost",
             dependencies: [
-                .product(name: "SlopadEngine", package: "Slopad"),
-                .product(name: "SlopadMarkdown", package: "Slopad"),
+                .product(name: "SlopadEditorEngine", package: "SlopadEditor"),
+                .product(name: "SlopadEditorMarkdown", package: "SlopadEditor"),
             ]
         )
     ]

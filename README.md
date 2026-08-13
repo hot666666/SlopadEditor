@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="Resources/Icon.png" alt="Slopad icon" width="300" height="300">
+  <img src="Resources/Icon.png" alt="SlopadEditor icon" width="300" height="300">
 </p>
 
-<h1 align="center">Slopad</h1>
+<h1 align="center">SlopadEditor</h1>
 
 <p align="center">
   A headless native block editor engine for Swift, with a production AppKit/TextKit2 path.
@@ -15,12 +15,12 @@
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2563eb">
 </p>
 
-Slopad is a work-in-progress block editor project. Its reusable foundation is
-`SlopadEngine`: the canonical document is a tree of blocks, the engine owns editing
+SlopadEditor is a work-in-progress block editor project. Its reusable foundation is
+`SlopadEditorEngine`: the canonical document is a tree of blocks, the engine owns editing
 meaning, and platform adapters own native input, drawing, focus, and scrolling.
 
 The production platform path is macOS 14+ through AppKit and TextKit2. Package resolution
-requires Swift 6.2 or later because the opt-in `SlopadMarkdown` product pins
+requires Swift 6.2 or later because the opt-in `SlopadEditorMarkdown` product pins
 `swift-markdown` 0.8.0.
 
 ## Start Here
@@ -28,43 +28,43 @@ requires Swift 6.2 or later because the opt-in `SlopadMarkdown` product pins
 Ordinary macOS hosts should depend on the curated facade:
 
 ```swift
-.product(name: "SlopadAppKit", package: "Slopad")
+.product(name: "SlopadEditorAppKit", package: "SlopadEditor")
 ```
 
 ```swift
-import SlopadAppKit
+import SlopadEditorAppKit
 ```
 
-`SlopadAppKit` is a compile-time facade. It exposes the supported controller, actions,
+`SlopadEditorAppKit` is a compile-time facade. It exposes the supported controller, actions,
 style, block chrome, snapshots, and document transaction vocabulary, but creates no second
-runtime or state owner. `SlopadAppKitUI`, `SlopadAppKitTextKit`, and `SlopadEngine` remain
+runtime or state owner. `SlopadEditorAppKitUI`, `SlopadEditorAppKitTextKit`, and `SlopadEditorEngine` remain
 available to hosts that intentionally build a complete custom adapter.
 
-SwiftUI hosts use the separate `SlopadSwiftUI` product. It layers declarative lifecycle
+SwiftUI hosts use the separate `SlopadEditorSwiftUI` product. It layers declarative lifecycle
 and observable host state over the same AppKit runtime; it does not create a second editor
 or expose the underlying controller.
 
 Run the reference host:
 
 ```sh
-swift run SlopadDebugApp
+swift run SlopadEditorDebugApp
 ```
 
-<img src="Resources/demo.gif" alt="Slopad debug demo" width="720">
+<img src="Resources/demo.gif" alt="SlopadEditor debug demo" width="720">
 
 ## Architecture at a Glance
 
 | Target | Owns | Must not own |
 | --- | --- | --- |
-| `SlopadEditorModel` | Canonical block tree, selection, commands, transactions, history | Layout, viewport, native state |
-| `SlopadBlockLayout` | Visible order, block geometry, hit/reveal facts, height index, text-layout cache | Canonical mutation, platform callbacks |
-| `SlopadEngine` | `EditorSession`, composition/runtime overlays, owner coordination, snapshots | Duplicate document or layout state |
-| `SlopadAppKitTextKit` | Coherent TextKit2 measurement, geometry, navigation, deletion, attributed content | Editing semantics, native input host |
-| `SlopadAppKitUI` | AppKit callback translation, drawing, focus, scrolling, surface synchronization | Canonical mutation or command meaning |
-| `SlopadAppKit` | Curated ordinary-host API | Runtime state |
-| `SlopadSwiftUI` | SwiftUI mounting, identity, focus, observation, lifecycle flush | A second controller or Session |
-| `SlopadMarkdown` | Explicit stateless whole-document decode/encode | Canonical storage, editor runtime |
-| `SlopadArchive` | Versioned native archive encode/decode over canonical blocks | Storage lifecycle, editor runtime |
+| `SlopadEditorDocumentModel` | Canonical block tree, selection, commands, transactions, history | Layout, viewport, native state |
+| `SlopadEditorBlockLayout` | Visible order, block geometry, hit/reveal facts, height index, text-layout cache | Canonical mutation, platform callbacks |
+| `SlopadEditorEngine` | `EditorSession`, composition/runtime overlays, owner coordination, snapshots | Duplicate document or layout state |
+| `SlopadEditorAppKitTextKit` | Coherent TextKit2 measurement, geometry, navigation, deletion, attributed content | Editing semantics, native input host |
+| `SlopadEditorAppKitUI` | AppKit callback translation, drawing, focus, scrolling, surface synchronization | Canonical mutation or command meaning |
+| `SlopadEditorAppKit` | Curated ordinary-host API | Runtime state |
+| `SlopadEditorSwiftUI` | SwiftUI mounting, identity, focus, observation, lifecycle flush | A second controller or Session |
+| `SlopadEditorMarkdown` | Explicit stateless whole-document decode/encode | Canonical storage, editor runtime |
+| `SlopadEditorArchive` | Versioned native archive encode/decode over canonical blocks | Storage lifecycle, editor runtime |
 
 The compiler-enforced graph is in [`Package.swift`](Package.swift). The
 [interactive responsibility map](docs/slopad-architecture-map.html) shows module
@@ -109,14 +109,14 @@ Markdown is an input/output format, never the canonical model. Whole-document co
 is opt-in:
 
 ```swift
-.product(name: "SlopadMarkdown", package: "Slopad")
+.product(name: "SlopadEditorMarkdown", package: "SlopadEditor")
 ```
 
 ```swift
-import SlopadMarkdown
+import SlopadEditorMarkdown
 
-let blocks = try SlopadMarkdown.decode("# Imported")
-let markdown = try SlopadMarkdown.encode(blocks)
+let blocks = try SlopadEditorMarkdown.decode("# Imported")
+let markdown = try SlopadEditorMarkdown.encode(blocks)
 ```
 
 Decode and encode are synchronous, stateless, and fail closed with typed diagnostics; no
@@ -124,23 +124,23 @@ partial document or output is returned. Supported round-trips preserve tree/cont
 semantics but decode creates fresh `BlockID`s.
 
 Typed Markdown shortcuts are a different path. The internal parser-free
-`SlopadMarkdownInputRules` target supplies bounded prefix and inline pattern data, while
-`SlopadEditorModel` owns trigger gating, canonical application, and undo semantics.
+`SlopadEditorMarkdownInputRules` target supplies bounded prefix and inline pattern data, while
+`SlopadEditorDocumentModel` owns trigger gating, canonical application, and undo semantics.
 
 ## Native Archive
 
 Identity-preserving native persistence conversion is a separate opt-in product:
 
 ```swift
-.product(name: "SlopadArchive", package: "Slopad")
+.product(name: "SlopadEditorArchive", package: "SlopadEditor")
 ```
 
 ```swift
 import Foundation
-import SlopadArchive
+import SlopadEditorArchive
 
-let data = try SlopadArchive.encode(snapshot.blocks)
-let blocks = try SlopadArchive.decode(data)
+let data = try SlopadEditorArchive.encode(snapshot.blocks)
+let blocks = try SlopadEditorArchive.decode(data)
 ```
 
 The synchronous codec preserves canonical block IDs, tree preorder, kinds, content, and
@@ -153,10 +153,10 @@ composition, layout, viewport, TextKit, or storage metadata.
 
 ## Development Surfaces
 
-- `SlopadDebugApp` — reference AppKit host for input, focus, selection, IME, scrolling,
+- `SlopadEditorDebugApp` — reference AppKit host for input, focus, selection, IME, scrolling,
   hit testing, and rendering.
-- `SlopadUIBenchmarkApp` — real AppKit interaction and frame-time harness.
-- `SlopadHeightBenchmark` and `SlopadSessionBenchmark` — focused non-product benchmarks.
+- `SlopadEditorUIBenchmarkApp` — real AppKit interaction and frame-time harness.
+- `SlopadEditorHeightBenchmark` and `SlopadEditorSessionBenchmark` — focused non-product benchmarks.
 - `Fixtures/DownstreamAppKitHost` and `Fixtures/DownstreamSwiftUIHost` — deterministic
   public lifecycle runtime smokes without `@testable` or package access; run both with
   `bash scripts/verify-host-surface.sh`.
@@ -175,7 +175,7 @@ composition, layout, viewport, TextKit, or storage metadata.
 - [ADRs](ADR/README.md) — durable decisions and their consequences.
 - [Testing](docs/TESTING.md) — gate selection and validation provenance.
 - [Lessons learned](docs/LESSONS_LEARNED.md) — repeated structural failure patterns.
-- [Epic #23 status](docs/epic-23-status.html) — historical completion evidence, not a
+- [Epic #23 status](report/2026-08-09-3235d82-epic-23-completion.html) — historical completion evidence, not a
   current work queue.
 
 ## Development Checks

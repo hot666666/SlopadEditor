@@ -10,50 +10,50 @@ mkdir -p "$CLANG_MODULE_CACHE_PATH"
 fixture="Fixtures/DownstreamArchiveHost"
 codec_source="$fixture/Sources/ArchiveCodecSurfaceProbe/ArchiveCodecSurfaceProbe.swift"
 lifecycle_source="$fixture/Sources/AppKitArchiveLifecycleProbe/AppKitArchiveLifecycleProbe.swift"
-archive_source="Sources/SlopadArchive"
+archive_source="Sources/SlopadEditorArchive"
 
 test "$(rg '^public typealias ' "$archive_source" | wc -l | tr -d ' ')" = "5"
-test "$(rg '^public import SlopadCoreModel$' "$archive_source" | wc -l | tr -d ' ')" = "1"
-if rg -n '@_exported import|import SlopadEngine|import SlopadAppKit|import SlopadSwiftUI' \
+test "$(rg '^public import SlopadEditorCoreModel$' "$archive_source" | wc -l | tr -d ' ')" = "1"
+if rg -n '@_exported import|import SlopadEditorEngine|import SlopadEditorAppKit|import SlopadEditorSwiftUI' \
     "$archive_source"; then
     echo "Archive target widened beyond its CoreModel-only boundary" >&2
     exit 1
 fi
 
 codec_imports="$(rg '^import ' "$codec_source" | sort)"
-test "$codec_imports" = $'import Foundation\nimport SlopadArchive'
+test "$codec_imports" = $'import Foundation\nimport SlopadEditorArchive'
 
 lifecycle_imports="$(rg '^import ' "$lifecycle_source" | sort)"
-test "$lifecycle_imports" = $'import AppKit\nimport SlopadAppKit\nimport SlopadArchive'
+test "$lifecycle_imports" = $'import AppKit\nimport SlopadEditorAppKit\nimport SlopadEditorArchive'
 
 codec_manifest_block="$(sed -n '/name: "ArchiveCodecSurfaceProbe"/,/name: "AppKitArchiveLifecycleProbe"/p' "$fixture/Package.swift")"
-test "$(printf '%s' "$codec_manifest_block" | rg -c 'product\(name: "SlopadArchive"')" = "1"
-if printf '%s' "$codec_manifest_block" | rg 'product\(name: "SlopadAppKit"'; then
+test "$(printf '%s' "$codec_manifest_block" | rg -c 'product\(name: "SlopadEditorArchive"')" = "1"
+if printf '%s' "$codec_manifest_block" | rg 'product\(name: "SlopadEditorAppKit"'; then
     echo "Codec probe gained an AppKit dependency" >&2
     exit 1
 fi
 
 lifecycle_manifest_block="$(sed -n '/name: "AppKitArchiveLifecycleProbe"/,$p' "$fixture/Package.swift")"
-test "$(printf '%s' "$lifecycle_manifest_block" | rg -c 'product\(name: "SlopadArchive"')" = "1"
-test "$(printf '%s' "$lifecycle_manifest_block" | rg -c 'product\(name: "SlopadAppKit"')" = "1"
-if printf '%s' "$lifecycle_manifest_block" | rg 'SlopadCoreModel|SlopadEngine|SlopadSwiftUI|SlopadAppKitUI'; then
+test "$(printf '%s' "$lifecycle_manifest_block" | rg -c 'product\(name: "SlopadEditorArchive"')" = "1"
+test "$(printf '%s' "$lifecycle_manifest_block" | rg -c 'product\(name: "SlopadEditorAppKit"')" = "1"
+if printf '%s' "$lifecycle_manifest_block" | rg 'SlopadEditorCoreModel|SlopadEditorEngine|SlopadEditorSwiftUI|SlopadEditorAppKitUI'; then
     echo "Lifecycle probe gained a raw product dependency" >&2
     exit 1
 fi
 
-if rg -n 'SlopadCoreModel|SlopadEngine|SlopadAppKit|SlopadSwiftUI|SlopadAppKitUI' \
+if rg -n 'SlopadEditorCoreModel|SlopadEditorEngine|SlopadEditorAppKit|SlopadEditorSwiftUI|SlopadEditorAppKitUI' \
     "$codec_source"; then
     echo "Codec probe bypasses the Archive facade" >&2
     exit 1
 fi
 
-if rg -n 'SlopadCoreModel|SlopadEngine|SlopadSwiftUI|SlopadAppKitUI|@testable|\bpackage\b' \
+if rg -n 'SlopadEditorCoreModel|SlopadEditorEngine|SlopadEditorSwiftUI|SlopadEditorAppKitUI|@testable|\bpackage\b' \
     "$lifecycle_source"; then
     echo "Lifecycle probe bypasses its public facades" >&2
     exit 1
 fi
 
-if rg -n 'SlopadArchive' \
+if rg -n 'SlopadEditorArchive' \
     Fixtures/DownstreamAppKitHost \
     Fixtures/DownstreamSwiftUIHost \
     Fixtures/DownstreamMarkdownHost \

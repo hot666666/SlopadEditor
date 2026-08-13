@@ -25,7 +25,7 @@ See `docs/HEIGHT_INDEX_STORAGE_EXPERIMENT.md` for commands, interpretation, and 
 
 ## AppKit UI Benchmark Sweep
 
-Generated on 2026-07-06 for the real `SlopadUIBenchmarkApp` AppKit/TextKit2 UI benchmark.
+Generated on 2026-07-06 for the real `SlopadEditorUIBenchmarkApp` AppKit/TextKit2 UI benchmark.
 
 - `appkit-ui-rbtree-20260706.csv`: raw frame samples using the default
   `RBTreeBlockHeightIndexStorage`.

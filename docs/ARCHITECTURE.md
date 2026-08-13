@@ -1,6 +1,6 @@
 # Architecture
 
-This document is the text reference for Slopad's current ownership and runtime contracts.
+This document is the text reference for SlopadEditor's current ownership and runtime contracts.
 [`Package.swift`](../Package.swift) is the compiler-enforced dependency graph, current
 source and tests define what the code does, and [ADRs](../ADR/README.md) explain durable
 choices. The [interactive architecture map](slopad-architecture-map.html) is the visual
@@ -16,43 +16,43 @@ callbacks, drawing, pasteboard negotiation, and autoscroll.
 
 ## System Shape
 
-Slopad is a headless native block editor. Its canonical document is a tree of blocks;
+SlopadEditor is a headless native block editor. Its canonical document is a tree of blocks;
 Markdown and HTML are formats at the edge, not the editor model.
 
 The production targets form these direct dependency layers:
 
 | Layer | Target | Direct role |
 | --- | --- | --- |
-| Host facade | `SlopadSwiftUI` | SwiftUI lifecycle over the curated AppKit facade |
-| Host facade | `SlopadAppKit` | One-product/one-import ordinary macOS surface |
-| Platform adapter | `SlopadAppKitUI` | AppKit callbacks, native input, drawing, focus, scroll, surface sync |
-| Text backend | `SlopadAppKitTextKit` | TextKit2 implementation of the text-layout capability seam |
-| Orchestration | `SlopadEngine` | Public `EditorSession` and editor semantics across owners |
-| Canonical owner | `SlopadEditorModel` | Document, selection, commands, transactions, history |
-| Derived owner | `SlopadBlockLayout` | Visibility, block geometry, hit/reveal facts, caches, height index |
-| Format syntax | `SlopadMarkdownInputRules` | Internal immutable bounded typed-input patterns |
-| Format codec | `SlopadMarkdown` | Opt-in stateless whole-document decode and encode |
-| Format codec | `SlopadArchive` | Opt-in stateless versioned native archive encode and decode |
-| Contracts | `SlopadCoreModel` | Public vocabulary and genuine package cross-target contracts |
-| Storage | `SlopadDataStructure` | Editor-independent data structures |
+| Host facade | `SlopadEditorSwiftUI` | SwiftUI lifecycle over the curated AppKit facade |
+| Host facade | `SlopadEditorAppKit` | One-product/one-import ordinary macOS surface |
+| Platform adapter | `SlopadEditorAppKitUI` | AppKit callbacks, native input, drawing, focus, scroll, surface sync |
+| Text backend | `SlopadEditorAppKitTextKit` | TextKit2 implementation of the text-layout capability seam |
+| Orchestration | `SlopadEditorEngine` | Public `EditorSession` and editor semantics across owners |
+| Canonical owner | `SlopadEditorDocumentModel` | Document, selection, commands, transactions, history |
+| Derived owner | `SlopadEditorBlockLayout` | Visibility, block geometry, hit/reveal facts, caches, height index |
+| Format syntax | `SlopadEditorMarkdownInputRules` | Internal immutable bounded typed-input patterns |
+| Format codec | `SlopadEditorMarkdown` | Opt-in stateless whole-document decode and encode |
+| Format codec | `SlopadEditorArchive` | Opt-in stateless versioned native archive encode and decode |
+| Contracts | `SlopadEditorCoreModel` | Public vocabulary and genuine package cross-target contracts |
+| Storage | `SlopadEditorDataStructure` | Editor-independent data structures |
 
-`SlopadArchive` is an opt-in synchronous pure codec whose target depends only on
-`SlopadCoreModel`. Its public facade uses Swift 6 `public import` for declaration legality
-and exposes only five type-identical archive aliases; it does not make `SlopadCoreModel` a
+`SlopadEditorArchive` is an opt-in synchronous pure codec whose target depends only on
+`SlopadEditorCoreModel`. Its public facade uses Swift 6 `public import` for declaration legality
+and exposes only five type-identical archive aliases; it does not make `SlopadEditorCoreModel` a
 product or broadly re-export its vocabulary. See
 [ADR 0015](../ADR/0015-version-native-archive-and-keep-storage-host-owned.md).
 
 The dependency graph enforces four important absences:
 
-- `SlopadEditorModel` and `SlopadBlockLayout` do not import each other;
+- `SlopadEditorDocumentModel` and `SlopadEditorBlockLayout` do not import each other;
   `EditorSession` coordinates them.
-- `SlopadAppKitTextKit` does not import the engine. Runtime calls arrive through
-  `BlockTextLayoutProtocol` capabilities defined in `SlopadCoreModel`.
-- `SlopadMarkdown` does not import the engine. A caller explicitly decides when decoded
+- `SlopadEditorAppKitTextKit` does not import the engine. Runtime calls arrive through
+  `BlockTextLayoutProtocol` capabilities defined in `SlopadEditorCoreModel`.
+- `SlopadEditorMarkdown` does not import the engine. A caller explicitly decides when decoded
   block inputs enter a document transaction.
-- `SlopadArchive` likewise does not import the engine or a storage provider. It
+- `SlopadEditorArchive` likewise does not import the engine or a storage provider. It
   transforms canonical block inputs to/from `Data`; the host owns persistence lifecycle.
-- `SlopadAppKit` and `SlopadSwiftUI` add no second controller, Session, document, or cache.
+- `SlopadEditorAppKit` and `SlopadEditorSwiftUI` add no second controller, Session, document, or cache.
 
 Debug apps, benchmarks, tests, and downstream fixtures are outer-edge consumers. They
 verify production owners but do not define editor behavior.
@@ -64,16 +64,16 @@ interchangeable.
 
 | Lifetime | Owner | Examples | Rule |
 | --- | --- | --- | --- |
-| Canonical document | `SlopadEditorModel` stores types defined in `SlopadCoreModel` | block tree/order, `BlockID`, kind, text, inline marks | Changes only through validated model transactions |
-| Canonical editing state | `SlopadEditorModel` | caret/text/block selection, stored marks, history | Platform callbacks request transitions; they do not mutate it directly |
+| Canonical document | `SlopadEditorDocumentModel` stores types defined in `SlopadEditorCoreModel` | block tree/order, `BlockID`, kind, text, inline marks | Changes only through validated model transactions |
+| Canonical editing state | `SlopadEditorDocumentModel` | caret/text/block selection, stored marks, history | Platform callbacks request transitions; they do not mutate it directly |
 | Session runtime | `EditorSession` | live composition, composition selection, slash query/source revision, drag/navigation context | Cleared or invalidated when its exact source state no longer matches |
-| Platform runtime | `SlopadAppKitUI` | responder, native marked range, scroll position, overlay widgets | Must converge on Session facts without becoming semantics |
-| Derived layout | `SlopadBlockLayout` and text backend | visible order, y/height index, prepared text layout, hit/caret/selection geometry | Rebuildable from canonical plus runtime inputs; never persisted as document state |
+| Platform runtime | `SlopadEditorAppKitUI` | responder, native marked range, scroll position, overlay widgets | Must converge on Session facts without becoming semantics |
+| Derived layout | `SlopadEditorBlockLayout` and text backend | visible order, y/height index, prepared text layout, hit/caret/selection geometry | Rebuildable from canonical plus runtime inputs; never persisted as document state |
 | Render projection | `EditorSessionSnapshot` | visible blocks, active text input, overlays, total height | Viewport-scoped and disposable |
 | Persistence projection | `EditorDocumentSnapshot` | complete canonical DFS block inputs and Session epoch/revision | Full-tree read; excludes selection, layout, viewport, scroll, and composition |
 | Review context | `EditorDocumentContextSnapshot` | full document, exact selection, selected content, opaque source | Short-lived CAS authority used only by `applyDocumentPatch(_:)` |
 
-Canonical value definitions living in `SlopadCoreModel` do not make that target the
+Canonical value definitions living in `SlopadEditorCoreModel` do not make that target the
 mutation owner. Likewise, a complete TextKit prepared graph is a derived cache entry, not
 canonical editor state.
 
@@ -92,15 +92,15 @@ replacement policy in ADR 0014 remain unfinished product work.
 
 | Interaction | Producer-to-consumer path | Invariant |
 | --- | --- | --- |
-| Typing/IME | AppKit callback → `SlopadAppKitUI` → `EditorSession.handleInput` → model transaction → layout invalidation → snapshot → synchronized native surface | Composition is a Session overlay until commit; canonical selection stays in canonical coordinates |
-| Text pointer selection | AppKit point → Session pointer event → `SlopadBlockLayout` block hit → text backend grapheme hit → Session selection transition → snapshot | Backend returns facts; Session owns selection meaning |
+| Typing/IME | AppKit callback → `SlopadEditorAppKitUI` → `EditorSession.handleInput` → model transaction → layout invalidation → snapshot → synchronized native surface | Composition is a Session overlay until commit; canonical selection stays in canonical coordinates |
+| Text pointer selection | AppKit point → Session pointer event → `SlopadEditorBlockLayout` block hit → text backend grapheme hit → Session selection transition → snapshot | Backend returns facts; Session owns selection meaning |
 | Block selection/drag | AppKit gutter/body routing → Session runtime preview → layout drop/reveal geometry → model move transaction on successful drop | Preview is runtime state; only the final valid drop mutates the tree |
 | Slash command | Model typed-`/` rule → Session query/source runtime → snapshot anchor/catalog → AppKit overlay → Session CAS apply → one model transaction | Query/menu state is not canonical; `/query` deletion and kind change form one undo step |
 | Rendering/scroll | AppKit viewport → `EditorSession.render` → block visibility/layout → coherent text backend facts → render snapshot → AppKit surface sync | Only visible projection is rendered; it is not a persistence source |
 | Persistence | model semantic change → Session committed revision → host callback → on-demand `documentSnapshot` → host debounce → archive encode → host storage | Snapshot blocks are the source; epoch/revision only reject stale in-process work and are never stored |
 | Reviewed replacement | context snapshot → external review → complete patch → Session epoch/revision/selection CAS → model validation/replacement → layout/runtime invalidation | A changed post-image is one transaction; stale, invalid, or composing sources fail without partial mutation |
-| Markdown import/export | caller → `SlopadMarkdown` → fresh `[EditorBlockInput]` or deterministic text → optional Session patch | Codec AST never crosses its target and no conversion is implicit |
-| Native archive reload | host bytes → `SlopadArchive` raw wire validation → canonical input validation → `[EditorBlockInput]` → explicit host Session lifecycle | Identity/order/content survive; malformed or unsupported archives return no partial blocks |
+| Markdown import/export | caller → `SlopadEditorMarkdown` → fresh `[EditorBlockInput]` or deterministic text → optional Session patch | Codec AST never crosses its target and no conversion is implicit |
+| Native archive reload | host bytes → `SlopadEditorArchive` raw wire validation → canonical input validation → `[EditorBlockInput]` → explicit host Session lifecycle | Identity/order/content survive; malformed or unsupported archives return no partial blocks |
 
 ### Synchronized AppKit actions
 
@@ -131,7 +131,7 @@ hook.
 
 | Capability | Backend answers | Semantic owner after the answer |
 | --- | --- | --- |
-| `BlockMeasuring` | text height and measurement result for an effective request | `SlopadBlockLayout` caches and places blocks |
+| `BlockMeasuring` | text height and measurement result for an effective request | `SlopadEditorBlockLayout` caches and places blocks |
 | `TextGeometryResolving` | fragments, hit positions, caret and selection rects | Session assembles render/input facts |
 | `TextNavigationResolving` | physical/linguistic movement facts and transient bidi context | Session changes canonical selection and crosses block boundaries |
 | `TextDeletionResolving` | Unicode-aware deletion range | Session/model applies the edit and history |
@@ -142,7 +142,7 @@ caret/selection geometry, marked text, and navigation based on the same effectiv
 bounded eviction. Cache identity follows measurement request values and style, not a
 loosely related revision convention.
 
-For custom adapters importing `SlopadAppKitTextKit` directly, `TextKitTextSystem` is the
+For custom adapters importing `SlopadEditorAppKitTextKit` directly, `TextKitTextSystem` is the
 supported construction boundary. Its public `layouter` and `renderer` share one internal
 `TextKitLayoutContext`; their standalone initializers remain internal. This preserves the
 coherent-backend invariant outside the default `AppKitTextSystem` path without exposing
@@ -157,12 +157,12 @@ complete adapter/backend pair so geometry and drawing stay coherent.
 
 | Consumer | Recommended surface | Consumer owns | Consumer must not reach into |
 | --- | --- | --- | --- |
-| Ordinary macOS app | `SlopadAppKit` | document storage policy, app chrome, lifecycle | raw TextKit graph, model/layout internals |
-| SwiftUI app | `SlopadSwiftUI` | mount/unmount, document identity, bindings, persistence timing | controller bypass or a second runtime |
-| Complete custom platform adapter | `SlopadEngine` plus its own backend | native callback translation, drawing, focus, scroll coherence | direct model/layout coupling |
-| Markdown caller | `SlopadMarkdown` and optionally `SlopadEngine` | explicit import/export timing and failure UX | parser AST retention or partial success |
-| Native archive codec caller | `SlopadArchive` | construct/encode/decode the curated archive aliases | raw Engine/CoreModel imports, Session state, storage providers, or a second canonical document owner |
-| Native archive lifecycle host | exactly one public UI facade plus `SlopadArchive` | file/DB/cloud lifecycle, debounce, atomic write, conflict/retry/error UX | raw Engine/CoreModel imports, package-only state, or codec-owned lifecycle policy |
+| Ordinary macOS app | `SlopadEditorAppKit` | document storage policy, app chrome, lifecycle | raw TextKit graph, model/layout internals |
+| SwiftUI app | `SlopadEditorSwiftUI` | mount/unmount, document identity, bindings, persistence timing | controller bypass or a second runtime |
+| Complete custom platform adapter | `SlopadEditorEngine` plus its own backend | native callback translation, drawing, focus, scroll coherence | direct model/layout coupling |
+| Markdown caller | `SlopadEditorMarkdown` and optionally `SlopadEditorEngine` | explicit import/export timing and failure UX | parser AST retention or partial success |
+| Native archive codec caller | `SlopadEditorArchive` | construct/encode/decode the curated archive aliases | raw Engine/CoreModel imports, Session state, storage providers, or a second canonical document owner |
+| Native archive lifecycle host | exactly one public UI facade plus `SlopadEditorArchive` | file/DB/cloud lifecycle, debounce, atomic write, conflict/retry/error UX | raw Engine/CoreModel imports, package-only state, or codec-owned lifecycle policy |
 | Debug/benchmark/fixture | development targets | scenarios, measurements, public compile proof | production ownership |
 
 The ordinary AppKit host surface is admitted by intent:
@@ -178,7 +178,7 @@ The ordinary AppKit host surface is admitted by intent:
 | Change default presentation | `updateEditorStyle(_:)` |
 | Draw block decoration | `AppKitBlockChromeRenderer` |
 
-`SlopadSwiftUI` packages the mount → edit → observe → flush → replace → unmount lifecycle.
+`SlopadEditorSwiftUI` packages the mount → edit → observe → flush → replace → unmount lifecycle.
 It guards document identity, filters committed changes, bridges focus, and flushes
 composition before persistence without re-exporting the controller.
 
@@ -202,7 +202,7 @@ symbols whose exposure would widen the host contract.
 Symbols that are public in another module are probed only through the facade, and that
 pins only that the facade does not re-export them. SwiftPM gives a downstream target a
 single import path covering every built module, so a host that declared only the
-`SlopadAppKit` product can still write `import SlopadAppKitTextKit` and reach
+`SlopadEditorAppKit` product can still write `import SlopadEditorAppKitTextKit` and reach
 `TextKitTextSystem`; `--explicit-target-dependency-import-check error` does not prevent
 this across packages. Such a host has imported a module it never declared, which review
 catches, but the compiler does not.
@@ -211,16 +211,16 @@ catches, but the compiler does not.
 
 Markdown has two deliberately separate entry points:
 
-- `SlopadMarkdownInputRules` contains parser-free bounded prefix/inline patterns linked
-  into ordinary editing. `SlopadEditorModel` owns trigger classification, candidate
+- `SlopadEditorMarkdownInputRules` contains parser-free bounded prefix/inline patterns linked
+  into ordinary editing. `SlopadEditorDocumentModel` owns trigger classification, candidate
   evaluation, canonical mutation, and undo.
-- `SlopadMarkdown` is an opt-in whole-document codec. It accepts/returns public
+- `SlopadEditorMarkdown` is an opt-in whole-document codec. It accepts/returns public
   `[EditorBlockInput]` values and depends on `swift-markdown`; it owns no editor runtime.
 
 Decode and encode are stateless and fail closed with nonempty typed diagnostics. Decode
 creates fresh IDs. The supported round-trip contract preserves canonical tree/content
 semantics rather than source spelling or identity. Parser AST types remain internal:
-only `Sources/SlopadMarkdown` may use `internal import Markdown`.
+only `Sources/SlopadEditorMarkdown` may use `internal import Markdown`.
 
 The codec is not a plugin registry, persistence choice, or paste fallback. Callers decide
 when to import/export and how to present unsupported input. See
@@ -228,17 +228,17 @@ when to import/export and how to present unsupported input. See
 
 ## Native Archive Boundary
 
-`SlopadArchive` v1 is a separate opt-in `SlopadCoreModel`-only codec over UTF-8 JSON
+`SlopadEditorArchive` v1 is a separate opt-in `SlopadEditorCoreModel`-only codec over UTF-8 JSON
 `Data`. Its envelope contains `formatVersion` and the complete canonical preorder blocks
 only. It preserves IDs, parent/root/sibling order, kinds, text, and inline marks; it excludes
 selection, history, operation journal, external reference payloads, epoch/revision,
 composition, layout, viewport, and TextKit state.
 
-The target internally depends on `SlopadCoreModel`, and files declaring public signatures
-use Swift 6 `public import SlopadCoreModel`. The archive module itself declares only
+The target internally depends on `SlopadEditorCoreModel`, and files declaring public signatures
+use Swift 6 `public import SlopadEditorCoreModel`. The archive module itself declares only
 typealiases for `BlockID`, `BlockKind`, `BlockContent`, `TextRange`, and
 `EditorBlockInput`; nested kind/mark vocabulary remains reachable through those aliases.
-There is no `SlopadCoreModel` product, Engine dependency, copied wrapper model, or blanket
+There is no `SlopadEditorCoreModel` product, Engine dependency, copied wrapper model, or blanket
 `@_exported import`. All archive signatures and associated error values use those exact
 aliases, so blocks obtained through any UI or Engine facade are type-identical and need no
 conversion.
@@ -270,7 +270,7 @@ fails without a partial document or oversized output.
 
 `Fixtures/DownstreamArchiveHost` proves the public boundary with two external
 targets/sources. The codec-surface
-probe depends on/imports only Foundation and `SlopadArchive`, constructs the aliased graph,
+probe depends on/imports only Foundation and `SlopadEditorArchive`, constructs the aliased graph,
 and round-trips it. The lifecycle probe may additionally import exactly one public UI
 facade and passes its `snapshot.blocks` directly to the codec; it never imports raw Engine,
 CoreModel, or package-only types. A single fixture package may contain both only as separate

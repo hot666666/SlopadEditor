@@ -15,17 +15,31 @@ implemented behavior. The IME rows remain the decided target, but installed inpu
 events currently do not reach the composition consumer in product use; direct
 `setMarkedText` tests prove the callback contract only, not installed-IME delivery.
 
+## Document Map
+
+This file contains three kinds of material with different authority. Read the one that
+answers your question; do not treat design rationale as a contract.
+
+| Sections | Kind | Authority |
+| --- | --- | --- |
+| Evidence Labels → Rendering and Performance Contract | **Normative contract** | What the implemented policy requires. `docs/ARCHITECTURE.md` cites this range. |
+| Engine Contract for High-Level UI | **Design rationale, partly superseded** | Explains *why* the projections are split. Its type sketches predate implementation; Implementation Closure names what actually shipped. |
+| Clipboard Contract → Settled Implementation Decisions | **Normative contract** | Payload rules and `D1`–`D7`. |
+| Implementation Verification Plan → Executed Implementation Order | **Completed gate record** | Historical evidence of how the work was verified, not a standing work order. |
+
+When a type name here disagrees with source, source wins and this document is the defect.
+
 ## Evidence Labels
 
 | Label | Meaning |
 | --- | --- |
-| **Target** | Normative Slopad behavior agreed for implementation |
+| **Target** | Normative SlopadEditor behavior agreed for implementation |
 | **Notion observed** | Reproduced directly in the connected Notion Playground on 2026-08-09 |
 | **User confirmed** | Supplied screenshots or an explicit product rule from this design review |
-| **Implemented** | Current Slopad source and owner-level tests implement the rule |
+| **Implemented** | Current SlopadEditor source and owner-level tests implement the rule |
 | **Settled decision** | Product choice fixed during this review and normative for implementation |
 
-Notion is reference evidence, not Slopad's state owner. Pointer-origin behavior could not
+Notion is reference evidence, not SlopadEditor's state owner. Pointer-origin behavior could not
 be driven reliably by browser automation inside Notion's contenteditable surface, so
 those rows use the supplied screenshots and explicit user confirmation. Keyboard,
 clipboard, formatting, deletion, nesting, Escape, and Cmd-A rows were exercised directly.
@@ -217,7 +231,7 @@ earlier block as survivor, empty-survivor behavior, and single-step paste replac
 
 ### Unselected children of a removed endpoint
 
-Slopad promotes `B`'s unselected children to `B.parentID`. A live Notion test produced a
+SlopadEditor promotes `B`'s unselected children to `B.parentID`. A live Notion test produced a
 different result:
 
 ```text
@@ -228,7 +242,7 @@ B (root, selected text removed)     ├─ B.child.1
   └─ B.child.2
 ```
 
-Notion reparents those children under the surviving earlier block `A`; Slopad deliberately
+Notion reparents those children under the surviving earlier block `A`; SlopadEditor deliberately
 does not. Promotion preserves the unselected subtree at the removed endpoint's structural
 level and avoids making the surviving text block an implicit new parent. The repair is part
 of the same transaction as the range replacement.
@@ -265,6 +279,12 @@ complete affected span.
 
 ## Engine Contract for High-Level UI
 
+> **Status: design rationale. Names here are pre-implementation sketches.**
+> The projection split, cost tiers, and ownership arguments below remain correct and
+> normative. The Swift declarations are the vocabulary used while designing P2 and were
+> not updated as the work landed. For shipped names and files, read
+> [Implementation Closure](#implementation-closure); for shipped shapes, read the source.
+
 The state matrix is not enough for a floating toolbar, context menu, inspector, link
 editor, comment UI, or structured paste surface. Those views must not inspect
 `EditorSelection` and reconstruct engine policy independently. They need three different
@@ -272,8 +292,8 @@ projections with different costs and owners:
 
 | Projection | Owner | Lifetime and cost | Consumers |
 | --- | --- | --- | --- |
-| Canonical selection | `SlopadEditorModel` | Persistent editing state; O(1) `TextPosition` endpoints | Commands, history, document context |
-| Resolved command span | `SlopadEditorModel`, requested by Session | Ephemeral command/preflight value; may traverse O(K) affected blocks | Delete, replace, format, copy, Enter, indent |
+| Canonical selection | `SlopadEditorDocumentModel` | Persistent editing state; O(1) `TextPosition` endpoints | Commands, history, document context |
+| Resolved command span | `SlopadEditorDocumentModel`, requested by Session | Ephemeral command/preflight value; may traverse O(K) affected blocks | Delete, replace, format, copy, Enter, indent |
 | Visible selection presentation | `EditorSession` coordinating BlockLayout/TextLayout | Viewport-scoped O(V + G) projection | AppKit painting, toolbar geometry facts, accessibility |
 
 Do not turn `EditorSelectedContent` into the live selection owner. It is a public,
@@ -282,37 +302,55 @@ Extract one lower-level canonical range resolver, then let review context, clipb
 mutation, formatting, and command-state aggregation project from it at the cost appropriate
 to each use.
 
-### Proposed engine-owned values
+### Engine-owned values
 
-The names below are design vocabulary, not permission to make every type public now.
-Start `internal` or `package`; widen only when a real host consumer passes ADR 0012's
-exposure test.
+These three values shipped as `package` types, matching the design intent that they stay
+below the host contract. Widen only when a real host consumer passes ADR 0012's exposure
+test; Epic #67 found no such consumer for command state.
 
 ```swift
-// SlopadEditorModel: normalized semantic input to one command.
-struct ResolvedTextSpan {
-    let selection: TextSelection       // original direction retained
-    let start: TextPosition            // canonical earlier endpoint
-    let end: TextPosition              // canonical later endpoint
-    let fragments: [ResolvedTextFragment]
+// SlopadEditorDocumentModel: normalized semantic input to one command.
+// Sources/SlopadEditorDocumentModel/Selection/ResolvedTextSpan.swift
+package struct ResolvedTextSpan: Sendable {
+    package let selection: TextSelection   // original direction retained
+    package let start: TextPosition        // canonical earlier endpoint
+    package let end: TextPosition          // canonical later endpoint
+    package let blockIDs: [BlockID]        // canonical DFS span, not a flat coordinate
+    package let fragments: [ResolvedTextFragment]
 }
 
-// SlopadEngine: viewport-independent facts for buttons/menus.
-struct EditorCommandState {
-    let selection: EditorSelection
-    let actions: [EditorActionID: EditorActionAvailability]
-    let inlineMarks: [InlineMarkKind: EditorToggleState]
-    let blockKind: EditorMixedValue<BlockKind>
+// SlopadEditorEngine: viewport-independent facts for buttons/menus.
+// Sources/SlopadEditorEngine/Session/CommandState/EditorCommandState.swift
+package struct EditorCommandState: Hashable, Sendable {
+    package let selectionMode: EditorCommandSelectionMode
+    package let detail: EditorCommandStateDetail
+    package let clearInlineStylesAvailability: EditorActionAvailability
+    package let blockKind: EditorMixedValue<BlockKind>
+
+    // Accessor inputs, not consumer-readable facts.
+    let inlineStyleAvailability: EditorActionAvailability
+    let inlineStyles: [BlockContent.InlineMark.Kind.CaseIdentity: EditorToggleState]
+    let indentBlocksAvailability: EditorActionAvailability
+    let outdentBlocksAvailability: EditorActionAvailability
 }
 
-// SlopadEngine snapshot: viewport-dependent facts, never canonical state.
-struct EditorSelectionPresentation {
-    let visibleFragments: [EditorVisibleTextSelection]
-    let focusBlockID: BlockID?
-    let visibleBounds: EditorRect?
-    let focusRect: EditorRect?
+// SlopadEditorEngine snapshot: viewport-dependent facts, never canonical state.
+// Sources/SlopadEditorEngine/Session/EditorSelectionPresentation.swift
+package struct EditorSelectionPresentation: Sendable {
+    package let visibleTextSelections: [EditorVisibleTextSelection]
+    package let visibleBlockSelectionIDs: Set<BlockID>
+    package let visibleBounds: EditorRect?   // visible, viewport-clipped geometry only
+    package let focusRect: EditorRect?
+    package let isAnchorVisible: Bool
+    package let isFocusVisible: Bool
 }
 ```
+
+The design sketch proposed a generic `actions: [EditorActionID: EditorActionAvailability]`
+map and an `inlineMarks: [InlineMarkKind: EditorToggleState]` map. Neither `EditorActionID`
+nor `InlineMarkKind` exists: availability shipped as named per-command fields, and marks are
+keyed by `BlockContent.InlineMark.Kind.CaseIdentity`. Named fields keep the closed command
+set compiler-checked, which an open ID map would not.
 
 `EditorActionAvailability` needs at least `unavailable`, `available`, and
 `availableAfterCompositionCommit`. Querying availability must not commit composition or
@@ -378,14 +416,23 @@ order.
 
 Replace the one-way `selectedPlainText()` shape with a two-phase boundary:
 
-1. Session builds an `EditorClipboardPlan` containing a plain-text projection plus either
-   a partial-text or complete-subtree structured projection.
+1. Session builds a write plan containing a plain-text projection plus either a
+   partial-text or complete-subtree structured projection.
 2. AppKit negotiates `NSPasteboard` types and performs the external write/read.
 3. Cut mutates only after the required pasteboard write succeeds. Paste sends a typed
    payload back to Session, which applies one canonical transaction.
 
+This shipped as `EditorSession.clipboardWritePlan()` in
+[`EditorSession+ClipboardWritePlan.swift`](../Sources/SlopadEditorEngine/Session/Selection/EditorSession+ClipboardWritePlan.swift),
+returning `EditorClipboardWritePlan` — a versioned `EditorClipboardPayload` plus its
+`plainText` fallback. The payload's structured content is
+`.textSlice(EditorClipboardTextSlice)` or `.blockSubtrees(EditorClipboardBlockSubtrees)`,
+declared in
+[`EditorClipboardPayload.swift`](../Sources/SlopadEditorCoreModel/Clipboard/EditorClipboardPayload.swift).
+There is no type named `EditorClipboardPlan`.
+
 The plan is an ephemeral value, not a second document model. The adapter writes a
-versioned Slopad pasteboard type together with ordinary plain text. Slopad does not add an
+versioned SlopadEditor pasteboard type together with ordinary plain text. SlopadEditor does not add an
 implicit HTML/RTF or Markdown-import path here. Canonical tree repair and insertion belong
 to model commands.
 
@@ -477,7 +524,7 @@ Text selection and block selection need different structured payloads:
 | `B` | Deduplicated selected roots and each complete subtree in canonical DFS order | Kind-aware DFS line projection; empty blocks remain empty lines and relative hierarchy stays in the structured payload |
 
 Notion used a partial multi-text payload for `TN` and a different whole-block payload for
-`B`. Slopad follows its open-edge merge behavior while retaining its own canonical model:
+`B`. SlopadEditor follows its open-edge merge behavior while retaining its own canonical model:
 
 - A structured `B` payload pasted at a block boundary inserts complete copied blocks.
 - The same payload pasted inside destination text absorbs the first copied block into the
@@ -489,8 +536,8 @@ Notion used a partial multi-text payload for `TN` and a different whole-block pa
   behavior when the source mode was text selection.
 - A structured paste mints fresh `BlockID`s and preserves only relative hierarchy.
 
-Copy writes the versioned Slopad structured representation and an ordinary plain-text
-fallback. Paste chooses a valid supported Slopad representation first, then plain text.
+Copy writes the versioned SlopadEditor structured representation and an ordinary plain-text
+fallback. Paste chooses a valid supported SlopadEditor representation first, then plain text.
 Invalid, unsupported-version, or oversized structured data fails closed to plain text.
 If encoding a structured copy exceeds the 8 MiB cap, Copy and Cut deliberately write only
 the ordinary plain-text representation; Cut mutates only after that plain write succeeds.
@@ -506,17 +553,17 @@ The old-policy sites were migrated under their existing owners:
 
 | Area | Implemented behavior |
 | --- | --- |
-| [`EditorSession+TextPointerDragInput.swift`](../Sources/SlopadEngine/Session/TextInteraction/EditorSession+TextPointerDragInput.swift) | Latches text mode, hit-tests the current block, and resolves an empty-origin drag from the nearest non-empty edge in its direction. |
-| [`EditorSession+VerticalMovementInput.swift`](../Sources/SlopadEngine/Session/Navigation/EditorSession+VerticalMovementInput.swift) | Extends text by one visual destination across block boundaries without converting to `B`. |
-| [`EditorSession+ActiveTextSelection.swift`](../Sources/SlopadEngine/Session/TextInteraction/EditorSession+ActiveTextSelection.swift) | Keeps one focus-block native input descriptor while canonical `TN` retains both endpoints. |
-| [`EditorSession+Rendering.swift`](../Sources/SlopadEngine/Session/EditorSession+Rendering.swift) | Projects visible block-local text ranges and atomic block tint from prepared visible-order ranks. |
-| [`EditorSession+RenderDamage.swift`](../Sources/SlopadEngine/Session/EditorSession+RenderDamage.swift) | Computes selection damage only from visible ranks; it no longer materializes the full `TN` span per pointer update. |
-| [`EditorSession+ClipboardWritePlan.swift`](../Sources/SlopadEngine/Session/Selection/EditorSession+ClipboardWritePlan.swift) | Produces versioned text-slice or block-subtree payloads and a kind-aware plain fallback. |
-| [`EditorSession+CommandInput.swift`](../Sources/SlopadEngine/Session/InputRouting/EditorSession+CommandInput.swift) | Routes `TN` typing, deletion, Enter, formatting, indentation, Escape, Cmd-A, and structured paste through shared model semantics. |
-| [`EditorModel+TextContentCommands.swift`](../Sources/SlopadEditorModel/Command/EditorModel+TextContentCommands.swift) | Replaces normalized cross-block spans, preserves the earlier endpoint, promotes removed-endpoint descendants, and records one transaction. |
-| [`EditorModel+StructuredPasteCommands.swift`](../Sources/SlopadEditorModel/Command/EditorModel+StructuredPasteCommands.swift) | Applies fresh-ID structured forests using root-aware open-edge merging while preserving endpoint and middle subtrees. |
-| [`AppKitEditorViewController.swift`](../Sources/SlopadAppKitUI/AppKitEditorViewController.swift) | Classifies the origin once, keeps text/block drag modes distinct, and continues text selection during autoscroll. |
-| [`AppKitActiveInputController.swift`](../Sources/SlopadAppKitUI/AppKitActiveInputController.swift) | Negotiates typed plus plain clipboard representations, fail-closed paste fallback, and cut-after-write-success. |
+| [`EditorSession+TextPointerDragInput.swift`](../Sources/SlopadEditorEngine/Session/TextInteraction/EditorSession+TextPointerDragInput.swift) | Latches text mode, hit-tests the current block, and resolves an empty-origin drag from the nearest non-empty edge in its direction. |
+| [`EditorSession+VerticalMovementInput.swift`](../Sources/SlopadEditorEngine/Session/Navigation/EditorSession+VerticalMovementInput.swift) | Extends text by one visual destination across block boundaries without converting to `B`. |
+| [`EditorSession+ActiveTextSelection.swift`](../Sources/SlopadEditorEngine/Session/TextInteraction/EditorSession+ActiveTextSelection.swift) | Keeps one focus-block native input descriptor while canonical `TN` retains both endpoints. |
+| [`EditorSession+Rendering.swift`](../Sources/SlopadEditorEngine/Session/EditorSession+Rendering.swift) | Projects visible block-local text ranges and atomic block tint from prepared visible-order ranks. |
+| [`EditorSession+RenderDamage.swift`](../Sources/SlopadEditorEngine/Session/EditorSession+RenderDamage.swift) | Computes selection damage only from visible ranks; it no longer materializes the full `TN` span per pointer update. |
+| [`EditorSession+ClipboardWritePlan.swift`](../Sources/SlopadEditorEngine/Session/Selection/EditorSession+ClipboardWritePlan.swift) | Produces versioned text-slice or block-subtree payloads and a kind-aware plain fallback. |
+| [`EditorSession+CommandInput.swift`](../Sources/SlopadEditorEngine/Session/InputRouting/EditorSession+CommandInput.swift) | Routes `TN` typing, deletion, Enter, formatting, indentation, Escape, Cmd-A, and structured paste through shared model semantics. |
+| [`EditorModel+TextContentCommands.swift`](../Sources/SlopadEditorDocumentModel/Command/EditorModel+TextContentCommands.swift) | Replaces normalized cross-block spans, preserves the earlier endpoint, promotes removed-endpoint descendants, and records one transaction. |
+| [`EditorModel+StructuredPasteCommands.swift`](../Sources/SlopadEditorDocumentModel/Command/EditorModel+StructuredPasteCommands.swift) | Applies fresh-ID structured forests using root-aware open-edge merging while preserving endpoint and middle subtrees. |
+| [`AppKitEditorViewController.swift`](../Sources/SlopadEditorAppKitUI/AppKitEditorViewController.swift) | Classifies the origin once, keeps text/block drag modes distinct, and continues text selection during autoscroll. |
+| [`AppKitActiveInputController.swift`](../Sources/SlopadEditorAppKitUI/AppKitActiveInputController.swift) | Negotiates typed plus plain clipboard representations, fail-closed paste fallback, and cut-after-write-success. |
 | Session/AppKit tests and UI benchmark | Cover forward/reverse `TN`, empty and atomic blocks, native text/gutter event paths, autoscroll, structured clipboard, direct callback-contract composition, exact undo, and 100/1,000/10,000-block projection. They do not prove installed-IME delivery or the unimplemented live IME policy. |
 
 `ResolvedTextSpan` is the shared command-time owner used by mutation, formatting,
@@ -531,7 +578,7 @@ uses prepared visible-order ranks instead of that full-span traversal.
 | `D2` | Deleting every selected block leaves the first selected block as an empty paragraph with `C(0)`. |
 | `D3` | Printable/IME input is ignored in `B`; paste is intentional replacement; inline marks cover all selected text-capable blocks and leave `B` active. |
 | `D4` | `TN` Enter and Shift-Enter are delete-then-split and delete-then-soft-break; `B` Enter enters text at the first block's end and `B` Shift-Enter is a no-op. |
-| `D5` | Clipboard uses typed Slopad text-slice/block-subtree payloads plus plain text, with the Notion-style open-edge rules above and no automatic Markdown decode. |
+| `D5` | Clipboard uses typed SlopadEditor text-slice/block-subtree payloads plus plain text, with the Notion-style open-edge rules above and no automatic Markdown decode. |
 | `D6` | Undo/redo restores exact selection mode, anchor/focus direction, offsets, and affinity. |
 | `D7` | `B` Shift-Right enters first-character `T1`, Shift-Left is a no-op; `TN` indent/outdent acts on every touched block; atomic and collapsed subtree content participates logically and uses block tint when it has no text geometry. |
 
@@ -547,27 +594,27 @@ uses prepared visible-order ranks instead of that full-span traversal.
 - Clipboard copy writes `com.hot666666.slopad.clipboard.v1` and `.string`. Structured
   paste validates version/shape/size at the edge, mints fresh IDs, preserves relative
   subtrees and marks, and applies one model transaction.
-- [#72](https://github.com/hot666666/Slopad/issues/72) isolated the signal 11 to test-fixture
+- [#72](https://github.com/hot666666/SlopadEditor/issues/72) isolated the signal 11 to test-fixture
   ownership: AppKit's `isReleasedWhenClosed` default conflicted with Swift ARC ownership.
   With test windows using ARC-only ownership, the fixed minimal regression passed locally
   in 20/20 fresh processes and the combined 656-test suite passed in 5/5 fresh processes.
   The deterministic UI benchmark covers forward/reverse text selection at 100, 1,000, and
   10,000 blocks with empty blocks mixed in.
 - Installed input-method events currently do not reach the composition consumer in
-  `SlopadDebugApp`. Repairing and proving **Apple built-in Korean 2-set** delivery is future
-  work in [#71](https://github.com/hot666666/Slopad/issues/71), followed by implementation
+  `SlopadEditorDebugApp`. Repairing and proving **Apple built-in Korean 2-set** delivery is future
+  work in [#71](https://github.com/hot666666/SlopadEditor/issues/71), followed by implementation
   and product verification of the decided live replacement policy. The
-  [#76 native composition termination table](https://github.com/hot666666/Slopad/issues/76)
+  [#76 native composition termination table](https://github.com/hot666666/SlopadEditor/issues/76)
   is its required callback-by-callback criterion; both issues remain open. #72's bounded
   local test stability is not installed-IME, native product input, visual, or device proof.
-- The production `SlopadDebugApp` state harness passes all 18 scenarios, including the
+- The production `SlopadEditorDebugApp` state harness passes all 18 scenarios, including the
   real cross-block text drag and viewport-derived down/up reveal boundaries.
 - Caret review disposition: no change. Direct product use confirmed that AppKit's native
   automatic insertion indicator already has the intended idle and ordinary-input cadence.
   The currently unreachable installed-IME composition path is not a reason to add
   speculative composition-specific caret suppression; validate it after native delivery
   and composition semantics are implemented.
-- Collapsed subtrees remain a P4 feature because Slopad has no collapse state yet. D7 is
+- Collapsed subtrees remain a P4 feature because SlopadEditor has no collapse state yet. D7 is
   the forward-compatible rule that feature must obey. Shared toolbar mixed-value and
   availability projection remains P2 and is not a second selection owner.
 
@@ -585,6 +632,12 @@ local deterministic benchmark records, not a universal hardware threshold.
 
 ## Implementation Verification Plan
 
+> **Status: completed gate record for the non-IME policy.** These gates were the exit
+> criteria for the work recorded in [Implementation Closure](#implementation-closure).
+> They are evidence of how that change was verified, not a standing work order. Gate 4's
+> installed-IME items and the ADR 0014 live-replacement row remain open; everything else
+> was met. For the current verification gates on new work, use [Testing](TESTING.md).
+
 Evidence is accumulated by owner and by the real producer-to-consumer path. A lower-layer
 test cannot substitute for a native callback, visual, or performance claim.
 
@@ -597,9 +650,11 @@ test cannot substitute for a native callback, visual, or performance claim.
 
 ### Gate 1 — canonical owner and transactions
 
-Focused `SlopadEditorModelTests` must cover forward and reverse `TN` for replacement,
-Backspace/Delete, Enter, Shift-Enter, formatting, indent/outdent, and undo/redo. Assertions
-must include:
+The EditorModel-owned suites in `Tests/SlopadEditorEngineTests/EditorModel` must cover forward
+and reverse `TN` for replacement, Backspace/Delete, Enter, Shift-Enter, formatting,
+indent/outdent, and undo/redo. There is no separate `SlopadEditorDocumentModelTests` target;
+`SlopadEditorDocumentModel` is exercised through the `SlopadEditorEngineTests` target, which declares it
+as a direct dependency. Assertions must include:
 
 - exact document DFS post-image, surviving `BlockID`/kind/parent, and fresh pasted IDs;
 - promotion of removed endpoint children to the removed endpoint's parent;
@@ -609,7 +664,7 @@ must include:
 
 ### Gate 2 — Session semantics and bounded projection
 
-Focused `SlopadEngineTests` must exercise every implemented matrix row through
+Focused `SlopadEditorEngineTests` must exercise every implemented matrix row through
 `EditorSession.handleInput`, including pointer-origin latching, separator-only keyboard
 steps, Escape, staged Cmd-A, `B` printable no-op, `B` Enter/Shift-Enter, and typed clipboard
 payload routing. A direct `B` composition-event no-op remains callback-contract coverage,
@@ -619,12 +674,12 @@ ranges while command-time operations still visit the complete logical span.
 
 ### Gate 3 — AppKit adapter and pasteboard negotiation
 
-Focused `SlopadAppKitUITests` must enter through the production adapter and assert:
+Focused `SlopadEditorAppKitUITests` must enter through the production adapter and assert:
 
 - text-lane drag remains `T1/TN`; structural-margin drag remains `B`;
 - focus-block native selection synchronization does not collapse canonical `TN`;
-- copy writes both the versioned Slopad type and `.string`;
-- paste prefers a valid supported Slopad payload, falls back on invalid/newer/oversized
+- copy writes both the versioned SlopadEditor type and `.string`;
+- paste prefers a valid supported SlopadEditor payload, falls back on invalid/newer/oversized
   data, and never auto-decodes plain Markdown-looking text;
 - a failed required pasteboard write prevents Cut deletion;
 - the focused `C` uses AppKit's native automatic insertion-indicator cadence and
@@ -634,19 +689,19 @@ Focused `SlopadAppKitUITests` must enter through the production adapter and asse
 
 ### Gate 4 — native callback and visual behavior
 
-Build and run `SlopadDebugApp`. The native callback smoke must use synthesized `NSEvent`
+Build and run `SlopadEditorDebugApp`. The native callback smoke must use synthesized `NSEvent`
 delivery through `NSWindow.sendEvent(_:)` and real `NSTextInputClient` callbacks rather
 than calling semantic handlers directly. Manually inspect forward/reverse cross-block
 drag, empty gaps, autoscroll, Escape/Cmd-A, clipboard round trips, caret blink, and Korean
 composition/cancel with Apple's built-in Korean 2-set after installed-IME delivery is
-repaired. Only then implement and verify [#76's native callback termination table](https://github.com/hot666666/Slopad/issues/76),
+repaired. Only then implement and verify [#76's native callback termination table](https://github.com/hot666666/SlopadEditor/issues/76),
 including the committed-snapshot rule during live composition. The direct marked-text smoke
 proves callback handling only; it is not evidence that an installed input method reaches
 that consumer, nor that the decided live replacement policy is implemented.
 
 ### Gate 5 — performance and redraw
 
-Build `SlopadUIBenchmarkApp` and add deterministic forward/reverse cross-block drag plus
+Build `SlopadEditorUIBenchmarkApp` and add deterministic forward/reverse cross-block drag plus
 autoscroll scenarios at 100, 1,000, and 10,000 blocks, including empty blocks. Capture the
 benchmark environment and compare repeated runs. Acceptance requires:
 
@@ -663,11 +718,11 @@ After the executable diff is stable, run the canonical and affected-surface gate
 ```sh
 swift test --quiet
 git diff --check
-swift build --product SlopadAppKit --quiet
-swift build --product SlopadAppKitTextKit --quiet
-swift build --product SlopadAppKitUI --quiet
-swift build --product SlopadDebugApp --quiet
-swift build --product SlopadUIBenchmarkApp --quiet
+swift build --product SlopadEditorAppKit --quiet
+swift build --product SlopadEditorAppKitTextKit --quiet
+swift build --product SlopadEditorAppKitUI --quiet
+swift build --product SlopadEditorDebugApp --quiet
+swift build --product SlopadEditorUIBenchmarkApp --quiet
 swift build --package-path Fixtures/DownstreamAppKitHost --product DownstreamAppKitHost --quiet
 ```
 
@@ -685,7 +740,7 @@ and downstream-build evidence as separate claims.
    native input contract.
 4. Route delete, paste, Enter, formatting, Escape, and Cmd-A through the shared range
    semantics. Composition remains open until Apple's built-in Korean 2-set delivery reaches
-   the consumer; then implement [#76's decided live replacement lifecycle](https://github.com/hot666666/Slopad/issues/76)
+   the consumer; then implement [#76's decided live replacement lifecycle](https://github.com/hot666666/SlopadEditor/issues/76)
    against that real path, including the committed-snapshot boundary. Shared command
    availability/mixed-state derivation stays P2 until the built-in toolbar becomes its first
    real consumer.
@@ -694,5 +749,5 @@ and downstream-build evidence as separate claims.
    shared Session snapshot/action contracts, with checkbox hit-control priority ahead of
    gutter drag; add a public host projection only when its first real consumer passes ADR
    0012.
-7. Prove the real AppKit path in `SlopadDebugApp`, then run the 100/1,000/10,000-block UI
+7. Prove the real AppKit path in `SlopadEditorDebugApp`, then run the 100/1,000/10,000-block UI
    benchmark gates before claiming completion.

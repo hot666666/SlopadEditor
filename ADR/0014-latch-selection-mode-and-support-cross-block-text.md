@@ -20,7 +20,7 @@ decided live replacement policy remains future product work.
 
 ## Context
 
-Before this decision, Slopad started a body drag as text selection, constrained its endpoint to the
+Before this decision, SlopadEditor started a body drag as text selection, constrained its endpoint to the
 anchor block, and could convert the gesture to block selection after a vertical threshold.
 That makes one continuous gesture change semantic meaning after it has begun. It also
 prevents an ordinary character selection from ending at an exact text offset in another
@@ -52,14 +52,14 @@ The pointer-down hit classification chooses the gesture mode for its complete li
 - Autoscroll, viewport changes, and crossing empty blocks preserve the latched mode.
 
 The AppKit adapter classifies platform geometry and sends a typed begin event. Session owns
-the latched gesture runtime and semantic transition. `SlopadBlockLayout` and the text
+the latched gesture runtime and semantic transition. `SlopadEditorBlockLayout` and the text
 backend answer block and block-local text hit-test facts; neither owns the selection.
 
 ### Cross-block text uses two canonical endpoints
 
 `TextSelection(anchor:focus:)` remains the canonical representation. Each endpoint is a
 `TextPosition(blockID:offset:affinity:)`; selection direction is preserved. Canonical DFS
-order is used only to normalize the affected span for a command or projection. Slopad does
+order is used only to normalize the affected span for a command or projection. SlopadEditor does
 not introduce a flattened document string or a global integer position space.
 
 Crossing a block boundary is a logical separator step. It can produce a non-collapsed
@@ -105,7 +105,7 @@ committed snapshot's blocks and never stores composition or Session revision. Th
 native callback termination table—first/subsequent `setMarkedText`, `insertText`,
 `unmarkText`, Escape,
 undo/redo, synchronized commands, focus loss, and explicit flush—is the implementation
-criterion in [#76](https://github.com/hot666666/Slopad/issues/76). It is implemented only
+criterion in [#76](https://github.com/hot666666/SlopadEditor/issues/76). It is implemented only
 after real installed-IME delivery, including Apple's built-in Korean 2-set, is proven in
 the product path.
 
@@ -169,6 +169,6 @@ removed-endpoint children are promoted to the removed endpoint's parent; an all-
 deletion retains one empty paragraph; printable input is ignored in block selection and
 future installed-IME input follows the same target; cross-block Enter/Shift-Enter use
 delete-then-existing-command semantics;
-clipboard uses versioned Slopad text-slice/block-subtree payloads plus literal plain text;
+clipboard uses versioned SlopadEditor text-slice/block-subtree payloads plus literal plain text;
 history restores exact selection direction and affinity; and atomic or collapsed content
 participates logically with block tint where text geometry does not exist.

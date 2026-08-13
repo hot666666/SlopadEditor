@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-This directory stores durable architecture decisions for Slopad. ADRs are for decisions
+This directory stores durable architecture decisions for SlopadEditor. ADRs are for decisions
 that should survive individual refactor slices: ownership, target graph, public surface,
 platform seams, benchmark policy, and performance-critical storage choices.
 See the current [architecture map and philosophy](../docs/ARCHITECTURE.md) before reading
@@ -23,3 +23,4 @@ the decisions that led to it.
 - [0013 - Depend on swift-markdown behind a format target, and guarantee semantic round-trip only](0013-markdown-format-boundary.md)
 - [0014 - Latch selection mode at gesture origin and support cross-block text](0014-latch-selection-mode-and-support-cross-block-text.md)
 - [0015 - Version the native archive and keep storage lifecycle host-owned](0015-version-native-archive-and-keep-storage-host-owned.md)
+- [0016 - Name the package SlopadEditor and reserve SlopadEditor for the app](0016-name-the-package-slopadeditor-and-reserve-slopad-for-the-app.md)

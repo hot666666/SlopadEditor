@@ -33,13 +33,13 @@ body:
       options:
         - Needs owner decision
         - GitHub workflow
-        - SlopadAppKitUI
-        - SlopadEngine / EditorSession
-        - SlopadEditorModel
-        - SlopadBlockLayout
-        - SlopadCoreModel
-        - SlopadAppKitTextKit
-        - SlopadDataStructure
+        - SlopadEditorAppKitUI
+        - SlopadEditorEngine / EditorSession
+        - SlopadEditorDocumentModel
+        - SlopadEditorBlockLayout
+        - SlopadEditorCoreModel
+        - SlopadEditorAppKitTextKit
+        - SlopadEditorDataStructure
         - Debug or benchmark target
     validations:
       required: true
@@ -104,9 +104,9 @@ body:
       placeholder: |
         - [ ] Focused test:
         - [ ] `swift test --quiet`
-        - [ ] `swift build --product SlopadAppKitUI --quiet`
-        - [ ] `swift build --product SlopadDebugApp --quiet`
-        - [ ] `swift build --product SlopadUIBenchmarkApp --quiet`
+        - [ ] `swift build --product SlopadEditorAppKitUI --quiet`
+        - [ ] `swift build --product SlopadEditorDebugApp --quiet`
+        - [ ] `swift build --product SlopadEditorUIBenchmarkApp --quiet`
         - [ ] `git diff --check`
     validations:
       required: true

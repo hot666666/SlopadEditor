@@ -27,11 +27,11 @@ Keep `RBTreeBlockHeightIndexStorage` as the default implementation behind
 `BlockHeightIndexStorage`.
 
 Keep the array storage only as a private experimental compile-time implementation. Do not
-expose storage selection through `EditorSession`, `SlopadCoreModel`, or public host API.
+expose storage selection through `EditorSession`, `SlopadEditorCoreModel`, or public host API.
 
 ## Consequences
 
-- `PrefixSumRedBlackTree` remains a pure data structure in `SlopadDataStructure`.
+- `PrefixSumRedBlackTree` remains a pure data structure in `SlopadEditorDataStructure`.
 - The y/height domain stays owned by `BlockHeightIndexStorage`.
 - Storage comparisons should use both session-level structural benchmarks and AppKit UI
   benchmarks. AppKit FPS alone is not enough to choose the storage default.

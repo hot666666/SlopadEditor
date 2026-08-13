@@ -1,5 +1,5 @@
 import AppKit
-import SlopadSwiftUI
+import SlopadEditorSwiftUI
 import SwiftUI
 
 /// Counts host body evaluations so a lifecycle step can wait for SwiftUI's update pass to
@@ -16,8 +16,8 @@ private final class BodyEvaluationCounter {
 
 @MainActor
 private struct HostRoot: View {
-    let editor: SlopadEditor?
-    let model: SlopadEditorModel
+    let editor: SlopadEditorView?
+    let model: SlopadEditorViewModel
     let bodyEvaluations: BodyEvaluationCounter
 
     @FocusState private var isEditing: Bool
@@ -47,11 +47,11 @@ private struct DownstreamSwiftUIHost {
 
         let initialBlockID: BlockID = "swiftui-initial"
         let replacementBlockID: BlockID = "swiftui-replacement"
-        let model = SlopadEditorModel()
+        let model = SlopadEditorViewModel()
         var committedChangeCount = 0
         var callbackSnapshotRevisions: [UInt64] = []
         let bodyEvaluations = BodyEvaluationCounter()
-        let initialDocument = SlopadDocument(
+        let initialDocument = SlopadEditorDocument(
             id: "record-1",
             blocks: [
                 EditorBlockInput(
@@ -61,8 +61,8 @@ private struct DownstreamSwiftUIHost {
             ]
         )
 
-        func editor(document: SlopadDocument) -> SlopadEditor {
-            SlopadEditor(model: model, document: document)
+        func editor(document: SlopadEditorDocument) -> SlopadEditorView {
+            SlopadEditorView(model: model, document: document)
                 .editorStyle(AppKitEditorStyle())
                 .onCommittedChange {
                     committedChangeCount += 1
@@ -147,7 +147,7 @@ private struct DownstreamSwiftUIHost {
             blocks: model.documentSnapshot?.blocks,
             canUndo: model.canUndo
         )
-        let staleSameIdentityDocument = SlopadDocument(
+        let staleSameIdentityDocument = SlopadEditorDocument(
             id: "record-1",
             blocks: [
                 EditorBlockInput(
@@ -196,7 +196,7 @@ private struct DownstreamSwiftUIHost {
         precondition(snapshotAfterFlush.epoch == initialEpoch)
         precondition(snapshotAfterFlush.revision.rawValue == 3)
 
-        let replacementDocument = SlopadDocument(
+        let replacementDocument = SlopadEditorDocument(
             id: "record-2",
             blocks: [
                 EditorBlockInput(

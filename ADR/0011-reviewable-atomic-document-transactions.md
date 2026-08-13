@@ -57,7 +57,7 @@ transport but not `Decodable`, so a host cannot decode unchecked projection comb
 `EditorDocumentPatch` remains the public host-constructed input.
 
 The patch is a full post-image rather than public operation objects. Before mutation,
-`SlopadCoreModel` validates non-empty input, unique IDs, canonical `BlockContent` marks,
+`SlopadEditorCoreModel` validates non-empty input, unique IDs, canonical `BlockContent` marks,
 parent existence, absence of cycles, canonical parent-before-child DFS order, and
 selection bounds. Public failures are typed errors, not preconditions. Parent-chain and
 document invariant preorder validation use iterative stacks so an unbounded public
@@ -69,7 +69,7 @@ callback, layout, or render work.
 
 `AppKitEditorViewController` only adds synchronized forwarding: after Session success it
 publishes one `onUpdate`, then converges render, native text, selection, focus, and reveal
-state. The `SlopadAppKit` facade explicitly aliases every public context/patch type so an
+state. The `SlopadEditorAppKit` facade explicitly aliases every public context/patch type so an
 ordinary host retains the one-product, one-import contract.
 
 ## Consequences
@@ -88,6 +88,6 @@ ordinary host retains the one-product, one-import contract.
   without mutation.
 - Session starts a fresh derived `BlockLayout` state after a changed post-image because
   public block values may retain IDs while replacing content and canonical visible order.
-- `Fixtures/DownstreamAppKitHost` compile-runs the contract through `SlopadAppKit` alone;
+- `Fixtures/DownstreamAppKitHost` compile-runs the contract through `SlopadEditorAppKit` alone;
   owner tests cover structured selection, CAS failures, validation rollback, no-op,
   history, callbacks, and surface synchronization.

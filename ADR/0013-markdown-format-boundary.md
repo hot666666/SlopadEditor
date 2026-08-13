@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-Slopad has no external dependencies. `Package.swift` declares none, and every target is
+SlopadEditor has no external dependencies. `Package.swift` declares none, and every target is
 built from sources in this repository. Adding a Markdown parser changes that, and two
 questions have to be answered before any adapter code exists — issue #29, blocking #30.
 
@@ -32,13 +32,13 @@ Taken against `swift-markdown` 0.8.0 with a probe package rather than estimated.
 | Probed version | `swift-markdown` 0.8.0, released 2026-05-07 |
 | Resolved transitive version | `swift-cmark` 0.8.0 — a C library (cmark-gfm) |
 | Upstream manifest | `swift-tools-version:6.2`; its targets explicitly use Swift 5 mode |
-| Slopad manifest | `swift-tools-version:6.0` — unchanged; its targets currently compile in Swift 6 mode |
+| SlopadEditor manifest | `swift-tools-version:6.0` — unchanged; its targets currently compile in Swift 6 mode |
 | Cold build | 109 files, ~10s on an 8-core arm64 machine |
 | `Sendable` | **`Document` and `Markup` do not conform.** What is allowed is narrower than "clean" — see below |
 
 The one real constraint is not in the table's first column. `swift-markdown`'s manifest is
-`6.2`, so **once #30 adds it, the toolchain building Slopad must be Swift 6.2 or later** even
-though Slopad's own tools version stays at 6.0. That is the minimum-toolchain answer #29
+`6.2`, so **once #30 adds it, the toolchain building SlopadEditor must be Swift 6.2 or later** even
+though SlopadEditor's own tools version stays at 6.0. That is the minimum-toolchain answer #29
 asked for; this docs-only PR does not change the current build graph.
 
 ### What the `Sendable` result actually is
@@ -63,7 +63,7 @@ client target, the boundary is:
 So a parser value can be held and used inside one isolation domain, and region isolation can
 move a disconnected local value once. It cannot satisfy a `Sendable` API or be shared
 arbitrarily across domains. `swift-markdown` 0.8.0 itself explicitly selects Swift 5 mode;
-Slopad's targets compile in Swift 6 mode, so the adapter is a Swift 6 client of a Swift 5
+SlopadEditor's targets compile in Swift 6 mode, so the adapter is a Swift 6 client of a Swift 5
 dependency.
 
 This independently supports the isolation rule below. Parsing and conversion execute inside
@@ -75,9 +75,9 @@ concurrency design.
 
 ### The dependency lives behind one target
 
-`SlopadMarkdown` is a separate, opt-in library product and target. Its target depends on
-`SlopadCoreModel` and on the `Markdown` product from `swift-markdown`; it is not folded into
-`SlopadEngine`, `SlopadAppKit`, or `SlopadSwiftUI`.
+`SlopadEditorMarkdown` is a separate, opt-in library product and target. Its target depends on
+`SlopadEditorCoreModel` and on the `Markdown` product from `swift-markdown`; it is not folded into
+`SlopadEditorEngine`, `SlopadEditorAppKit`, or `SlopadEditorSwiftUI`.
 
 Its public surface is expressed entirely in core vocabulary — `EditorBlockInput`,
 `BlockContent`, `BlockKind`, `BlockContent.InlineMark`, and diagnostics defined in that
@@ -89,9 +89,9 @@ That is the compiler-enforced public API boundary.
 SwiftPM target separation alone is not claimed to make the module physically unimportable:
 a transitive module can still be visible to another target in the resolved graph. #30
 therefore also adds a repository architecture test that requires every Markdown import to
-be spelled `internal import Markdown` inside `Sources/SlopadMarkdown` and rejects it anywhere
+be spelled `internal import Markdown` inside `Sources/SlopadEditorMarkdown` and rejects it anywhere
 else under `Sources/`. A dedicated downstream fixture depends on the opt-in
-`SlopadMarkdown` product plus `SlopadEngine`, decodes through the public core-vocabulary API,
+`SlopadEditorMarkdown` product plus `SlopadEditorEngine`, decodes through the public core-vocabulary API,
 passes the resulting blocks through `EditorDocumentPatch` and `EditorSession`, and never
 imports `Markdown`.
 
@@ -107,12 +107,12 @@ source; raising the exact requirement is a deliberate reviewed change. A downstr
 that requires an incompatible exact version will fail dependency resolution; that is the
 accepted cost of preventing an unreviewed pre-1.0 minor update. A root
 `Package.resolved` still records the selected transitive graph, but it is not the pin: each
-downstream fixture or host is its own resolution root and does not inherit Slopad's lockfile.
+downstream fixture or host is its own resolution root and does not inherit SlopadEditor's lockfile.
 
 That propagation is intentional. Once #30 adds the package dependency, every host resolving
-Slopad must resolve and parse `swift-markdown`'s manifest, so those roots need a Swift
+SlopadEditor must resolve and parse `swift-markdown`'s manifest, so those roots need a Swift
 6.2-or-later toolchain even if their own manifest uses an older tools version. Only a host
-that selects the opt-in `SlopadMarkdown` product needs to build and link its Markdown and C
+that selects the opt-in `SlopadEditorMarkdown` product needs to build and link its Markdown and C
 targets. #30 updates the README requirement when that package-graph change lands.
 
 ### Round-trip is semantic, not byte-exact
@@ -193,7 +193,7 @@ The persistence source of truth is now decided: a versioned native archive, not 
 Markdown remains explicit whole-document import/export and therefore keeps its fresh-ID and
 syntax-normalization contract.
 [ADR 0015](0015-version-native-archive-and-keep-storage-host-owned.md) defines
-`SlopadArchive` as an opt-in pure codec whose target depends only on `SlopadCoreModel`; its
+`SlopadEditorArchive` as an opt-in pure codec whose target depends only on `SlopadEditorCoreModel`; its
 public facade exposes only the ADR's curated, type-identical archive aliases, not a
 CoreModel product. It encodes a format version and canonical blocks, including their
 identities, but never selection, undo/history, operation journal, epoch/revision,
@@ -201,11 +201,11 @@ composition, layout, viewport, or TextKit state. The embedding app owns files, d
 cloud sync, autosave, conflicts, retries, and error UX. This ADR supplies the Markdown
 identity facts that native-archive persistence must not weaken. The archive product remains
 unimplemented;
-[issue #78](https://github.com/hot666666/Slopad/issues/78) tracks that implementation.
+[issue #78](https://github.com/hot666666/SlopadEditor/issues/78) tracks that implementation.
 
 ## Consequences
 
-- Only `SlopadMarkdown` declares or imports the `Markdown` product. A second target needing
+- Only `SlopadEditorMarkdown` declares or imports the `Markdown` product. A second target needing
   Markdown means the opt-in product is missing an API, not that the dependency should spread.
 - Adding the package dependency in #30 raises the effective build-toolchain requirement to
   Swift 6.2 or later and updates the README then; this docs-only decision does not change the

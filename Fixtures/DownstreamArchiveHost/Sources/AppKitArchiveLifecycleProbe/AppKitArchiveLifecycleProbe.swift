@@ -1,6 +1,6 @@
 import AppKit
-import SlopadAppKit
-import SlopadArchive
+import SlopadEditorAppKit
+import SlopadEditorArchive
 
 private struct HostSaveToken: Equatable, Sendable {
     let documentID: String
@@ -220,7 +220,7 @@ private actor HostArchivePersistence {
         let data: Data
         do {
             data = try await Task.detached {
-                try SlopadArchive.encode(blocks)
+                try SlopadEditorArchive.encode(blocks)
             }.value
         } catch {
             return .failed(token)
@@ -447,7 +447,7 @@ private struct AppKitArchiveLifecycleProbe {
     static func main() async throws {
         _ = NSApplication.shared
         let storageURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("SlopadDownstreamArchiveHost", isDirectory: true)
+            .appendingPathComponent("SlopadEditorDownstreamArchiveHost", isDirectory: true)
             .appendingPathComponent("document.slopad")
         try? FileManager.default.removeItem(at: storageURL)
 
@@ -511,7 +511,7 @@ private struct AppKitArchiveLifecycleProbe {
         await commitReleaser.value
 
         let storedBeforeNewSubmission = try await persistence.storedData()
-        let decodedBeforeNewSubmission = try SlopadArchive.decode(storedBeforeNewSubmission)
+        let decodedBeforeNewSubmission = try SlopadEditorArchive.decode(storedBeforeNewSubmission)
         let persistedBeforeNewSubmission = persistence.persistedTokenSynchronously()
         precondition(decodedBeforeNewSubmission == firstCapturedBlocks)
         precondition(persistedBeforeNewSubmission == nil)
@@ -524,7 +524,7 @@ private struct AppKitArchiveLifecycleProbe {
                 && !coordinator.isDirty
                 && coordinator.isIdle
         }
-        let latestBlocks = try SlopadArchive.decode(await persistence.storedData())
+        let latestBlocks = try SlopadEditorArchive.decode(await persistence.storedData())
         precondition(latestBlocks == controller.documentSnapshot.blocks)
         precondition(
             coordinator.staleEncodeCount == 1,
@@ -551,7 +551,7 @@ private struct AppKitArchiveLifecycleProbe {
         try await waitUntil("composition autosave did not finish") {
             coordinator.persistedToken?.storageVersion == 3 && !coordinator.isDirty
         }
-        let autosavedDuringComposition = try SlopadArchive.decode(await persistence.storedData())
+        let autosavedDuringComposition = try SlopadEditorArchive.decode(await persistence.storedData())
         precondition(autosavedDuringComposition == committedBeforeExplicitSave)
 
         // Explicit save owns the flush policy, then captures the new committed snapshot.
@@ -559,7 +559,7 @@ private struct AppKitArchiveLifecycleProbe {
         try await waitUntil("explicit composition save did not finish") {
             coordinator.persistedToken?.storageVersion == 4 && !coordinator.isDirty
         }
-        let explicitlySaved = try SlopadArchive.decode(await persistence.storedData())
+        let explicitlySaved = try SlopadEditorArchive.decode(await persistence.storedData())
         precondition(explicitlySaved == controller.documentSnapshot.blocks)
         precondition(explicitlySaved != committedBeforeExplicitSave)
 
@@ -586,7 +586,7 @@ private struct AppKitArchiveLifecycleProbe {
         precondition(controller.documentSnapshot.blocks.map(\.id) == explicitlySaved.map(\.id))
         precondition(controller.documentSnapshot.blocks.first?.id == blockID)
         precondition(coordinator.staleEncodeCount == 2)
-        let storedAfterSwitch = try SlopadArchive.decode(await persistence.storedData())
+        let storedAfterSwitch = try SlopadEditorArchive.decode(await persistence.storedData())
         precondition(storedAfterSwitch == explicitlySaved)
 
         if CommandLine.arguments.contains("--large-document-smoke") {
@@ -621,7 +621,7 @@ private struct AppKitArchiveLifecycleProbe {
         try await waitUntil("large-document archive smoke did not finish", timeout: .seconds(30)) {
             coordinator.persistedToken != nil && !coordinator.isDirty
         }
-        let decoded = try SlopadArchive.decode(await persistence.storedData())
+        let decoded = try SlopadEditorArchive.decode(await persistence.storedData())
         precondition(decoded.count == 10_000)
         print(
             "SLOPAD_ARCHIVE_SMOKE blocks=10000 snapshot_ms=\(milliseconds(coordinator.snapshotDuration)) encode_ms=\(milliseconds(coordinator.encodeDuration)) threshold=none latest_only=true"
@@ -634,7 +634,7 @@ private struct AppKitArchiveLifecycleProbe {
     private static func runFailedCommitProbe() async throws {
         let fileManager = FileManager.default
         let failureDestination = fileManager.temporaryDirectory
-            .appendingPathComponent("SlopadDownstreamArchiveHost", isDirectory: true)
+            .appendingPathComponent("SlopadEditorDownstreamArchiveHost", isDirectory: true)
             .appendingPathComponent("forced-final-commit-failure.slopad")
         try? fileManager.removeItem(at: failureDestination)
         defer { try? fileManager.removeItem(at: failureDestination) }

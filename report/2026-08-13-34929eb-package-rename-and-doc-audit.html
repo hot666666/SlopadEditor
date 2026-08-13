@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SlopadEditor 패키지 리네임 · 구조 감사 현황</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f4f7f8; --panel:#fff; --ink:#17212b; --muted:#61707d; --line:#cbd5dc; --done:#087a57; --accent:#1769aa; --soft:#edf2f5; --warn:#a4560c; --focus:#7c3aed; }
+  @media (prefers-color-scheme:dark) { :root { --bg:#10161b; --panel:#182129; --ink:#edf3f7; --muted:#a4b1bb; --line:#3b4853; --done:#52cb99; --accent:#7dbdff; --soft:#222d36; --warn:#e0a45c; --focus:#c9adff; } }
+  * { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.55 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+  a { color:var(--accent); } a:focus-visible,summary:focus-visible { outline:3px solid var(--focus); outline-offset:3px; }
+  main { width:min(1160px,calc(100% - 28px)); margin:22px auto 48px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px; }
+  .hero { display:grid; grid-template-columns:minmax(280px,1.7fr) repeat(3,minmax(104px,.6fr)); overflow:hidden; }
+  .hero>* { padding:16px 18px; border-right:1px solid var(--line); } .hero>*:last-child { border-right:0; }
+  h1 { margin:0; font-size:clamp(21px,3vw,30px); letter-spacing:-.035em; } h2 { margin:0 0 4px; font-size:18px; } h3 { margin:0 0 6px; font-size:14px; }
+  p { margin:6px 0; } code { font:12px ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap:anywhere; }
+  .eyebrow,.label { color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .metric strong { display:block; margin-top:3px; font-size:23px; line-height:1.1; color:var(--done); } .metric span { color:var(--muted); font-size:12px; }
+  section.block { margin-top:14px; padding:17px 18px; }
+  .sub { color:var(--muted); margin:0 0 12px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; } th,td { padding:7px 9px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-size:11px; letter-spacing:.06em; text-transform:uppercase; } tbody tr:last-child td { border-bottom:0; }
+  .scroll { overflow-x:auto; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+  .layers { display:grid; gap:8px; margin-top:10px; }
+  .layer { display:grid; grid-template-columns:132px 1fr; gap:10px; align-items:start; padding:9px 11px; border-radius:8px; background:var(--soft); }
+  .layer b { color:var(--muted); font-size:12px; } .mods { display:flex; gap:6px; flex-wrap:wrap; }
+  .mods code { padding:2px 7px; border:1px solid var(--line); border-radius:6px; background:var(--panel); }
+  .ok { color:var(--done); font-weight:700; } .warn { color:var(--warn); font-weight:700; }
+  ul { margin:8px 0; padding-left:19px; } li { margin:4px 0; }
+  details { border-top:1px solid var(--line); } details:first-of-type { border-top:0; } summary { padding:10px 0; cursor:pointer; font-weight:700; }
+  .authority { margin-top:14px; padding-top:12px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+  @media (max-width:860px) { .hero { grid-template-columns:1fr 1fr; } .hero header { grid-column:1/-1; } .hero>* { border-right:0; border-bottom:1px solid var(--line); } .grid2 { grid-template-columns:1fr; } .layer { grid-template-columns:1fr; } }
+  @media (max-width:560px) { main { width:min(100% - 16px,1160px); margin-top:8px; } .hero>*,section.block { padding:12px; } }
+</style>
+</head>
+<body>
+<main>
+  <section class="hero panel" aria-labelledby="page-title">
+    <header>
+      <div class="eyebrow">발행 2026-08-13 · <code>34929eb</code> · <code>chore/complete-package-rename-and-doc-audit</code></div>
+      <h1 id="page-title">패키지 리네임 · 구조 감사</h1>
+      <p><code>9bf4b65</code> 기준 25 커밋. ADR 0016 리네임이 전 범위에 적용되었고, 구조 감사가 제기한 항목이 모두 종결되었습니다.</p>
+    </header>
+    <div class="metric"><span>타깃</span><strong>22 / 22</strong><span>전부 <code>SlopadEditor*</code></span></div>
+    <div class="metric"><span>게이트</span><strong>5 / 5</strong><span>green</span></div>
+    <div class="metric"><span>테스트</span><strong>119</strong><span>suite · 0 실패</span></div>
+  </section>
+
+  <section class="block panel" aria-labelledby="targets">
+    <div class="label">Target graph</div>
+    <h2 id="targets">모듈 12 · 실행 4 · 테스트 6</h2>
+    <p class="sub">모든 타깃이 <code>SlopadEditor</code> 접두사를 가집니다. 소비 애플리케이션 이름 <code>Slopad</code>는 이 저장소가 소유하지 않습니다 — <a href="../ADR/0016-name-the-package-slopadeditor-and-reserve-slopad-for-the-app.md">ADR 0016</a>.</p>
+    <div class="layers">
+      <div class="layer"><b>Host facade</b><div class="mods"><code>SlopadEditorSwiftUI</code><code>SlopadEditorAppKit</code></div></div>
+      <div class="layer"><b>Platform adapter</b><div class="mods"><code>SlopadEditorAppKitUI</code></div></div>
+      <div class="layer"><b>Text backend</b><div class="mods"><code>SlopadEditorAppKitTextKit</code></div></div>
+      <div class="layer"><b>Orchestration</b><div class="mods"><code>SlopadEditorEngine</code></div></div>
+      <div class="layer"><b>Canonical owner</b><div class="mods"><code>SlopadEditorDocumentModel</code></div></div>
+      <div class="layer"><b>Derived owner</b><div class="mods"><code>SlopadEditorBlockLayout</code></div></div>
+      <div class="layer"><b>Format</b><div class="mods"><code>SlopadEditorMarkdownInputRules</code><code>SlopadEditorMarkdown</code><code>SlopadEditorArchive</code></div></div>
+      <div class="layer"><b>Contracts · Storage</b><div class="mods"><code>SlopadEditorCoreModel</code><code>SlopadEditorDataStructure</code></div></div>
+    </div>
+    <p class="sub" style="margin-top:12px">이름이 기계적 치환으로 결정되지 않은 둘: <code>SlopadEditorModel</code>은 모듈이자 SwiftUI 공개 클래스였습니다. 모듈은 실제 책임을 드러내는 <code>SlopadEditorDocumentModel</code>이 되었고, 호스트 타입은 <code>SlopadEditorView</code> / <code>SlopadEditorViewModel</code> / <code>SlopadEditorDocument</code>로 분리되었습니다.</p>
+  </section>
+
+  <section class="block panel" aria-labelledby="gates">
+    <div class="label">Verification</div>
+    <h2 id="gates">게이트 현황</h2>
+    <p class="sub"><code>34929eb</code>에서 실행한 결과입니다. 시각·설치형 IME·물리 장치 증거는 포함하지 않습니다.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>게이트</th><th>결과</th><th>범위</th></tr></thead>
+      <tbody>
+        <tr><td><code>swift test</code></td><td class="ok">EXIT 0 · 119 suite · 0 실패</td><td>소유 레이어별 단위·회귀</td></tr>
+        <tr><td><code>verify-host-surface.sh</code></td><td class="ok">EXIT 0</td><td>ADR 0012 상시 호스트 계약. 리네임 이전 <span class="warn">red</span>였고 이 브랜치에서 복구</td></tr>
+        <tr><td><code>verify-archive-surface.sh</code></td><td class="ok">EXIT 0</td><td>ADR 0015 아카이브 경계</td></tr>
+        <tr><td><code>verify-naming.sh</code></td><td class="ok">EXIT 0 · 봉인</td><td>ADR 0016. 옛 이름 재등장 시 실패 — 주입 검증 완료</td></tr>
+        <tr><td><code>git diff --check</code></td><td class="ok">EXIT 0</td><td>공백 오류</td></tr>
+        <tr><td>제품 빌드</td><td class="ok">7 / 7</td><td>라이브러리 5 · DebugApp · UIBenchmarkApp</td></tr>
+        <tr><td>문서 링크</td><td class="ok">95 resolve · 0 broken</td><td>상대 경로 + 앵커</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <div class="grid2">
+    <section class="block panel" aria-labelledby="found">
+      <div class="label">Findings</div>
+      <h2 id="found">감사가 실제로 찾은 것</h2>
+      <p class="sub">의존 흐름 · 네이밍 · 소유권 위반은 <span class="ok">0건</span>이었습니다. 실제 결함은 검증과 문서에 있었습니다.</p>
+      <ul>
+        <li><b>상시 PR 게이트가 깨져 있었습니다.</b> 패키지 리네임이 픽스처는 갱신했지만 그것을 검사하는 스크립트의 기대값은 갱신하지 않아, 정상 픽스처에 대해 fail-closed 되고 있었습니다. push 전에 발견되어 CI 이력에는 남지 않았습니다.</li>
+        <li><b>권위 문서가 계약·제안·완료 체크리스트를 구분 없이 담고 있었습니다.</b> 출시된 적 없는 타입 셋을 계약처럼 기술하고, 존재하지 않는 테스트 타깃을 게이트로 요구했습니다.</li>
+        <li><b>공개 README가 복붙 불가였습니다.</b> 세 예제 중 하나가 존재하지 않는 패키지 이름을 광고했습니다.</li>
+        <li><code>package</code> 과다 노출 후보 32개 중 <b>22개는 컴파일러가 거부</b>했습니다 — 텍스트 검색이 볼 수 없는 소비 형태였습니다.</li>
+      </ul>
+    </section>
+
+    <section class="block panel" aria-labelledby="traps">
+      <div class="label">Migration traps</div>
+      <h2 id="traps">단계를 쪼갠 이유</h2>
+      <p class="sub">계획이 예상하지 못했고 게이트가 잡은 함정들입니다. 전부 <a href="../docs/LESSONS_LEARNED.md">Lessons Learned</a>에 규칙으로 남았습니다.</p>
+      <ul>
+        <li>픽스처 <code>.build</code>가 옛 경로를 캐시해 <code>missing inputs</code>으로 실패</li>
+        <li>모듈과 이름이 어긋난 테스트 타깃은 빌드 불가 — 같은 커밋으로 이동해야 함</li>
+        <li>셸 <code>$'A\nSlopadX'</code>의 리터럴 <code>\n</code>이 단어 경계를 무력화</li>
+        <li>모듈명으로 검색하면 그 접두사를 가진 <em>타입</em>은 잡히지 않음</li>
+        <li><b>가드 자신의 allowlist</b>가 옛 디렉터리를 가리켜, 보호하려던 대상을 조용히 놓침</li>
+        <li>한국어 조사가 붙은 이름은 단어 경계로 찾을 수 없음</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="block panel" aria-labelledby="changed">
+    <div class="label">What landed</div>
+    <h2 id="changed">25 커밋</h2>
+    <details open><summary>리네임 (17)</summary>
+      <p>산문·표시 문자열 → 모듈 12개를 fan-in 오름차순으로(1-import 파일럿부터 239-import <code>CoreModel</code>까지) → SwiftUI 공개 타입 → 개발 타깃과 스크립트 → 최종 스윕과 봉인. 각 단계는 green 트리 위의 한 커밋이라 <code>git revert</code> 하나로 되돌아갑니다.</p></details>
+    <details><summary>검증 복구 (1)</summary>
+      <p>호스트 게이트 스크립트와 아카이브 픽스처의 절반만 적용된 리네임을 복구했습니다. 스크립트 2곳이 실제 원인이었고, 픽스처 4곳은 동작에 영향 없는 명칭 불일치였습니다.</p></details>
+    <details><summary>구조 (2)</summary>
+      <p><code>EditorCommandState</code>의 미소비 멤버를 좁혔고, 스냅샷 발행 규칙을 <code>AppKitSnapshotPublisher</code>로 분리했습니다. 후자는 AppKit 상태가 없는 순수 값 비교인데 뷰 컨트롤러 안에 있어 창을 띄워야만 실행 가능했습니다. 이제 재진입 억제 동작이 단독 테스트로 고정됩니다.</p></details>
+    <details><summary>문서 (5)</summary>
+      <p>정책 문서의 섹션별 권위를 표시하고, 출시되지 않은 타입 참조를 실제 이름으로 정정했습니다. ADR 0016을 추가하고, 작업이 끝난 시점 기록 3개를 삭제하면서 durable한 교훈은 Lessons Learned로 옮겼습니다.</p></details>
+  </section>
+
+  <section class="block panel" aria-labelledby="open">
+    <div class="label">Open</div>
+    <h2 id="open">남은 것</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>항목</th><th>성격</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>저장소 디렉터리명</td><td>미결 판단</td><td>SwiftPM이 path 의존성 identity를 디렉터리에서 도출해 <code>slopad</code>가 됩니다. 동작 무해</td></tr>
+        <tr><td>뷰 컨트롤러 협력 타입 추가 추출</td><td>설계 변경</td><td>1,748줄. 스냅샷 발행은 분리됨. 포인터 제스처·크롬 조정이 다음 후보이며 <code>SlopadEditorDebugApp</code> 동작 검증 필요</td></tr>
+        <tr><td>브랜치 미push</td><td>운영</td><td><code>origin/main</code> 대비 25 커밋 ahead</td></tr>
+      </tbody>
+    </table></div>
+    <p class="authority">이 페이지는 <code>34929eb</code> 시점의 발행물이며 갱신되지 않습니다. 코드가 무엇을 하는지는 현재 소스와 테스트가, 경계는 <a href="../docs/ARCHITECTURE.md">Architecture</a>와 <a href="../ADR/README.md">ADR</a>이, 방향은 <a href="../docs/ROADMAP.md">ROADMAP</a>이 정의합니다.</p>
+  </section>
+</main>
+</body>
+</html>

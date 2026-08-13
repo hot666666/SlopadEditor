@@ -1,0 +1,47 @@
+import SlopadEditorCoreModel
+
+// MARK: - EditorSessionSnapshot
+
+public struct EditorSessionSnapshot: Sendable {
+    public let revision: EditorSnapshotRevision
+    public let totalHeight: Double
+    public let visibleBlocks: [EditorRenderedBlock]
+    public let selection: EditorSelection
+    public let composition: TextComposition?
+    public let history: EditorHistoryState
+    public let activeTextInput: EditorSessionActiveTextInputDescriptor?
+    package let selectionPresentation: EditorSelectionPresentation
+    package let commandState: EditorCommandState
+    /// Runtime-only `/` command interpretation for the current caret, if any.
+    package let slashCommand: EditorSlashCommandPresentation?
+    public let blockDragState: EditorBlockDragState?
+    public let blockSelectionRectangleState: EditorBlockSelectionRectangleState?
+
+    init(
+        revision: EditorSnapshotRevision,
+        totalHeight: Double,
+        visibleBlocks: [EditorRenderedBlock],
+        selection: EditorSelection,
+        composition: TextComposition? = nil,
+        history: EditorHistoryState,
+        activeTextInput: EditorSessionActiveTextInputDescriptor? = nil,
+        selectionPresentation: EditorSelectionPresentation = .empty,
+        commandState: EditorCommandState,
+        slashCommand: EditorSlashCommandPresentation? = nil,
+        blockDragState: EditorBlockDragState? = nil,
+        blockSelectionRectangleState: EditorBlockSelectionRectangleState? = nil
+    ) {
+        self.revision = revision
+        self.totalHeight = totalHeight
+        self.visibleBlocks = visibleBlocks
+        self.selection = selection
+        self.composition = composition
+        self.history = history
+        self.activeTextInput = activeTextInput
+        self.selectionPresentation = selectionPresentation
+        self.commandState = commandState
+        self.slashCommand = slashCommand
+        self.blockDragState = blockDragState
+        self.blockSelectionRectangleState = blockSelectionRectangleState
+    }
+}

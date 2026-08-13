@@ -1,6 +1,6 @@
 # Agent Workflow
 
-This document defines the changeable operating policy for Codex work in Slopad. The
+This document defines the changeable operating policy for Codex work in SlopadEditor. The
 executable source of truth for current model and reasoning settings is
 [`../.codex/config.toml`](../.codex/config.toml) and the role files in
 [`../.codex/agents/`](../.codex/agents/). Do not copy their values into issue plans or

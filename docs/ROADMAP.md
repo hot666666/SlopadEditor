@@ -1,7 +1,7 @@
 # ROADMAP
 
 This document contains only unfinished product direction, priority, and exit criteria.
-Current source and tests define what Slopad does today. [Architecture](ARCHITECTURE.md),
+Current source and tests define what SlopadEditor does today. [Architecture](ARCHITECTURE.md),
 the [architecture map](slopad-architecture-map.html), and the ADRs define established
 boundaries; the active tracking issue defines the executable work order.
 
@@ -11,8 +11,8 @@ orders.
 
 ## Current Baseline
 
-[Epic #23](https://github.com/hot666666/Slopad/issues/23) is complete. Its
-[completion page](epic-23-status.html) records historical integration evidence. The
+[Epic #23](https://github.com/hot666666/SlopadEditor/issues/23) is complete. Its
+[completion page](../report/2026-08-09-3235d82-epic-23-completion.html) records historical integration evidence. The
 implemented baseline includes the headless Session/model/layout split, the curated AppKit
 and SwiftUI host surfaces, coherent TextKit2 capabilities and bounded prepared-layout
 reuse, inline marks and parser-free typed shortcuts, slash-only block commands, committed
@@ -62,13 +62,13 @@ bounded tracking issue.
 
 ### P0 — Preserve the continuous ADR 0012 host-surface gate
 
-[#69](https://github.com/hot666666/Slopad/issues/69) implemented the always-run Epic #67
+[#69](https://github.com/hot666666/SlopadEditor/issues/69) implemented the always-run Epic #67
 baseline. [`scripts/verify-host-surface.sh`](../scripts/verify-host-surface.sh) is now the
 canonical gate for both ordinary AppKit and SwiftUI lifecycle fixtures, and CI invokes it
 on every pull request. This is an ongoing boundary constraint, not a feature waiting for
 completion.
 
-- Keep `SlopadAppKit` as the ordinary one-product/one-import path and `SlopadSwiftUI` as
+- Keep `SlopadEditorAppKit` as the ordinary one-product/one-import path and `SlopadEditorSwiftUI` as
   the declarative lifecycle surface.
 - Admit new host operations only as synchronized actions, style/chrome customization,
   engine input contracts, or a complete custom-adapter requirement.
@@ -86,14 +86,14 @@ internals, or development hooks.
 
 - Exercise forward/reverse text and structural drags, empty-origin drag, autoscroll,
   Escape/Cmd-A, structured clipboard round trips, and caret/selection chrome manually in
-  `SlopadDebugApp`.
+  `SlopadEditorDebugApp`.
 - Make **Apple's built-in Korean 2-set** installed-IME delivery reproducible through the
   opt-in DebugApp native-input trace. One 2026-08-10 diagnostic session observed a real
   marked update reach the composition consumer; it did not prove commit/cancel lifecycle,
   candidate-window behavior, or repeatability. Direct `setMarkedText` tests prove only the
   consumer's callback contract, not installed-input-method delivery.
 - Only after that real UI evidence exists, implement ADR 0014's decided live cross-block
-  replacement through [#76](https://github.com/hot666666/Slopad/issues/76)'s native
+  replacement through [#76](https://github.com/hot666666/SlopadEditor/issues/76)'s native
   callback close table: grouped history, exact cancel/redo restoration, candidate-window
   behavior, and the one committed-revision rule. Do not infer product behavior from direct
   callback injection.
@@ -133,9 +133,9 @@ priority, and no public model internals.
   fail-closed codec; it handles whole documents only and never becomes an implicit
   persistence or paste path.
 - The embedding app owns files, databases, cloud sync, autosave, conflict resolution,
-  retry, and error UX. `SlopadArchive` owns neither storage nor lifecycle policy.
+  retry, and error UX. `SlopadEditorArchive` owns neither storage nor lifecycle policy.
 - Add GFM table support only after the Core table vocabulary in
-  [#50](https://github.com/hot666666/Slopad/issues/50) has a real owner and invariants.
+  [#50](https://github.com/hot666666/SlopadEditor/issues/50) has a real owner and invariants.
 
 Exit: Markdown import/export behavior is explicit, diagnostics reach product UX, and the
 host retains all native archive storage policy.
@@ -177,7 +177,7 @@ platform-hosted tests and fixtures.
 
 - TextKit2 geometry varies with OS, font, and layout-manager behavior; unit tests should
   assert invariants and real UI paths should cover native interaction.
-- Convenience APIs can pull semantics into `SlopadAppKit`/`SlopadAppKitUI`; apply the
+- Convenience APIs can pull semantics into `SlopadEditorAppKit`/`SlopadEditorAppKitUI`; apply the
   ADR 0012 host-surface test before widening them.
 - A partial text-renderer hook would split measurement, geometry, and drawing. Full text
   replacement requires a coherent adapter/backend pair.

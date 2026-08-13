@@ -55,13 +55,13 @@ body:
       description: Which layer most likely owns the failing behavior?
       options:
         - Unknown / needs triage
-        - SlopadAppKitUI
-        - SlopadEngine / EditorSession
-        - SlopadEditorModel
-        - SlopadBlockLayout
-        - SlopadCoreModel
-        - SlopadAppKitTextKit
-        - SlopadDataStructure
+        - SlopadEditorAppKitUI
+        - SlopadEditorEngine / EditorSession
+        - SlopadEditorDocumentModel
+        - SlopadEditorBlockLayout
+        - SlopadEditorCoreModel
+        - SlopadEditorAppKitTextKit
+        - SlopadEditorDataStructure
         - Debug or benchmark target
     validations:
       required: true
@@ -84,7 +84,7 @@ body:
       placeholder: |
         - [ ] Focused regression test:
         - [ ] `swift test --quiet`
-        - [ ] `swift build --product SlopadAppKitUI --quiet`
+        - [ ] `swift build --product SlopadEditorAppKitUI --quiet`
     validations:
       required: true
   - type: textarea

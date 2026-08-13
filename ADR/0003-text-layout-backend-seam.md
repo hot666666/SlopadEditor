@@ -9,7 +9,7 @@ Accepted. Amended 2026-08-08 — see "Amendment: narrow contracts, one backend".
 ## Context
 
 Block height is not a fixed property. It depends on text content, available width, style,
-line fragments, inline marks, and platform text shaping behavior. Slopad currently proves
+line fragments, inline marks, and platform text shaping behavior. SlopadEditor currently proves
 this path with TextKit2, but the engine is not supposed to be tied to AppKit/TextKit.
 
 The text layout path must support more than height measurement: caret rects, selection
@@ -18,14 +18,14 @@ same block-local text layout facts.
 
 ## Decision
 
-Keep the public text layout seam in `SlopadCoreModel/Layout` as
+Keep the public text layout seam in `SlopadEditorCoreModel/Layout` as
 `BlockTextLayoutProtocol` and related value types. Keep block-local request construction
-and cache policy inside `SlopadBlockLayout/TextLayout`.
+and cache policy inside `SlopadEditorBlockLayout/TextLayout`.
 
-`SlopadAppKitTextKit` is the current AppKit/TextKit2 backend. It implements the seam and
+`SlopadEditorAppKitTextKit` is the current AppKit/TextKit2 backend. It implements the seam and
 provides fragment layout, geometry, attributed-content, and drawing helpers to the
-default `SlopadAppKitUI` adapter. TextKit2 types do not belong in `SlopadEngine`,
-`SlopadEditorModel`, or `SlopadBlockLayout`.
+default `SlopadEditorAppKitUI` adapter. TextKit2 types do not belong in `SlopadEditorEngine`,
+`SlopadEditorDocumentModel`, or `SlopadEditorBlockLayout`.
 
 The seam anchors a coherent geometry contract, not a height-only service or high-level
 paint hook. `EditorSession` owns the live composition overlay and supplies it to
@@ -67,9 +67,9 @@ next surface.
 - Do not rename `textLayouter` to `textMeasurer`; the seam covers more than height.
 - A future UIKit or non-Apple backend should implement the same layout protocol instead
   of changing engine semantics.
-- Layout cache invalidation belongs to `SlopadBlockLayout`, not the platform backend.
+- Layout cache invalidation belongs to `SlopadEditorBlockLayout`, not the platform backend.
 - Adapting `EditorTextRenderDescriptor` to backend requests belongs to the platform UI
-  adapter, so the TextKit backend does not depend on `SlopadEngine`.
+  adapter, so the TextKit backend does not depend on `SlopadEditorEngine`.
 - Native views draw from session render descriptors and backend layout results; they do
   not own editor selection/composition semantics.
 - Engine code must not implement physical navigation as logical `offset +/- 1` or define
@@ -127,7 +127,7 @@ Consequences added by this amendment:
   Standalone layouter and renderer initializers are internal so a downstream adapter
   cannot accidentally assemble a split backend.
 - Do not create a SwiftPM target per capability. The protocols live where the seam already
-  lived, in `SlopadCoreModel/Layout`.
+  lived, in `SlopadEditorCoreModel/Layout`.
 - Caret and selection rectangles arrive through the Session snapshot (issue #35), resolved
   in document coordinates so an adapter draws rather than asks. `EditorSession` memoizes them
   across the adapter's surface-convergence renders, which run many times per paint.

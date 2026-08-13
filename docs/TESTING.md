@@ -22,8 +22,8 @@ bash scripts/verify-host-surface.sh
 
 `just host-surface` delegates to the same script. This is the canonical continuous ADR
 0012 gate on every pull request. It builds and runs both ordinary one-product lifecycle
-fixtures: `DownstreamAppKitHost` through `SlopadAppKit` alone and
-`DownstreamSwiftUIHost` through `SlopadSwiftUI` alone. Each mounts a literal window/view,
+fixtures: `DownstreamAppKitHost` through `SlopadEditorAppKit` alone and
+`DownstreamSwiftUIHost` through `SlopadEditorSwiftUI` alone. Each mounts a literal window/view,
 performs public semantic and formatting edits with a one-step formatting undo, observes the
 committed snapshot, flushes composition before reading, replaces the document with
 epoch/identity/content checks, exercises focus/resize, and tears down deterministically.
@@ -46,13 +46,13 @@ installed input-method delivery require their dedicated AppKit/UI evidence.
 
 | Change surface | Required additional gate |
 | --- | --- |
-| AppKit or public host API | `bash scripts/verify-host-surface.sh`; `swift build --product SlopadAppKit --quiet`; `swift build --product SlopadAppKitTextKit --quiet`; `swift build --product SlopadAppKitUI --quiet` |
-| UI or runtime input/rendering | `swift build --product SlopadDebugApp --quiet`; exercise the affected native path in `SlopadDebugApp` when the claim is behavioral rather than compile-only |
-| Layout, drawing, cache, frame-time, drag/reorder, or large documents | `swift build --product SlopadUIBenchmarkApp --quiet`; run the affected `SlopadUIBenchmarkApp` scenario and state the benchmark environment and resolution limits |
+| AppKit or public host API | `bash scripts/verify-host-surface.sh`; `swift build --product SlopadEditorAppKit --quiet`; `swift build --product SlopadEditorAppKitTextKit --quiet`; `swift build --product SlopadEditorAppKitUI --quiet` |
+| UI or runtime input/rendering | `swift build --product SlopadEditorDebugApp --quiet`; exercise the affected native path in `SlopadEditorDebugApp` when the claim is behavioral rather than compile-only |
+| Layout, drawing, cache, frame-time, drag/reorder, or large documents | `swift build --product SlopadEditorUIBenchmarkApp --quiet`; run the affected `SlopadEditorUIBenchmarkApp` scenario and state the benchmark environment and resolution limits |
 | Package or target graph | `swift package dump-package` |
-| Public SwiftUI host surface | `bash scripts/verify-host-surface.sh`; `swift build --product SlopadSwiftUI --quiet` |
+| Public SwiftUI host surface | `bash scripts/verify-host-surface.sh`; `swift build --product SlopadEditorSwiftUI --quiet` |
 | Markdown format boundary | build the downstream Markdown fixture; verify supported round trips and typed failure diagnostics through the public codec boundary |
-| Native archive boundary | `bash scripts/verify-archive-surface.sh`; `swift build --product SlopadArchive --quiet`; run focused Archive/Core validation tests and the opt-in large-document lifecycle smoke when snapshot/encode cost is relevant |
+| Native archive boundary | `bash scripts/verify-archive-surface.sh`; `swift build --product SlopadEditorArchive --quiet`; run focused Archive/Core validation tests and the opt-in large-document lifecycle smoke when snapshot/encode cost is relevant |
 
 The Archive unit suite checks every V1 wire safety budget at its exact boundary and at
 boundary plus one. The AppKit lifecycle probe deterministically suspends an old save before
@@ -78,7 +78,7 @@ AppKit has no deterministic test API that asks the user's installed input method
 compose a specific string. The marked-text smoke therefore reproduces the callback sequence
 that AppKit delivers, but it does not prove a physical keyboard, global event routing, input
 source selection, candidate-window UI, or a particular third-party IME. Exercise the same
-path in `SlopadDebugApp` when the claim depends on those system integrations.
+path in `SlopadEditorDebugApp` when the claim depends on those system integrations.
 
 ### Installed-input-method diagnostic trace
 
@@ -87,15 +87,15 @@ checkout identity and the opt-in native-input trace:
 
 ```sh
 test -z "$(git status --short)"
-SLOPAD_BUILD_STATE=clean SLOPAD_BUILD_SHA="$(git rev-parse HEAD)" \
-  swift run SlopadDebugApp --native-input-trace \
-  2> /tmp/slopad-native-input-trace.log
-rg '^SLOPAD_NATIVE_INPUT_TRACE ' /tmp/slopad-native-input-trace.log
+SLOPADEDITOR_BUILD_STATE=clean SLOPADEDITOR_BUILD_SHA="$(git rev-parse HEAD)" \
+  swift run SlopadEditorDebugApp --native-input-trace \
+  2> /tmp/slopadeditor-native-input-trace.log
+rg '^SLOPADEDITOR_NATIVE_INPUT_TRACE ' /tmp/slopadeditor-native-input-trace.log
 ```
 
-`SLOPAD_BUILD_SHA` is a caller-declared checkout HEAD, not a binary identity discovered by
+`SLOPADEDITOR_BUILD_SHA` is a caller-declared checkout HEAD, not a binary identity discovered by
 the app. `sourceState=clean` is valid only after the clean-status command succeeds. When
-diagnosing an uncommitted build, pass `SLOPAD_BUILD_STATE=dirty` instead and treat
+diagnosing an uncommitted build, pass `SLOPADEDITOR_BUILD_STATE=dirty` instead and treat
 `declaredHeadSHA` as its base commit, not as an exact identifier for the executable.
 
 The option is disabled by default. Its schema, sink, and event construction compile only in
@@ -154,7 +154,7 @@ The fixed minimal regression is:
 
 ```sh
 swift test --quiet --filter \
-  'SlopadAppKitUITests.AppKitTestWindowLifetimeTests/arcOwnedWindowClosesWithoutAppKitRelease'
+  'SlopadEditorAppKitUITests.AppKitTestWindowLifetimeTests/arcOwnedWindowClosesWithoutAppKitRelease'
 ```
 
 On the environment above it passed in 20 independent `swift test` processes (`20/20`, one

@@ -18,7 +18,7 @@ selection semantics.
 
 ## Decision
 
-Add `SlopadAppKitUI` as a library product and SwiftPM target.
+Add `SlopadEditorAppKitUI` as a library product and SwiftPM target.
 
 The package owns reusable AppKit adapter code:
 
@@ -34,7 +34,7 @@ The block appearance extension point is chrome-only. A host chrome renderer rece
 identity, kind, marker, depth, frame, style, graphics context, and active/selected state.
 The render context initializer is internal because only the adapter can assemble a valid
 context. It does not receive the Session snapshot, concrete text layouter/renderer, text
-render descriptor, or dirty rectangle. `SlopadAppKitUI` clips the hook to its block frame,
+render descriptor, or dirty rectangle. `SlopadEditorAppKitUI` clips the hook to its block frame,
 saves and restores graphics state, then performs all chrome passes before its TextKit2
 fragment-based text drawing, text selection, and caret feedback. Live marked text is
 projected into the effective content used by that same adapter-owned text drawing path.
@@ -42,7 +42,7 @@ projected into the effective content used by that same adapter-owned text drawin
 Replacing the complete native text pipeline requires a host to build a custom platform
 adapter around `EditorSession` and use a coherent backend that keeps layout, drawing, hit
 testing, caret/selection geometry, and native text geometry consistent. It is not exposed
-as another high-level paint hook in `SlopadAppKitUI`.
+as another high-level paint hook in `SlopadEditorAppKitUI`.
 
 ```mermaid
 flowchart TB
@@ -51,11 +51,11 @@ flowchart TB
     Seam["BlockTextLayoutProtocol<br/>coherent text-layout seam"]
 
     subgraph Default["Default AppKit Path"]
-        AppKitUI["SlopadAppKitUI<br/>native text pipeline integration"]
+        AppKitUI["SlopadEditorAppKitUI<br/>native text pipeline integration"]
         Chrome["AppKitBlockChromeRenderer + theme<br/>background · border · gutter · marker"]
         FragmentPass["Adapter-owned TextKit2 fragment pass<br/>effective live composition included"]
         FeedbackPass["Adapter-owned selection · caret feedback"]
-        AppKitTextKit["SlopadAppKitTextKit"]
+        AppKitTextKit["SlopadEditorAppKitTextKit"]
 
         Chrome -.->|"clipped and isolated"| AppKitUI
         AppKitUI -->|"always follows chrome"| FragmentPass
@@ -103,15 +103,15 @@ the AppKit backend alone resolves them to `NSFont`, `NSColor`, and attributed-te
 no-render batching helpers are not public host contracts. They use package access only
 when debug or benchmark targets require them; otherwise they remain internal or private.
 
-It depends on `SlopadEngine` and `SlopadAppKitTextKit`. It does not expose `EditorModel`,
+It depends on `SlopadEditorEngine` and `SlopadEditorAppKitTextKit`. It does not expose `EditorModel`,
 `BlockLayout`, canonical `Document`, layout cache, or height-index storage.
 
 ## Consequences
 
-- macOS apps can depend on `SlopadAppKitUI` for a working AppKit editor surface.
-- Debug-only scenario/HUD state stays in `SlopadDebugApp`.
+- macOS apps can depend on `SlopadEditorAppKitUI` for a working AppKit editor surface.
+- Debug-only scenario/HUD state stays in `SlopadEditorDebugApp`.
 - Benchmark-only frame loops, CSV output, and forced display flushes stay in
-  `SlopadUIBenchmarkApp`.
+  `SlopadEditorUIBenchmarkApp`.
 - AppKit visual customization happens through `AppKitBlockChromeRenderer` and theme
   values, not by moving editor semantics or text-pipeline ownership out of
   `EditorSession` and the adapter.

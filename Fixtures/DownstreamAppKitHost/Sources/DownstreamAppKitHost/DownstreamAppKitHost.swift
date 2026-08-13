@@ -1,5 +1,5 @@
 import AppKit
-import SlopadAppKit
+import SlopadEditorAppKit
 
 @MainActor
 private struct HostChromeRenderer: AppKitBlockChromeRenderer {
@@ -75,7 +75,7 @@ private struct DownstreamAppKitHost {
                 style: style
             )
         } catch {
-            fatalError("Public SlopadAppKit contract failed: \(error)")
+            fatalError("Public SlopadEditorAppKit contract failed: \(error)")
         }
 
         controller.setFocused(false)

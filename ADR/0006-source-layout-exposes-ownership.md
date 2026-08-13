@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-Slopad has several layers that intentionally expose a small interface to other callers:
+SlopadEditor has several layers that intentionally expose a small interface to other callers:
 public host-facing surface, package-only owner interfaces between SwiftPM targets, and
 target-internal implementation details.
 
@@ -41,23 +41,23 @@ Rules:
 
 Target-specific placement:
 
-- `Sources/SlopadEngine/Session`
+- `Sources/SlopadEditorEngine/Session`
   - Root: `EditorSession`, public snapshot/update/render output values, and thin public
     facade entrypoints.
-- `Sources/SlopadEditorModel`
+- `Sources/SlopadEditorDocumentModel`
   - Root: `EditorModel`, package entrypoints consumed by Session, and cross-target
     semantic change facts.
-- `Sources/SlopadBlockLayout`
+- `Sources/SlopadEditorBlockLayout`
   - Root: `BlockLayout`, package entrypoints consumed by Session, and package geometry or
     invalidation outputs when another target needs them.
-- `Sources/SlopadCoreModel`
+- `Sources/SlopadEditorCoreModel`
   - Folders hold public vocabulary and backend seam values by domain: document, text,
     selection, composition, interaction, geometry, and layout.
-- `Sources/SlopadDataStructure`
+- `Sources/SlopadEditorDataStructure`
   - Pure data structures only. No editor, block, layout, or platform vocabulary.
-- `Sources/SlopadAppKitTextKit`
+- `Sources/SlopadEditorAppKitTextKit`
   - TextKit2 backend implementation and interop only.
-- `Sources/SlopadAppKitUI`
+- `Sources/SlopadEditorAppKitUI`
   - Public controller, style consumption, and chrome contract remain easy to identify.
     Native input routing, fragment/feedback drawing, active input, drag autoscroll, and
     surface synchronization helpers remain target-internal unless a real cross-target

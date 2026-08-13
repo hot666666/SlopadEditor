@@ -4,7 +4,7 @@ Date: 2026-07-06
 
 ## Scope
 
-This document records UI benchmark results using `SlopadUIBenchmarkApp` as the real
+This document records UI benchmark results using `SlopadEditorUIBenchmarkApp` as the real
 AppKit reference host.
 
 This is not an engine-only benchmark. Each measured frame includes the host path:
@@ -28,7 +28,7 @@ flowchart LR
     RenderSync["renderAndSyncSurface<br/>avgRenderAndSyncMs"]
     Render["EditorSession.render"]
     Layout["BlockLayout<br/>height index + visible range<br/>TextLayout cache"]
-    TextBackend["SlopadAppKitTextKit<br/>TextKit2 fragment layout + geometry"]
+    TextBackend["SlopadEditorAppKitTextKit<br/>TextKit2 fragment layout + geometry"]
     Snapshot["EditorSessionSnapshot<br/>visible blocks + geometry"]
     Surface["canvas resize<br/>active input sync<br/>setNeedsDisplay"]
     Display["displayIfNeeded<br/>avgDisplayMs"]
@@ -123,7 +123,7 @@ Default RBTree storage:
 
 ```sh
 swift run -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION \
-  SlopadUIBenchmarkApp \
+  SlopadEditorUIBenchmarkApp \
   --output /tmp/slopad-ui-bench-20260706/rbtree-scroll-10000.csv \
   --block-count 10000 \
   --frames 60 \
@@ -136,7 +136,7 @@ Array storage comparison build:
 swift run -c release \
   -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION \
   -Xswiftc -DSLOPAD_HEIGHT_INDEX_ARRAY \
-  SlopadUIBenchmarkApp \
+  SlopadEditorUIBenchmarkApp \
   --output /tmp/slopad-ui-bench-20260706/array-scroll-10000.csv \
   --block-count 10000 \
   --frames 60 \
@@ -238,7 +238,7 @@ Example long-text command:
 
 ```sh
 swift run -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION \
-  SlopadUIBenchmarkApp \
+  SlopadEditorUIBenchmarkApp \
   --scenario unicode-navigation \
   --block-count 100 \
   --active-text-length 10000 \
@@ -358,7 +358,7 @@ Representative command shape:
 
 ```sh
 swift run -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION \
-  SlopadUIBenchmarkApp \
+  SlopadEditorUIBenchmarkApp \
   --scenario forward-reverse-scroll \
   --block-count 10000 \
   --frames 128 \

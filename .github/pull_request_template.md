@@ -22,9 +22,9 @@ Closes #
 
 - [ ] Not run
 - [ ] `swift test --quiet`
-- [ ] `swift build --product SlopadAppKitUI --quiet`
-- [ ] `swift build --product SlopadDebugApp --quiet`
-- [ ] `swift build --product SlopadUIBenchmarkApp --quiet`
+- [ ] `swift build --product SlopadEditorAppKitUI --quiet`
+- [ ] `swift build --product SlopadEditorDebugApp --quiet`
+- [ ] `swift build --product SlopadEditorUIBenchmarkApp --quiet`
 - [ ] `git diff --check`
 - [ ] Other:
 
@@ -42,6 +42,6 @@ Closes #
 - [ ] Tests or verification cover the changed behavior.
 - [ ] Public declaration changes were reviewed against ADR 0012; every widening passes its
       three-part test and has a real downstream call site, or this PR does not widen the surface.
-- [ ] Ordinary AppKit/SwiftUI fixtures still use one Slopad product/import with no internal bypass.
+- [ ] Ordinary AppKit/SwiftUI fixtures still use one SlopadEditor product/import with no internal bypass.
 - [ ] Documentation was updated, or no documentation change is needed.
 - [ ] Dependencies are merged, or this PR is intentionally stacked and marked as blocked.

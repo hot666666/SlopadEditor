@@ -58,7 +58,7 @@ count_matches() {
 # Reduce every import to its module name before comparing. Attributes, attribute arguments,
 # indentation, and declaration-kind imports must not be able to carry a raw package
 # dependency past the allowlist. An attribute pattern that stops at the attribute name
-# fails open rather than closed: `@_spi(Internal) import SlopadEngine` stops looking like
+# fails open rather than closed: `@_spi(Internal) import SlopadEditorEngine` stops looking like
 # an import at all and drops out of the comparison entirely, which is the opposite of what
 # this guard is for.
 fixture_import_modules() {
@@ -74,36 +74,36 @@ fixture_import_modules() {
 # also a module it cannot name.
 require_equal "AppKit lifecycle fixture imports more than the supported facade" \
     "$(fixture_import_modules "$appkit_source")" \
-    $'AppKit\nSlopadAppKit'
+    $'AppKit\nSlopadEditorAppKit'
 require_equal "SwiftUI lifecycle fixture imports more than the supported facade" \
     "$(fixture_import_modules "$swiftui_source")" \
-    $'AppKit\nSlopadSwiftUI\nSwiftUI'
+    $'AppKit\nSlopadEditorSwiftUI\nSwiftUI'
 
-require_equal "AppKit lifecycle fixture must depend on the SlopadAppKit product" \
-    "$(count_matches '\.product\(name: "SlopadAppKit", package: "Slopad"\)' \
+require_equal "AppKit lifecycle fixture must depend on the SlopadEditorAppKit product" \
+    "$(count_matches '\.product\(name: "SlopadEditorAppKit", package: "SlopadEditor"\)' \
         "$appkit_fixture/Package.swift")" \
     "1"
 require_equal "AppKit lifecycle fixture declares more than one product dependency" \
     "$(count_matches '\.product\(name:' "$appkit_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadMarkdownInputRules|SlopadMarkdown|SlopadArchive|SlopadDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadAppKitUI|SlopadAppKitTextKit|SlopadSwiftUI|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadEditorCoreModel|SlopadEditorEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorDocumentModel|SlopadEditorBlockLayout|SlopadEditorAppKitUI|SlopadEditorAppKitTextKit|SlopadEditorSwiftUI|SlopadEditorDebugApp|SlopadEditorUIBenchmarkApp' \
     "$appkit_fixture/Package.swift"; then
-    echo "AppKit lifecycle fixture manifest bypasses the SlopadAppKit facade" >&2
+    echo "AppKit lifecycle fixture manifest bypasses the SlopadEditorAppKit facade" >&2
     exit 1
 fi
 
-require_equal "SwiftUI lifecycle fixture must depend on the SlopadSwiftUI product" \
-    "$(count_matches '\.product\(name: "SlopadSwiftUI", package: "Slopad"\)' \
+require_equal "SwiftUI lifecycle fixture must depend on the SlopadEditorSwiftUI product" \
+    "$(count_matches '\.product\(name: "SlopadEditorSwiftUI", package: "SlopadEditor"\)' \
         "$swiftui_fixture/Package.swift")" \
     "1"
 require_equal "SwiftUI lifecycle fixture declares more than one product dependency" \
     "$(count_matches '\.product\(name:' "$swiftui_fixture/Package.swift")" \
     "1"
 if rg -n \
-    'SlopadCoreModel|SlopadEngine|SlopadMarkdownInputRules|SlopadMarkdown|SlopadArchive|SlopadDataStructure|SlopadEditorModel|SlopadBlockLayout|SlopadAppKitUI|SlopadAppKitTextKit|SlopadAppKit|SlopadDebugApp|SlopadUIBenchmarkApp' \
+    'SlopadEditorCoreModel|SlopadEditorEngine|SlopadEditorMarkdownInputRules|SlopadEditorMarkdown|SlopadEditorArchive|SlopadEditorDataStructure|SlopadEditorDocumentModel|SlopadEditorBlockLayout|SlopadEditorAppKitUI|SlopadEditorAppKitTextKit|SlopadEditorAppKit|SlopadEditorDebugApp|SlopadEditorUIBenchmarkApp' \
     "$swiftui_fixture/Package.swift"; then
-    echo "SwiftUI lifecycle fixture manifest bypasses the SlopadSwiftUI facade" >&2
+    echo "SwiftUI lifecycle fixture manifest bypasses the SlopadEditorSwiftUI facade" >&2
     exit 1
 fi
 
@@ -325,16 +325,16 @@ swiftui_swift_version="$(
     swift_command_argument "$swiftui_description" "$swiftui_command_key" -swift-version
 )"
 
-positive_probe SlopadAppKit AppKitEditorAction \
+positive_probe SlopadEditorAppKit AppKitEditorAction \
     "$appkit_swiftc" "$appkit_import_path" "$appkit_target" "$appkit_sdk" \
     "$appkit_frameworks" "$appkit_system_imports" "$appkit_swift_version"
-positive_probe SlopadAppKit AppKitEditorViewController \
+positive_probe SlopadEditorAppKit AppKitEditorViewController \
     "$appkit_swiftc" "$appkit_import_path" "$appkit_target" "$appkit_sdk" \
     "$appkit_frameworks" "$appkit_system_imports" "$appkit_swift_version"
-positive_probe SlopadSwiftUI SlopadEditor \
+positive_probe SlopadEditorSwiftUI SlopadEditorView \
     "$swiftui_swiftc" "$swiftui_import_path" "$swiftui_target" "$swiftui_sdk" \
     "$swiftui_frameworks" "$swiftui_system_imports" "$swiftui_swift_version"
-positive_probe SlopadSwiftUI SlopadEditorModel \
+positive_probe SlopadEditorSwiftUI SlopadEditorViewModel \
     "$swiftui_swiftc" "$swiftui_import_path" "$swiftui_target" "$swiftui_sdk" \
     "$swiftui_frameworks" "$swiftui_system_imports" "$swiftui_swift_version"
 
@@ -350,7 +350,7 @@ appkit_forbidden_symbols=(
     TextKitTextSystem
 )
 for symbol in "${appkit_forbidden_symbols[@]}"; do
-    forbidden_probe SlopadAppKit "$symbol" \
+    forbidden_probe SlopadEditorAppKit "$symbol" \
         "$appkit_swiftc" "$appkit_import_path" "$appkit_target" "$appkit_sdk" \
         "$appkit_frameworks" "$appkit_system_imports" "$appkit_swift_version"
 done
@@ -368,7 +368,7 @@ swiftui_forbidden_symbols=(
     TextKitTextSystem
 )
 for symbol in "${swiftui_forbidden_symbols[@]}"; do
-    forbidden_probe SlopadSwiftUI "$symbol" \
+    forbidden_probe SlopadEditorSwiftUI "$symbol" \
         "$swiftui_swiftc" "$swiftui_import_path" "$swiftui_target" "$swiftui_sdk" \
         "$swiftui_frameworks" "$swiftui_system_imports" "$swiftui_swift_version"
 done
@@ -376,8 +376,8 @@ done
 # The probes above import the facade, so what they pin is "this symbol is not re-exported
 # through the supported product". For a symbol that is public in another module that is the
 # entire claim available: SwiftPM gives the downstream target one `-I` covering every built
-# module, so `import SlopadAppKitTextKit` compiles in a target that only declared the
-# SlopadAppKit product, and `--explicit-target-dependency-import-check error` does not stop
+# module, so `import SlopadEditorAppKitTextKit` compiles in a target that only declared the
+# SlopadEditorAppKit product, and `--explicit-target-dependency-import-check error` does not stop
 # it across packages. Reaching that symbol still costs the host an explicit import of a
 # module it never declared, which is visible in review, but the compiler does not forbid it.
 #
@@ -385,14 +385,14 @@ done
 # unreachable even when an external consumer imports their own module directly. These are
 # the symbols whose exposure would actually widen the host contract.
 declared_module_forbidden_symbols=(
-    "SlopadEngine:EditorCommandState"
-    "SlopadEngine:EditorCommandAction"
-    "SlopadEngine:EditorCommandSelectionMode"
-    "SlopadEngine:EditorSelectionPresentation"
-    "SlopadEngine:EditorVisibleTextSelection"
-    "SlopadAppKitUI:AppKitFloatingFormattingToolbar"
-    "SlopadAppKitUI:AppKitTodoCheckboxControl"
-    "SlopadBlockLayout:BlockLayout"
+    "SlopadEditorEngine:EditorCommandState"
+    "SlopadEditorEngine:EditorCommandAction"
+    "SlopadEditorEngine:EditorCommandSelectionMode"
+    "SlopadEditorEngine:EditorSelectionPresentation"
+    "SlopadEditorEngine:EditorVisibleTextSelection"
+    "SlopadEditorAppKitUI:AppKitFloatingFormattingToolbar"
+    "SlopadEditorAppKitUI:AppKitTodoCheckboxControl"
+    "SlopadEditorBlockLayout:BlockLayout"
 )
 for entry in "${declared_module_forbidden_symbols[@]}"; do
     forbidden_probe "${entry%%:*}" "${entry##*:}" \

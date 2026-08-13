@@ -3,46 +3,46 @@
 import PackageDescription
 
 let package = Package(
-    name: "Slopad",
+    name: "SlopadEditor",
     platforms: [
         .macOS(.v14)
     ],
     products: [
         .library(
-            name: "SlopadEngine",
-            targets: ["SlopadEngine"]
+            name: "SlopadEditorEngine",
+            targets: ["SlopadEditorEngine"]
         ),
         .library(
-            name: "SlopadMarkdown",
-            targets: ["SlopadMarkdown"]
+            name: "SlopadEditorMarkdown",
+            targets: ["SlopadEditorMarkdown"]
         ),
         .library(
-            name: "SlopadArchive",
-            targets: ["SlopadArchive"]
+            name: "SlopadEditorArchive",
+            targets: ["SlopadEditorArchive"]
         ),
         .library(
-            name: "SlopadAppKit",
-            targets: ["SlopadAppKit"]
+            name: "SlopadEditorAppKit",
+            targets: ["SlopadEditorAppKit"]
         ),
         .library(
-            name: "SlopadSwiftUI",
-            targets: ["SlopadSwiftUI"]
+            name: "SlopadEditorSwiftUI",
+            targets: ["SlopadEditorSwiftUI"]
         ),
         .library(
-            name: "SlopadAppKitTextKit",
-            targets: ["SlopadAppKitTextKit"]
+            name: "SlopadEditorAppKitTextKit",
+            targets: ["SlopadEditorAppKitTextKit"]
         ),
         .library(
-            name: "SlopadAppKitUI",
-            targets: ["SlopadAppKitUI"]
+            name: "SlopadEditorAppKitUI",
+            targets: ["SlopadEditorAppKitUI"]
         ),
         .executable(
-            name: "SlopadDebugApp",
-            targets: ["SlopadDebugApp"]
+            name: "SlopadEditorDebugApp",
+            targets: ["SlopadEditorDebugApp"]
         ),
         .executable(
-            name: "SlopadUIBenchmarkApp",
-            targets: ["SlopadUIBenchmarkApp"]
+            name: "SlopadEditorUIBenchmarkApp",
+            targets: ["SlopadEditorUIBenchmarkApp"]
         ),
     ],
     dependencies: [
@@ -53,151 +53,151 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "SlopadCoreModel"
+            name: "SlopadEditorCoreModel"
         ),
         // Markdown typed-input syntax is intentionally separate from the opt-in codec. It
         // contains only bounded pattern data and canonical rule effects — no parser target.
         .target(
-            name: "SlopadMarkdownInputRules",
-            dependencies: ["SlopadCoreModel"]
+            name: "SlopadEditorMarkdownInputRules",
+            dependencies: ["SlopadEditorCoreModel"]
         ),
         .target(
-            name: "SlopadMarkdown",
+            name: "SlopadEditorMarkdown",
             dependencies: [
-                "SlopadCoreModel",
+                "SlopadEditorCoreModel",
                 .product(name: "Markdown", package: "swift-markdown"),
             ]
         ),
         .target(
-            name: "SlopadArchive",
-            dependencies: ["SlopadCoreModel"]
+            name: "SlopadEditorArchive",
+            dependencies: ["SlopadEditorCoreModel"]
         ),
         .target(
-            name: "SlopadDataStructure"
+            name: "SlopadEditorDataStructure"
         ),
         .target(
-            name: "SlopadEditorModel",
-            dependencies: ["SlopadCoreModel", "SlopadMarkdownInputRules"]
+            name: "SlopadEditorDocumentModel",
+            dependencies: ["SlopadEditorCoreModel", "SlopadEditorMarkdownInputRules"]
         ),
         .target(
-            name: "SlopadBlockLayout",
+            name: "SlopadEditorBlockLayout",
             dependencies: [
-                "SlopadCoreModel",
-                "SlopadDataStructure",
+                "SlopadEditorCoreModel",
+                "SlopadEditorDataStructure",
             ]
         ),
         .target(
-            name: "SlopadEngine",
+            name: "SlopadEditorEngine",
             dependencies: [
-                "SlopadCoreModel",
-                "SlopadEditorModel",
-                "SlopadBlockLayout",
+                "SlopadEditorCoreModel",
+                "SlopadEditorDocumentModel",
+                "SlopadEditorBlockLayout",
             ]
         ),
         .target(
-            name: "SlopadAppKitTextKit",
-            dependencies: ["SlopadCoreModel"]
+            name: "SlopadEditorAppKitTextKit",
+            dependencies: ["SlopadEditorCoreModel"]
         ),
         .target(
-            name: "SlopadAppKitUI",
+            name: "SlopadEditorAppKitUI",
             dependencies: [
-                "SlopadEngine",
-                "SlopadAppKitTextKit",
+                "SlopadEditorEngine",
+                "SlopadEditorAppKitTextKit",
             ]
         ),
         .target(
-            name: "SlopadAppKit",
+            name: "SlopadEditorAppKit",
             dependencies: [
-                "SlopadEngine",
-                "SlopadAppKitUI",
+                "SlopadEditorEngine",
+                "SlopadEditorAppKitUI",
             ]
         ),
         // Layered on top of the AppKit facade rather than folded into it, for the same
-        // reason SlopadAppKit is a curated umbrella and not a runtime owner.
+        // reason SlopadEditorAppKit is a curated umbrella and not a runtime owner.
         .target(
-            name: "SlopadSwiftUI",
-            dependencies: ["SlopadAppKit"]
+            name: "SlopadEditorSwiftUI",
+            dependencies: ["SlopadEditorAppKit"]
         ),
         .executableTarget(
-            name: "SlopadHeightBenchmark",
+            name: "SlopadEditorHeightBenchmark",
             dependencies: [
-                "SlopadCoreModel",
-                "SlopadBlockLayout",
+                "SlopadEditorCoreModel",
+                "SlopadEditorBlockLayout",
             ],
-            path: "Benchmarks/SlopadHeightBenchmark"
+            path: "Benchmarks/SlopadEditorHeightBenchmark"
         ),
         .executableTarget(
-            name: "SlopadSessionBenchmark",
-            dependencies: ["SlopadEngine"],
-            path: "Benchmarks/SlopadSessionBenchmark"
+            name: "SlopadEditorSessionBenchmark",
+            dependencies: ["SlopadEditorEngine"],
+            path: "Benchmarks/SlopadEditorSessionBenchmark"
         ),
         .executableTarget(
-            name: "SlopadDebugApp",
+            name: "SlopadEditorDebugApp",
             dependencies: [
-                "SlopadEngine",
-                "SlopadAppKitTextKit",
-                "SlopadAppKitUI",
+                "SlopadEditorEngine",
+                "SlopadEditorAppKitTextKit",
+                "SlopadEditorAppKitUI",
             ],
-            path: "Debug/SlopadDebugApp"
+            path: "Debug/SlopadEditorDebugApp"
         ),
         .executableTarget(
-            name: "SlopadUIBenchmarkApp",
+            name: "SlopadEditorUIBenchmarkApp",
             dependencies: [
-                "SlopadEngine",
-                "SlopadAppKitTextKit",
-                "SlopadAppKitUI",
+                "SlopadEditorEngine",
+                "SlopadEditorAppKitTextKit",
+                "SlopadEditorAppKitUI",
             ],
-            path: "Benchmarks/SlopadUIBenchmarkApp"
+            path: "Benchmarks/SlopadEditorUIBenchmarkApp"
         ),
         .testTarget(
-            name: "SlopadEngineTests",
+            name: "SlopadEditorEngineTests",
             dependencies: [
-                "SlopadCoreModel",
-                "SlopadDataStructure",
-                "SlopadEditorModel",
-                "SlopadBlockLayout",
-                "SlopadEngine",
-                "SlopadMarkdown",
-                "SlopadMarkdownInputRules",
+                "SlopadEditorCoreModel",
+                "SlopadEditorDataStructure",
+                "SlopadEditorDocumentModel",
+                "SlopadEditorBlockLayout",
+                "SlopadEditorEngine",
+                "SlopadEditorMarkdown",
+                "SlopadEditorMarkdownInputRules",
             ]
         ),
         .testTarget(
-            name: "SlopadMarkdownTests",
+            name: "SlopadEditorMarkdownTests",
             dependencies: [
-                "SlopadCoreModel",
-                "SlopadMarkdown",
+                "SlopadEditorCoreModel",
+                "SlopadEditorMarkdown",
             ]
         ),
         .testTarget(
-            name: "SlopadArchiveTests",
+            name: "SlopadEditorArchiveTests",
             dependencies: [
-                "SlopadArchive",
-                "SlopadCoreModel",
+                "SlopadEditorArchive",
+                "SlopadEditorCoreModel",
             ],
             resources: [.copy("Fixtures")]
         ),
         .testTarget(
-            name: "SlopadAppKitTextKitTests",
+            name: "SlopadEditorAppKitTextKitTests",
             dependencies: [
-                "SlopadCoreModel",
-                "SlopadAppKitTextKit",
+                "SlopadEditorCoreModel",
+                "SlopadEditorAppKitTextKit",
             ]
         ),
         .testTarget(
-            name: "SlopadAppKitUITests",
+            name: "SlopadEditorAppKitUITests",
             dependencies: [
-                "SlopadEngine",
-                "SlopadAppKitUI",
+                "SlopadEditorEngine",
+                "SlopadEditorAppKitUI",
             ]
         ),
-        // SlopadAppKit is a test-only dependency: the tests construct a controller directly
-        // to stand in for what `makeNSViewController` produces. SlopadSwiftUI deliberately
+        // SlopadEditorAppKit is a test-only dependency: the tests construct a controller directly
+        // to stand in for what `makeNSViewController` produces. SlopadEditorSwiftUI deliberately
         // does not re-export the controller, so a SwiftUI host cannot reach around it.
         .testTarget(
-            name: "SlopadSwiftUITests",
+            name: "SlopadEditorSwiftUITests",
             dependencies: [
-                "SlopadSwiftUI",
-                "SlopadAppKit",
+                "SlopadEditorSwiftUI",
+                "SlopadEditorAppKit",
             ]
         ),
     ]

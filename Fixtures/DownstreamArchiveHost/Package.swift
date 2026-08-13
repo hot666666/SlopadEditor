@@ -8,20 +8,20 @@ let package = Package(
         .macOS(.v14)
     ],
     dependencies: [
-        .package(name: "Slopad", path: "../..")
+        .package(name: "SlopadEditor", path: "../..")
     ],
     targets: [
         .executableTarget(
             name: "ArchiveCodecSurfaceProbe",
             dependencies: [
-                .product(name: "SlopadArchive", package: "Slopad")
+                .product(name: "SlopadEditorArchive", package: "SlopadEditor")
             ]
         ),
         .executableTarget(
             name: "AppKitArchiveLifecycleProbe",
             dependencies: [
-                .product(name: "SlopadArchive", package: "Slopad"),
-                .product(name: "SlopadAppKit", package: "Slopad"),
+                .product(name: "SlopadEditorArchive", package: "SlopadEditor"),
+                .product(name: "SlopadEditorAppKit", package: "SlopadEditor"),
             ]
         ),
     ]

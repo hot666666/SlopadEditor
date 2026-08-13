@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-Slopad is intended to be a native block editor engine, not an AppKit wrapper, `NSTextView`
+SlopadEditor is intended to be a native block editor engine, not an AppKit wrapper, `NSTextView`
 subclass, or document-store-only library. Platform hosts need to send keyboard, pointer,
 selection, IME/composition, reveal, hit-test, and render requests into the engine without
 owning the editor semantics themselves.
@@ -22,13 +22,13 @@ platform-native views and event APIs stay outside the engine target.
 `EditorSession` is the public host-facing facade. It owns runtime orchestration and calls
 two internal owners:
 
-- `SlopadEditorModel` for canonical document state, selection, command application,
+- `SlopadEditorDocumentModel` for canonical document state, selection, command application,
   transaction/history, and semantic changes.
-- `SlopadBlockLayout` for visible order, block geometry, layout invalidation, reveal,
+- `SlopadEditorBlockLayout` for visible order, block geometry, layout invalidation, reveal,
   hit-test geometry, and text-layout-backed measurement.
 
-Native surface code, such as the reusable `SlopadAppKitUI` adapter, receives OS callbacks
-and delegates meaningful editor decisions to `EditorSession`. `SlopadDebugApp` consumes
+Native surface code, such as the reusable `SlopadEditorAppKitUI` adapter, receives OS callbacks
+and delegates meaningful editor decisions to `EditorSession`. `SlopadEditorDebugApp` consumes
 that adapter as a reference/debug host rather than defining the platform boundary.
 
 ## Consequences

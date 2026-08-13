@@ -1,5 +1,5 @@
-import SlopadEngine
-import SlopadMarkdown
+import SlopadEditorEngine
+import SlopadEditorMarkdown
 
 private struct FixtureTextLayouter: BlockTextLayoutProtocol {
     func measure(_ request: BlockMeasureRequest) -> BlockMeasurement {
@@ -52,11 +52,11 @@ private struct DownstreamMarkdownHost {
             selection: .inactive,
             textLayouter: FixtureTextLayouter()
         )
-        let decodedBlocks = try SlopadMarkdown.decode(
+        let decodedBlocks = try SlopadEditorMarkdown.decode(
             "# Imported\n\n- first\n  - nested"
         )
-        let encodedMarkdown = try SlopadMarkdown.encode(decodedBlocks)
-        let roundTrippedBlocks = try SlopadMarkdown.decode(encodedMarkdown)
+        let encodedMarkdown = try SlopadEditorMarkdown.encode(decodedBlocks)
+        let roundTrippedBlocks = try SlopadEditorMarkdown.decode(encodedMarkdown)
         precondition(roundTrippedBlocks.map(\.kind) == decodedBlocks.map(\.kind))
         precondition(roundTrippedBlocks.map(\.content) == decodedBlocks.map(\.content))
         let context = try session.documentContextSnapshot()

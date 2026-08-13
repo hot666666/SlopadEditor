@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
-<title>Slopad Selection Interaction Policy</title>
+<title>SlopadEditor Selection Interaction Policy</title>
 <style>
 :root {
   color-scheme: light dark;
@@ -370,7 +370,7 @@ footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(-
 </nav>
 
 <header class="hero shell">
-  <div class="eyebrow">Slopad · selection policy · IME gap</div>
+  <div class="eyebrow">SlopadEditor · selection policy · IME gap</div>
   <h1>선택 모드는 시작점에서 정하고,<br>끝까지 바꾸지 않는다.</h1>
   <p class="lede">텍스트에서 시작하면 블록 경계를 넘어 정확한 글자 위치까지 텍스트 선택. 구조 여백에서 시작하면 블록 선택. 상태별 액션 전이와 함께 toolbar·context menu·clipboard·link/comment UI가 selection policy를 복제하지 않도록 필요한 엔진 계약까지 정리했다.</p>
   <div class="status-row" aria-label="문서 상태">
@@ -484,7 +484,7 @@ footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(-
 
     <div class="projection-grid" aria-label="선택의 세 가지 엔진 투영">
       <article class="panel projection-card canonical">
-        <span class="projection-owner">SlopadEditorModel</span>
+        <span class="projection-owner">SlopadEditorDocumentModel</span>
         <h3>Canonical selection</h3>
         <p><span class="code">EditorSelection</span>과 두 <span class="code">TextPosition</span>만 history와 mutation의 진실이다.</p>
         <span class="projection-cost">O(1) state</span>
@@ -514,9 +514,9 @@ footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(-
     <div class="contract-grid">
       <article class="panel contract-card"><span class="contract-code">EditorCommandState</span><h3>명령 가능 여부 + mixed 값</h3><p>unavailable / available / after-composition-commit와 mark off/on/mixed. UI switch문을 없앤다.</p></article>
       <article class="panel contract-card"><span class="contract-code">EditorSelectionPresentation</span><h3>geometry fact</h3><p>visible bounds와 focus rect만 Session이 제공. 위/아래 배치와 window clamp는 AppKit 책임.</p></article>
-      <article class="panel contract-card"><span class="contract-code">EditorClipboardPlan</span><h3>clipboard negotiation</h3><p>plain text와 Slopad partial-text/subtree payload를 만든 뒤 AppKit이 NSPasteboard를 읽고 쓴다.</p></article>
+      <article class="panel contract-card"><span class="contract-code">EditorClipboardWritePlan</span><h3>clipboard negotiation</h3><p>plain text와 SlopadEditor partial-text/subtree payload를 만든 뒤 AppKit이 NSPasteboard를 읽고 쓴다. Session의 clipboardWritePlan()이 반환한다.</p></article>
       <article class="panel contract-card"><span class="contract-code">Selection action source</span><h3>비동기 stale 방지</h3><p>link/comment/AI popup은 epoch+revision+exact selection을 pin하고 stale이면 fail closed.</p></article>
-      <article class="panel contract-card"><span class="contract-code">EditorDecorationSnapshot</span><h3>selection 아닌 highlight</h3><p>검색·댓글·spellcheck·remote cursor는 local caret/history를 건드리지 않는 별도 projection.</p></article>
+      <article class="panel contract-card"><span class="contract-code">EditorDecorationSnapshot</span><h3>selection 아닌 highlight</h3><p>검색·댓글·spellcheck·remote cursor는 local caret/history를 건드리지 않는 별도 projection. 아직 미구현 제안이며 소비자가 생길 때 이름과 형태를 정한다.</p></article>
       <article class="panel contract-card"><span class="contract-code">EditorCommandResult</span><h3>하나의 apply owner</h3><p>기존 notApplicable / selection-only / document 결과를 유지. toolbar 전용 command engine은 만들지 않는다.</p></article>
     </div>
 
@@ -597,7 +597,7 @@ footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(-
 
 <footer>
   <div class="shell footer-inner">
-    <span>Slopad · Selection Interaction Policy · 2026-08-09</span>
+    <span>SlopadEditor · Selection Interaction Policy · 2026-08-09</span>
     <span><a href="SELECTION_INTERACTION_POLICY.md">Markdown authority</a> · <a href="../ADR/0014-latch-selection-mode-and-support-cross-block-text.md">ADR 0014</a> · <a href="ARCHITECTURE.md">Architecture</a></span>
   </div>
 </footer>
@@ -643,7 +643,7 @@ const matrix = [
   { id:"enter", group:"editing", action:"Enter / Shift-Enter", evidence:["target","observed","user","conflict"], cells:{I:"No-op",C:"Split / soft break",T1:"Delete then split/break",TN:"Delete then split/break",B:"Enter → first end; Shift-Enter no-op"}, detail:"TN은 범위를 한 번에 collapse한 뒤 survivor에서 기존 split 또는 soft-break 명령을 수행한다. B Enter는 첫 선택 블록 끝 caret으로 가고 Shift-Enter는 B를 유지한다.", notes:["전체 결과는 한 transaction이다.","earlier endpoint의 kind와 identity가 생존한다."] },
   { id:"format", group:"editing", action:"Inline style", evidence:["target","observed","user","conflict"], cells:{I:"No-op",C:"Toggle stored mark",T1:"Style fragment",TN:"Style every fragment",B:"Style all selected block text"}, detail:"TN은 각 block-local fragment, B는 선택된 모든 text-capable block의 전체 text에 같은 command를 적용한다.", notes:["atomic block은 건너뛴다.","모두 on이면 remove, 하나라도 off면 apply한다.","B는 스타일 적용 뒤에도 B로 남는다."] },
   { id:"indent", group:"editing", action:"Indent / Outdent", evidence:["target","user","conflict"], cells:{I:"No-op",C:"Existing local text rule",T1:"Touched local lines",TN:"All logically touched blocks",B:"Indent/outdent roots"}, detail:"TN이 건넌 text, empty, atomic block을 모두 구조 대상으로 보고 한 transaction으로 indent/outdent한다.", notes:["보이지 않는 collapsed subtree도 선택된 부모의 논리 단위에 포함한다.","presentation은 text rect가 없으면 block tint를 사용한다."] },
-  { id:"copy", group:"clipboard", action:"Copy", evidence:["target","observed","user","conflict"], cells:{I:"No-op",C:"No-op",T1:"Text-slice payload",TN:"Open endpoints + full middle",B:"Whole roots / subtrees"}, detail:"TN과 B는 versioned Slopad payload가 다르다. TN은 open-edge text slice, B는 deduplicated roots와 complete subtrees다.", notes:["동시에 ordinary plain text도 기록한다.","HTML/RTF payload는 만들지 않는다.","새er/invalid payload는 plain text로 fail closed한다."] },
+  { id:"copy", group:"clipboard", action:"Copy", evidence:["target","observed","user","conflict"], cells:{I:"No-op",C:"No-op",T1:"Text-slice payload",TN:"Open endpoints + full middle",B:"Whole roots / subtrees"}, detail:"TN과 B는 versioned SlopadEditor payload가 다르다. TN은 open-edge text slice, B는 deduplicated roots와 complete subtrees다.", notes:["동시에 ordinary plain text도 기록한다.","HTML/RTF payload는 만들지 않는다.","새er/invalid payload는 plain text로 fail closed한다."] },
   { id:"structured-paste", group:"clipboard", action:"Structured paste", evidence:["target","observed","user","conflict"], cells:{I:"No-op",C:"Notion-style edge merge",T1:"Replace then edge merge",TN:"Cross replace then edge merge",B:"Replace roots with subtrees"}, detail:"block boundary에서는 whole blocks를 삽입하고 text 중간에서는 첫/끝 wrapper를 목적지 양끝에 흡수한다. 완전한 중간 블록과 atomic block은 구조를 유지한다.", notes:["source mode가 text selection이면 완전히 덮인 endpoint도 text slice다.","붙여넣을 때 모든 BlockID를 새로 발급한다.","상대 hierarchy와 inline marks는 유지한다."] },
   { id:"cut", group:"clipboard", action:"Cut", evidence:["target","observed","user","conflict"], cells:{I:"No-op",C:"No-op",T1:"Copy + delete",TN:"Copy + cross delete",B:"Copy + structural delete"}, detail:"pasteboard의 필수 representation 쓰기가 성공한 뒤에만 canonical delete를 한 transaction으로 수행한다.", notes:["clipboard write 실패 시 document를 지우지 않는다.","삭제 결과는 같은 selection의 Backspace/Delete와 동일하다."] },
   { id:"undo", group:"history", action:"Undo / Redo", evidence:["target","user","conflict"], cells:{I:"Restore exact snapshot",C:"Restore exact snapshot",T1:"Restore exact snapshot",TN:"Restore exact direction + affinity",B:"Restore exact snapshot"}, detail:"document와 selection mode, anchor/focus 방향, offset, affinity를 같은 history snapshot에서 정확히 복구한다.", notes:["normalized range만 같은 상태는 통과로 보지 않는다."] },
@@ -709,9 +709,9 @@ const scenarios = [
     id:"children",
     title:"삭제된 endpoint의 자식 승격",
     short:"D1 · settled tree repair",
-    description:"Notion과 달리 Slopad는 B의 미선택 자식을 B.parent로 승격한다. 생존 A를 암묵적인 새 부모로 만들지 않는다.",
+    description:"Notion과 달리 SlopadEditor는 B의 미선택 자식을 B.parent로 승격한다. 생존 A를 암묵적인 새 부모로 만들지 않는다.",
     before:`<div class="doc-block">A · prefix</div><div class="doc-block"><span class="text-selected">B · all selected</span></div><div class="doc-block" style="margin-left:28px">↳ B.child.1</div><div class="doc-block" style="margin-left:28px">↳ B.child.2</div>`,
-    after:`<div class="doc-block">A · prefix</div><div class="doc-block">B.child.1 · promoted</div><div class="doc-block">B.child.2 · promoted</div><p class="logical">Slopad: parent = removed B.parent · one transaction</p>`,
+    after:`<div class="doc-block">A · prefix</div><div class="doc-block">B.child.1 · promoted</div><div class="doc-block">B.child.2 · promoted</div><p class="logical">SlopadEditor: parent = removed B.parent · one transaction</p>`,
     evidence:["observed","user","target"]
   }
 ];
@@ -721,7 +721,7 @@ const decisions = [
   {id:"D2", title:"전체 구조 삭제", body:"첫 선택 블록을 empty paragraph로 유지하고 caret 0을 둔다.", choices:[["prior","확정 · zero-body document를 만들지 않음"]]},
   {id:"D3", title:"B의 입력과 inline style", body:"printable/IME는 무시, paste는 roots 교체, inline style은 선택된 text-capable block 전체에 적용한다.", choices:[["prior","확정 · style 뒤에도 B 유지"]]},
   {id:"D4", title:"TN/B Enter · Shift-Enter", body:"TN은 delete-then-existing command. B Enter는 first block end caret, B Shift-Enter는 no-op이다.", choices:[["prior","확정 · one transaction"]]},
-  {id:"D5", title:"Clipboard", body:"Slopad structured payload + plain text. Notion식 open-edge merge를 쓰며 외부 plain text는 Markdown으로 자동 해석하지 않는다.", choices:[["prior","확정 · HTML/RTF 범위 제외"]]},
+  {id:"D5", title:"Clipboard", body:"SlopadEditor structured payload + plain text. Notion식 open-edge merge를 쓰며 외부 plain text는 Markdown으로 자동 해석하지 않는다.", choices:[["prior","확정 · HTML/RTF 범위 제외"]]},
   {id:"D6", title:"Undo/Redo selection", body:"selection mode와 anchor/focus 방향, offset, affinity를 정확히 복원한다.", choices:[["prior","확정 · normalized equivalence만으로 부족"]]},
   {id:"D7", title:"Text와 structure 경계", body:"B Shift-Right만 first-char T1으로 전환하고 TN indent/outdent는 모든 touched block에 적용한다. atomic/collapsed content도 논리 범위다.", choices:[["prior","확정 · text geometry가 없으면 block tint"]]}
 ];

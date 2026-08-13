@@ -1,5 +1,5 @@
 name = "reviewer"
-description = "Fresh read-only reviewer for a stable Slopad diff, focused on real correctness and architecture risks."
+description = "Fresh read-only reviewer for a stable SlopadEditor diff, focused on real correctness and architecture risks."
 model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"

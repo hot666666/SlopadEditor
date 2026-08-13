@@ -41,10 +41,10 @@ In short:
 
 ```sh
 # Default RBTree storage
-swift run -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION SlopadSessionBenchmark ...
+swift run -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION SlopadEditorSessionBenchmark ...
 
 # Experimental array storage
-swift run -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION -Xswiftc -DSLOPAD_HEIGHT_INDEX_ARRAY SlopadSessionBenchmark ...
+swift run -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION -Xswiftc -DSLOPAD_HEIGHT_INDEX_ARRAY SlopadEditorSessionBenchmark ...
 ```
 
 ## Baseline Files
@@ -64,7 +64,7 @@ Use `height-index-storage-extended-compare-20260706.csv` for side-by-side decisi
 
 ```sh
 swift run -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION \
-  SlopadSessionBenchmark \
+  SlopadEditorSessionBenchmark \
   --block-counts 100,1000,10000 \
   --iterations 3 \
   --output /tmp/slopad-session-benchmark-rbtree-storage-extended-100-1000-10000-20260706.csv
@@ -74,7 +74,7 @@ swift run -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION \
 swift run -c release \
   -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION \
   -Xswiftc -DSLOPAD_HEIGHT_INDEX_ARRAY \
-  SlopadSessionBenchmark \
+  SlopadEditorSessionBenchmark \
   --block-counts 100,1000,10000 \
   --iterations 3 \
   --output /tmp/slopad-session-benchmark-array-storage-extended-100-1000-10000-20260706.csv
@@ -180,7 +180,7 @@ surface and prove which workload each storage mode owns.
 - array-like storage for full rebuild/read-mostly snapshots
 - RBTree-like storage for structural-mutation-heavy snapshots
 
-Do not expose storage selection through `EditorSession`, `SlopadCoreModel`, or
+Do not expose storage selection through `EditorSession`, `SlopadEditorCoreModel`, or
 host-facing API.
 
 ## AppKit UI Follow-Up Measurement
@@ -200,11 +200,11 @@ default is still based on the session benchmark and structural mutation results 
 ```sh
 swift test --quiet
 swift test -Xswiftc -DSLOPAD_HEIGHT_INDEX_ARRAY --quiet
-swift build --product SlopadDebugApp --quiet
-swift build --product SlopadUIBenchmarkApp --quiet
-swift build --target SlopadHeightBenchmark --quiet
-swift build -c release -Xswiftc -DSLOPAD_HEIGHT_INDEX_ARRAY --target SlopadHeightBenchmark --quiet
-swift build -c release -Xswiftc -DSLOPAD_TREE_METRICS --target SlopadHeightBenchmark --quiet
-swift build -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION --target SlopadSessionBenchmark --quiet
+swift build --product SlopadEditorDebugApp --quiet
+swift build --product SlopadEditorUIBenchmarkApp --quiet
+swift build --target SlopadEditorHeightBenchmark --quiet
+swift build -c release -Xswiftc -DSLOPAD_HEIGHT_INDEX_ARRAY --target SlopadEditorHeightBenchmark --quiet
+swift build -c release -Xswiftc -DSLOPAD_TREE_METRICS --target SlopadEditorHeightBenchmark --quiet
+swift build -c release -Xswiftc -DSLOPAD_BENCHMARK_INSTRUMENTATION --target SlopadEditorSessionBenchmark --quiet
 git diff --check
 ```
