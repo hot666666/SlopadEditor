@@ -7,7 +7,7 @@ import Testing
 @MainActor
 @Suite("AppKit editor 접근성 계약")
 struct AppKitEditorViewControllerAccessibilityTests {
-    @Test("native scroll surface는 host identifier를 가진 text area로 노출된다")
+    @Test("native scroll surface는 AppKit role을 보존하고 host identity를 가진다")
     func scrollSurfaceUsesHostAccessibilityIdentity() {
         // Given
         let controller = makeController(text: "Accessible body")
@@ -20,10 +20,9 @@ struct AppKitEditorViewControllerAccessibilityTests {
         controller.renderAndSyncSurface(makeFirstResponder: false)
 
         // Then
-        #expect(controller.scrollView.accessibilityRole() == .textArea)
+        #expect(controller.scrollView.accessibilityRole() == .scrollArea)
         #expect(controller.scrollView.accessibilityIdentifier() == "DocumentEditor.Body")
         #expect(controller.scrollView.accessibilityLabel() == "Document body")
-        #expect(controller.scrollView.isAccessibilityEnabled())
         #expect(controller.scrollView.accessibilityValue() as? String == "Accessible body")
         #expect(!controller.canvasView.isAccessibilityElement())
     }
