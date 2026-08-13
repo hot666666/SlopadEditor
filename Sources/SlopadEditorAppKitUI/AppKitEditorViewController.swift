@@ -90,66 +90,6 @@ public final class AppKitEditorViewController: NSViewController {
         }
     }
 
-    private struct SnapshotVisibleBlockKey: Equatable {
-        let markerKind: BlockMarkerKind
-        let frame: EditorRect
-        let textFrame: EditorRect
-        let measureRequest: BlockMeasureRequest
-    }
-
-    private struct SnapshotActiveTextInputKey: Equatable {
-        let selectedRangeLowerBound: Int
-        let selectedRangeUpperBound: Int
-        let focusOffset: Int
-        let focusAffinity: TextAffinity
-        let navigationContext: TextNavigationContext?
-        let measureRequest: BlockMeasureRequest
-    }
-
-    private struct SnapshotPublicationKey: Equatable {
-        let viewport: EditorViewport
-        let revision: EditorSnapshotRevision
-        let totalHeight: Double
-        let visibleBlocks: [SnapshotVisibleBlockKey]
-        let selection: EditorSelection
-        let composition: TextComposition?
-        let canUndo: Bool
-        let canRedo: Bool
-        let activeTextInput: SnapshotActiveTextInputKey?
-        let dropIndicator: EditorRect?
-        let blockSelectionRectangle: EditorRect?
-
-        init(viewport: EditorViewport, snapshot: EditorSessionSnapshot) {
-            self.viewport = viewport
-            self.revision = snapshot.revision
-            self.totalHeight = snapshot.totalHeight
-            self.visibleBlocks = snapshot.visibleBlocks.map { block in
-                SnapshotVisibleBlockKey(
-                    markerKind: block.markerKind,
-                    frame: block.frame,
-                    textFrame: block.textRender.frame,
-                    measureRequest: block.textRender.measureRequest
-                )
-            }
-            self.selection = snapshot.selection
-            self.composition = snapshot.composition
-            self.canUndo = snapshot.history.canUndo
-            self.canRedo = snapshot.history.canRedo
-            self.activeTextInput = snapshot.activeTextInput.map { activeTextInput in
-                SnapshotActiveTextInputKey(
-                    selectedRangeLowerBound: activeTextInput.selectedRange.lowerBound,
-                    selectedRangeUpperBound: activeTextInput.selectedRange.upperBound,
-                    focusOffset: activeTextInput.focusOffset,
-                    focusAffinity: activeTextInput.focusAffinity,
-                    navigationContext: activeTextInput.navigationContext,
-                    measureRequest: activeTextInput.renderDescriptor.measureRequest
-                )
-            }
-            self.dropIndicator = snapshot.blockDragState?.dropIndicator
-            self.blockSelectionRectangle = snapshot.blockSelectionRectangleState?.rect
-        }
-    }
-
     private struct TodoCheckboxGesture {
         let blockID: BlockID
         let hitRect: CGRect
@@ -286,7 +226,7 @@ public final class AppKitEditorViewController: NSViewController {
     private var isAdjustingScrollPosition = false
     private var isSynchronizingSurface = false
     private var pendingSurfaceSyncRequest: SurfaceSyncRequest?
-    private var activeSnapshotPublicationKey: SnapshotPublicationKey?
+    private let snapshotPublisher = AppKitSnapshotPublisher()
     private var todoCheckboxGesture: TodoCheckboxGesture?
     private var isPointerSelectionGestureActive = false
     private let focusOnAppear: Bool
@@ -920,13 +860,10 @@ public final class AppKitEditorViewController: NSViewController {
     private func isActiveSnapshotPublication(
         _ renderedSurface: (viewport: EditorViewport, snapshot: EditorSessionSnapshot)
     ) -> Bool {
-        guard let activeSnapshotPublicationKey else { return false }
-        let isSameSnapshot =
-            activeSnapshotPublicationKey
-            == SnapshotPublicationKey(
-                viewport: renderedSurface.viewport,
-                snapshot: renderedSurface.snapshot
-            )
+        let isSameSnapshot = snapshotPublisher.isActivePublication(
+            viewport: renderedSurface.viewport,
+            snapshot: renderedSurface.snapshot
+        )
         return isSameSnapshot && nativeSurfaceMatches(renderedSurface.snapshot)
     }
 
@@ -957,13 +894,7 @@ public final class AppKitEditorViewController: NSViewController {
         viewport: EditorViewport
     ) {
         guard let onSnapshotChanged else { return }
-        let publicationKey = SnapshotPublicationKey(viewport: viewport, snapshot: snapshot)
-        guard activeSnapshotPublicationKey != publicationKey else { return }
-
-        let previousPublicationKey = activeSnapshotPublicationKey
-        activeSnapshotPublicationKey = publicationKey
-        defer { activeSnapshotPublicationKey = previousPublicationKey }
-        onSnapshotChanged(snapshot)
+        snapshotPublisher.publish(snapshot, viewport: viewport, deliver: onSnapshotChanged)
     }
 
     private func renderAndResizeCanvas() -> (

@@ -303,8 +303,8 @@ duplicated agent instruction file.
 | 4 | Unify GitHub URL spelling | docs | 13 sites | **done** |
 | 6 | Demote unconsumed `EditorCommandState` members | access | 4 members | **done** |
 | 5 | Split `AppKitEditorViewController` | complexity | medium | **rejected** — see above |
-| 7 | Extract collaborator types from the view controller | complexity | large | unowned, needs a packet |
-| 8 | Audit remaining `package` demotion candidates | access | ~30 candidates | unowned |
+| 7 | Extract collaborator types from the view controller | complexity | large | **started** — snapshot publication extracted |
+| 8 | Audit remaining `package` demotion candidates | access | ~30 candidates | **done** — 22 rejected by the compiler, 10 demoted, 2 deleted |
 
 Item 0 was not in the original scope; it was found by running the gates. Item 5 was
 attempted, measured, and reverted in favour of item 7.
