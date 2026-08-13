@@ -29,6 +29,8 @@ public struct SlopadEditorView: NSViewControllerRepresentable {
     private var focusBinding: FocusState<Bool>.Binding?
     private var committedChangeAction: (() -> Void)?
     private var unhandledActionHandler: ((AppKitEditorAction) -> Bool)?
+    private var editorAccessibilityIdentifier: String?
+    private var editorAccessibilityLabel: String?
 
     /// - Parameters:
     ///   - model: The observable projection to drive. Hold it in `@State`.
@@ -78,6 +80,17 @@ public struct SlopadEditorView: NSViewControllerRepresentable {
         return copy
     }
 
+    /// Gives the embedded native editor surface a host-owned accessibility identity.
+    public func editorAccessibility(
+        identifier: String,
+        label: String
+    ) -> SlopadEditorView {
+        var copy = self
+        copy.editorAccessibilityIdentifier = identifier
+        copy.editorAccessibilityLabel = label
+        return copy
+    }
+
     // MARK: - NSViewControllerRepresentable
 
     public func makeCoordinator() -> Coordinator {
@@ -91,6 +104,10 @@ public struct SlopadEditorView: NSViewControllerRepresentable {
         )
         context.coordinator.appliedDocumentID = document?.id
         context.coordinator.bind(controller: controller, editor: self)
+        controller.configureEditorAccessibility(
+            identifier: editorAccessibilityIdentifier,
+            label: editorAccessibilityLabel
+        )
         model.attach(controller)
         return controller
     }
@@ -102,6 +119,10 @@ public struct SlopadEditorView: NSViewControllerRepresentable {
         // Refresh the captured closures so callbacks always run the newest host state,
         // without re-registering them on the controller.
         context.coordinator.editor = self
+        controller.configureEditorAccessibility(
+            identifier: editorAccessibilityIdentifier,
+            label: editorAccessibilityLabel
+        )
 
         if style != controller.editorStyle {
             controller.updateEditorStyle(style)

@@ -32,6 +32,7 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
 
     private enum Accessibility {
         static let canvasIdentifier = "AppKitEditorCanvas"
+        static let canvasLabel = "Editor"
     }
 
     private enum UX {
@@ -391,9 +392,24 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
     private func setupView() {
         wantsLayer = true
         layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        setAccessibilityElement(true)
+        setAccessibilityRole(.textArea)
         setAccessibilityIdentifier(Accessibility.canvasIdentifier)
+        setAccessibilityLabel(Accessibility.canvasLabel)
+        setAccessibilityValue("")
         textInsertionIndicator.displayMode = .hidden
         addSubview(textInsertionIndicator)
+    }
+
+    func configureAccessibility(identifier: String?, label: String?) {
+        setAccessibilityIdentifier(identifier ?? Accessibility.canvasIdentifier)
+        setAccessibilityLabel(label ?? Accessibility.canvasLabel)
+    }
+
+    func updateAccessibilityValue(_ value: String) {
+        guard accessibilityValue() as? String != value else { return }
+        setAccessibilityValue(value)
+        NSAccessibility.post(element: self, notification: .valueChanged)
     }
 
     func updateInsertionPoint(_ caretRect: NSRect?) {
