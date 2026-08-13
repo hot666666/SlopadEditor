@@ -69,6 +69,40 @@ struct AppKitEditorViewControllerAccessibilityTests {
         )
     }
 
+    @Test("text가 같은 block kind 변경은 titleChanged만 게시한다")
+    func blockKindOnlyChangePostsTitleChanged() {
+        // Given
+        let scrollView = NSScrollView()
+        var notifications: [NSAccessibility.Notification] = []
+        let projection = AppKitEditorAccessibilityProjection { _, notification in
+            notifications.append(notification)
+        }
+        projection.synchronize(
+            blocks: [
+                EditorBlockInput(id: "block", content: BlockContent(text: "Same text")),
+            ],
+            on: scrollView
+        )
+        notifications.removeAll()
+
+        // When
+        projection.synchronize(
+            blocks: [
+                EditorBlockInput(
+                    id: "block",
+                    kind: .heading(level: .h1),
+                    content: BlockContent(text: "Same text")
+                ),
+            ],
+            on: scrollView
+        )
+
+        // Then
+        #expect(notifications == [.titleChanged])
+        #expect(scrollView.accessibilityValue() as? String == "Same text")
+        #expect(scrollView.accessibilityTitle() == "Heading 1")
+    }
+
     @Test("native accessibility parent와 children graph는 순환하지 않는다")
     func accessibilityGraphIsAcyclic() {
         // Given

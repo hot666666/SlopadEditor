@@ -234,6 +234,7 @@ public final class AppKitEditorViewController: NSViewController {
     private var isSynchronizingSurface = false
     private var pendingSurfaceSyncRequest: SurfaceSyncRequest?
     private let snapshotPublisher = AppKitSnapshotPublisher()
+    private let accessibilityProjection = AppKitEditorAccessibilityProjection()
     private var todoCheckboxGesture: TodoCheckboxGesture?
     private var isPointerSelectionGestureActive = false
     private let focusOnAppear: Bool
@@ -872,58 +873,14 @@ public final class AppKitEditorViewController: NSViewController {
         }
 
         synchronizeInsertionPoint(with: renderedSurface.snapshot)
-        synchronizeEditorAccessibilityProjection()
+        accessibilityProjection.synchronize(
+            blocks: session.documentSnapshot.blocks,
+            on: scrollView
+        )
         invalidateVisibleCanvas()
         synchronizeSlashCommandOverlay(with: renderedSurface.snapshot)
         synchronizeFloatingFormattingToolbar(with: renderedSurface.snapshot)
         return renderedSurface
-    }
-
-    private func synchronizeEditorAccessibilityProjection() {
-        let blocks = session.documentSnapshot.blocks
-        let value = blocks
-            .map(\.content.text)
-            .joined(separator: "\n")
-        if scrollView.accessibilityValue() as? String != value {
-            scrollView.setAccessibilityValue(value)
-            NSAccessibility.post(element: scrollView, notification: .valueChanged)
-        }
-
-        let blockStructure = blocks
-            .map { accessibilityName(for: $0.kind) }
-            .joined(separator: ", ")
-        if scrollView.accessibilityTitle() != blockStructure {
-            scrollView.setAccessibilityTitle(blockStructure)
-        }
-    }
-
-    private func accessibilityName(for kind: BlockKind) -> String {
-        switch kind {
-        case .paragraph:
-            "Paragraph"
-        case .heading(let level):
-            "Heading \(level.rawValue)"
-        case .unorderedListItem:
-            "Unordered List Item"
-        case .orderedListItem(let restartNumber):
-            if let restartNumber {
-                "Ordered List Item \(restartNumber)"
-            } else {
-                "Ordered List Item"
-            }
-        case .quote:
-            "Quote"
-        case .codeBlock(let language):
-            if let language, !language.isEmpty {
-                "Code Block \(language)"
-            } else {
-                "Code Block"
-            }
-        case .divider:
-            "Divider"
-        case .todo(let isChecked):
-            isChecked ? "Todo Checked" : "Todo Unchecked"
-        }
     }
 
     package func handlePreparedLayoutMemoryPressure(
