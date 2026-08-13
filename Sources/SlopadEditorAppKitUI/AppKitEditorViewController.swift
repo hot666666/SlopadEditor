@@ -389,6 +389,14 @@ public final class AppKitEditorViewController: NSViewController {
         renderAndSyncSurface(makeFirstResponder: true, scrollSelectionIntoView: true)
     }
 
+    /// Configures the native editor input surface for a host's accessibility namespace.
+    ///
+    /// Passing `nil` restores the editor defaults. The canvas remains the single native
+    /// text-input surface; this does not add a proxy control or a second editor state owner.
+    public func configureEditorAccessibility(identifier: String?, label: String?) {
+        editorCanvasView.configureAccessibility(identifier: identifier, label: label)
+    }
+
     /// Replaces the adapter-owned TextKit layout and drawing pipeline from one style.
     ///
     /// The operation synchronizes the Session snapshot and canvas before returning while
@@ -845,10 +853,18 @@ public final class AppKitEditorViewController: NSViewController {
         }
 
         synchronizeInsertionPoint(with: renderedSurface.snapshot)
+        synchronizeEditorAccessibilityValue()
         invalidateVisibleCanvas()
         synchronizeSlashCommandOverlay(with: renderedSurface.snapshot)
         synchronizeFloatingFormattingToolbar(with: renderedSurface.snapshot)
         return renderedSurface
+    }
+
+    private func synchronizeEditorAccessibilityValue() {
+        let value = session.documentSnapshot.blocks
+            .map(\.content.text)
+            .joined(separator: "\n")
+        editorCanvasView.updateAccessibilityValue(value)
     }
 
     package func handlePreparedLayoutMemoryPressure(
