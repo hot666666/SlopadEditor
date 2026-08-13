@@ -7,6 +7,11 @@ import SlopadEditorEngine
 
 @MainActor
 public final class AppKitEditorViewController: NSViewController {
+    private enum Accessibility {
+        static let editorIdentifier = "AppKitEditorCanvas"
+        static let editorLabel = "Editor"
+    }
+
     private enum UX {
         static let initialViewSize = NSSize(width: 920, height: 680)
         static let minimumViewportDimension: CGFloat = 1
@@ -158,6 +163,8 @@ public final class AppKitEditorViewController: NSViewController {
     // MARK: - Private State
 
     private var textSystem: AppKitTextSystem
+    private var editorAccessibilityIdentifier = Accessibility.editorIdentifier
+    private var editorAccessibilityLabel = Accessibility.editorLabel
     private var textLayouter: TextKitBlockTextLayouter {
         textSystem.textLayouter
     }
@@ -391,10 +398,12 @@ public final class AppKitEditorViewController: NSViewController {
 
     /// Configures the native editor input surface for a host's accessibility namespace.
     ///
-    /// Passing `nil` restores the editor defaults. The canvas remains the single native
-    /// text-input surface; this does not add a proxy control or a second editor state owner.
+    /// Passing `nil` restores the editor defaults. The scroll surface continues to route
+    /// input to the single native canvas; this does not add a proxy control or state owner.
     public func configureEditorAccessibility(identifier: String?, label: String?) {
-        editorCanvasView.configureAccessibility(identifier: identifier, label: label)
+        editorAccessibilityIdentifier = identifier ?? Accessibility.editorIdentifier
+        editorAccessibilityLabel = label ?? Accessibility.editorLabel
+        applyEditorAccessibilityConfiguration()
     }
 
     /// Replaces the adapter-owned TextKit layout and drawing pipeline from one style.
@@ -665,6 +674,7 @@ public final class AppKitEditorViewController: NSViewController {
         scrollView.drawsBackground = false
         scrollView.contentView.postsBoundsChangedNotifications = true
         scrollView.documentView = editorCanvasView
+        applyEditorAccessibilityConfiguration()
         view.addSubview(scrollView)
         view.addSubview(slashCommandOverlay)
         view.addSubview(floatingFormattingToolbar)
@@ -681,6 +691,13 @@ public final class AppKitEditorViewController: NSViewController {
             scrollView.topAnchor.constraint(equalTo: view.topAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+    }
+
+    private func applyEditorAccessibilityConfiguration() {
+        scrollView.setAccessibilityRole(.textArea)
+        scrollView.setAccessibilityIdentifier(editorAccessibilityIdentifier)
+        scrollView.setAccessibilityLabel(editorAccessibilityLabel)
+        scrollView.setAccessibilityEnabled(true)
     }
 
     @objc private func scrollViewContentBoundsDidChange(_ notification: Notification) {
@@ -864,7 +881,9 @@ public final class AppKitEditorViewController: NSViewController {
         let value = session.documentSnapshot.blocks
             .map(\.content.text)
             .joined(separator: "\n")
-        editorCanvasView.updateAccessibilityValue(value)
+        guard scrollView.accessibilityValue() as? String != value else { return }
+        scrollView.setAccessibilityValue(value)
+        NSAccessibility.post(element: scrollView, notification: .valueChanged)
     }
 
     package func handlePreparedLayoutMemoryPressure(
