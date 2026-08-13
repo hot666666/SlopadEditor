@@ -21,8 +21,6 @@ Two different questions have two different authorities:
 
 When source and an intent document disagree about *intent*, that is a planning defect, not a signal to ignore the document. Correct the document first (or open an issue), then change code. Do not silently follow either side.
 
-`docs/Semantic_Editor_Architecture_Handoff.md` is a background record, not a work order.
-
 ## Architecture Rules
 
 SlopadEditor is a headless native block editor engine. The canonical document is a block tree; Markdown/HTML are input/output formats, not the model.

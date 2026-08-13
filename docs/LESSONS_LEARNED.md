@@ -249,6 +249,80 @@ Next time:
   with deterministic bounded eviction.
 - Require "same cache key" to imply "same complete layout input" by construction.
 
+### Renaming an Identity While Its Checkers Keep the Old One
+
+Symptom: a gate fails against correctly renamed files, or keeps passing while silently
+probing a symbol that no longer exists.
+
+Cause: the rename covered the manifest, the sources, and the README, but not the scripts
+that assert on them. A checker is a file like any other and holds a stale name just as
+easily as the thing it checks. This happened twice — once when a package rename left the
+old name inside `verify-host-surface.sh`'s own assertion, and again when a module rename
+invalidated a path inside the naming guard's allowlist.
+
+Next time:
+
+- Rename a module and edit every gate script naming it in the same commit, never two.
+- After any stage that moves a directory, re-read the guard's own allowlist paths.
+- Grep the old identity across `scripts/`, `Fixtures/*/Package.swift`, and `justfile`, then
+  run every gate in `docs/TESTING.md` — not only `swift test`.
+
+### Judging Structure From a Text Search Instead of the Compiler
+
+Symptom: a cleanup list built from `rg` turns out to be mostly wrong once applied.
+
+Cause: a word-boundary search cannot see how Swift actually resolves a name. An enum
+consumed only through leading-dot syntax never appears by name at the call site; a type
+that is merely the type of a `package` member cannot be demoted at all. Of 32 access-level
+candidates found this way, the compiler rejected 22. The same blindness bites renames: a
+bounded search for a module name finds neither a type that merely starts with it, nor an
+occurrence preceded by a literal `\n` inside a shell ANSI-C string, nor one followed by a
+Korean particle — all three survived a module rename until a gate rejected them.
+
+Next time:
+
+- Treat a search result as a candidate list, never as a finding.
+- Apply the whole candidate set, build, and let the compiler return the real one.
+- When searching for an identifier, search for the prefix as well as the bounded token.
+
+### Splitting a File Instead of Moving a Responsibility
+
+Symptom: a large type is "cleaned up" into several files, and nothing about it is easier to
+change or test afterwards.
+
+Cause: `private` is file-scoped in Swift, so moving an extension out of its file forces
+every member it touches to widen. Extracting six extensions from a 1,821-line view
+controller reduced it to 1,117 lines at the cost of promoting 31 members from `private` to
+`internal` — the type kept every responsibility it had while its internal surface roughly
+doubled. File length moved; coupling did not.
+
+Next time:
+
+- Ask what state leaves the type, not how many lines leave the file.
+- Prefer extracting a collaborator that owns its own state, following the pattern the
+  adapter already uses for its autoscroll and input controllers.
+- Treat "the extracted rule can now be tested without mounting a window" as the evidence
+  that the split was real.
+
+### Citing a Document as an Authority When It Mixes Contract With Proposal
+
+Symptom: source and an intent document disagree, and the document names types that were
+never built.
+
+Cause: one file grew to hold a normative contract, a pre-implementation design proposal,
+and a completed gate checklist without distinguishing them, while `docs/ARCHITECTURE.md`
+pointed at it as the authority on implemented behavior. Its proposal section named
+`EditorClipboardPlan`, `EditorActionID`, and `InlineMarkKind`, none of which shipped, and a
+verification gate required a test target that does not exist.
+
+Next time:
+
+- A document cited as an authority must state which of its sections is one.
+- Reconcile design vocabulary with the shipped names when the work lands, or mark the
+  section as superseded and point at what shipped.
+- When a type name in a document disagrees with source, source wins and the document is
+  the defect.
+
 ## Pre-Work Checklist
 
 Do not edit yet if you cannot answer these questions before starting cleanup/refactor

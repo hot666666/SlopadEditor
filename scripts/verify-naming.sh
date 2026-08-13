@@ -34,9 +34,8 @@ for arg in "$@"; do
     esac
 done
 
-# Which migration stage owns a path. The stage order is defined in
-# docs/RENAME_MIGRATION_PLAN.md; this mapping is what makes progress measurable per stage
-# instead of as one undifferentiated pile.
+# Which part of the tree an occurrence is in. Kept so a regression report says where the
+# old name came back, not only that it did.
 category_of() {
     case "$1" in
         Sources/*)            echo "module source" ;;
@@ -63,12 +62,7 @@ is_allowed() {
         ADR/0015-*.md) return 0 ;;
         # Defines the distinction; necessarily names both sides.
         ADR/0016-*.md) return 0 ;;
-        docs/RENAME_MIGRATION_PLAN.md) return 0 ;;
         scripts/verify-naming.sh) return 0 ;;
-        # Point-in-time record of the state before the migration.
-        docs/ARCHITECTURE_AUDIT_*.md) return 0 ;;
-        # Historical background record, explicitly not a work order (AGENTS.md).
-        docs/Semantic_Editor_Architecture_Handoff.md) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -114,7 +108,7 @@ printf '%s\n' "${offenders[@]}" \
     | { ((show_all == 1)) && cat || head -12; } \
     | awk -F'|' '{ printf "  %6s  %s\n", $1, $2 }'
 echo
-echo "See ADR/0016 for the target scheme and docs/RENAME_MIGRATION_PLAN.md for the stage order."
+echo "See ADR/0016 for the naming scheme."
 
 # A stage that has been sealed must not regress. Each sealed stage adds its own check here
 # as it completes, so finished work is protected while unfinished work stays reportable.

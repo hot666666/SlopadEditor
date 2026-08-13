@@ -2,13 +2,12 @@
 
 ## Status
 
-Accepted. Supersedes the naming assumed by every document written before it.
+Accepted and fully applied. Supersedes the naming assumed by every document written
+before it.
 
 Decided: 2026-08-13
 
-Migration is staged and incomplete while this record is young. The executable plan is
-[Rename Migration Plan](../docs/RENAME_MIGRATION_PLAN.md); that document tracks progress,
-this one fixes the target.
+`scripts/verify-naming.sh` enforces this record on every pull request.
 
 ## Context
 
@@ -104,9 +103,9 @@ than in one pass, so no document is left describing a module that no longer exis
 `SlopadEditorCoreModel` is imported by 239 files. That rename is large but mechanical, and
 the compiler proves it: a missed import does not build.
 
-The plan trades one large risky change for a longer series of small verified ones. Each
-stage is independently revertable, and the working tree is buildable and green between
-stages. The cost is a longer migration and a temporary period in which the tree contains
-both naming conventions — which is why the completeness guard in
-[the migration plan](../docs/RENAME_MIGRATION_PLAN.md) reports remaining work rather than
-allowing "looks done" to be judged by eye.
+The migration ran as a series of small verified changes rather than one large one: each
+module moved in its own commit, with the tree buildable and green between them. Traps that
+a word-boundary search cannot see — module names inside shell escape sequences, types that
+merely start with a module name, Korean particles attached to the name — were found by the
+gates rather than by review, and are recorded in
+[Lessons Learned](../docs/LESSONS_LEARNED.md).
