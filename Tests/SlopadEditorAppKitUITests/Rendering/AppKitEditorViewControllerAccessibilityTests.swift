@@ -25,6 +25,7 @@ struct AppKitEditorViewControllerAccessibilityTests {
         #expect(controller.scrollView.accessibilityLabel() == "Document body")
         #expect(controller.scrollView.isAccessibilityEnabled())
         #expect(controller.scrollView.accessibilityValue() as? String == "Accessible body")
+        #expect(!controller.canvasView.isAccessibilityElement())
     }
 
     @Test("canonical edit 뒤 accessibility value가 최신 plain text로 갱신된다")
