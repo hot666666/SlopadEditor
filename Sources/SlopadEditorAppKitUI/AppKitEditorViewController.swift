@@ -694,10 +694,8 @@ public final class AppKitEditorViewController: NSViewController {
     }
 
     private func applyEditorAccessibilityConfiguration() {
-        scrollView.setAccessibilityRole(.textArea)
         scrollView.setAccessibilityIdentifier(editorAccessibilityIdentifier)
         scrollView.setAccessibilityLabel(editorAccessibilityLabel)
-        scrollView.setAccessibilityEnabled(true)
     }
 
     @objc private func scrollViewContentBoundsDidChange(_ notification: Notification) {
