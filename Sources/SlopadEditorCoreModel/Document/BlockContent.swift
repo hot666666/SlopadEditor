@@ -198,7 +198,7 @@ public struct BlockContent: Hashable, Codable, Sendable {
 
     package var revision: Int
 
-    package var isCanonical: Bool {
+    var isCanonical: Bool {
         marks == BlockContent.normalizedMarks(marks, textLength: text.count)
     }
 

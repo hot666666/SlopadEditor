@@ -4,7 +4,7 @@ import SlopadEditorCoreModel
 
 package struct EditorChange {
     package let documentChanged: Bool
-    package let canonicalStructureChanged: Bool
+    let canonicalStructureChanged: Bool
     package let changedBlockIDs: Set<BlockID>
     package let operations: [EditorOperation]
 

@@ -1432,10 +1432,6 @@ extension AppKitEditorViewController {
         isFloatingFormattingToolbarPresented ? floatingFormattingToolbar.frame : nil
     }
 
-    package var floatingFormattingToolbarPlacement: AppKitFloatingFormattingToolbar.Placement? {
-        isFloatingFormattingToolbarPresented ? floatingFormattingToolbar.placement : nil
-    }
-
     package func floatingFormattingToolbarItemState(
         _ item: AppKitFloatingFormattingToolbar.Item
     ) -> AppKitFloatingFormattingToolbar.ItemState? {

@@ -1,7 +1,7 @@
 // MARK: - BlockLayoutInstrumentation
 
 #if SLOPAD_BENCHMARK_INSTRUMENTATION
-package enum BlockLayoutMode: String {
+enum BlockLayoutMode: String {
     case reusedSnapshot
     case fullRebuild
     case incremental
@@ -15,7 +15,7 @@ enum BlockLayoutMode: String {
 #endif
 
 #if SLOPAD_BENCHMARK_INSTRUMENTATION
-package struct BlockLayoutBenchmarkMetrics {
+struct BlockLayoutBenchmarkMetrics {
     package var layoutMode: BlockLayoutMode?
     package var visibleOrderEntryCount: Int = 0
     package var inputBlockCount: Int = 0

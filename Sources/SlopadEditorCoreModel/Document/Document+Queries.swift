@@ -148,20 +148,6 @@ extension Document {
         return false
     }
 
-    package func depthFirstBlockIDs(from startID: BlockID, through endID: BlockID)
-        -> [BlockID]?
-    {
-        guard containsBlock(startID), containsBlock(endID) else { return nil }
-        var result: [BlockID] = []
-        var currentID: BlockID? = startID
-        while let blockID = currentID {
-            result.append(blockID)
-            if blockID == endID { return result }
-            currentID = nextDepthFirstBlockID(after: blockID)
-        }
-        return nil
-    }
-
     package func nextDepthFirstBlockID(after blockID: BlockID) -> BlockID? {
         if let firstChild = children(of: blockID).first { return firstChild }
         var currentID = blockID

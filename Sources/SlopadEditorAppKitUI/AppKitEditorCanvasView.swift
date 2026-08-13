@@ -396,7 +396,7 @@ final class AppKitEditorCanvasView: NSView, @preconcurrency NSTextInputClient {
         addSubview(textInsertionIndicator)
     }
 
-    package func updateInsertionPoint(_ caretRect: NSRect?) {
+    func updateInsertionPoint(_ caretRect: NSRect?) {
         hasInsertionPoint = caretRect != nil
         if let caretRect {
             textInsertionIndicator.frame = NSRect(

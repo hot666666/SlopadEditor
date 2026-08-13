@@ -27,7 +27,7 @@ package struct EditorInputRuleRunner {
     /// multi-character insertion or replacement is evaluated once. IME commits reach this
     /// through `replaceText`; the separately classified paste command reaches it through
     /// `insertText` with the pasted string.
-    package var maximumCandidateLookback: Int {
+    var maximumCandidateLookback: Int {
         // Reserve one grapheme for the right flank, so a matcher never inspects more than
         // its declared `scanLimit` even when syntax is completed mid-paragraph.
         max(0, (rules.map(\.scanLimit).max() ?? 0) - 1)
@@ -35,7 +35,7 @@ package struct EditorInputRuleRunner {
 
     /// Whether an input can enter the bounded matcher path. Ordinary characters stop here
     /// before the model captures any String window.
-    package func mayMatch(committedText: String) -> Bool {
+    func mayMatch(committedText: String) -> Bool {
         guard let closing = committedText.last else { return false }
         return triggers.contains(closing)
     }

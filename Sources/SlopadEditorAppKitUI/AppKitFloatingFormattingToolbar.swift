@@ -75,7 +75,7 @@ package final class AppKitFloatingFormattingToolbar: NSVisualEffectView {
         setPresented(true, targetFrame: placementResult.frame)
     }
 
-    package func itemState(_ item: Item) -> ItemState? {
+    func itemState(_ item: Item) -> ItemState? {
         buttons[item].map {
             ItemState(
                 isEnabled: $0.isEnabled,
