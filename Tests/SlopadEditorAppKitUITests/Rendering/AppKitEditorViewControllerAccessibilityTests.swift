@@ -7,8 +7,8 @@ import Testing
 @MainActor
 @Suite("AppKit editor 접근성 계약")
 struct AppKitEditorViewControllerAccessibilityTests {
-    @Test("canvas는 host identifier를 가진 native text area로 노출된다")
-    func canvasUsesHostAccessibilityIdentity() {
+    @Test("native scroll surface는 host identifier를 가진 text area로 노출된다")
+    func scrollSurfaceUsesHostAccessibilityIdentity() {
         // Given
         let controller = makeController(text: "Accessible body")
 
@@ -20,11 +20,11 @@ struct AppKitEditorViewControllerAccessibilityTests {
         controller.renderAndSyncSurface(makeFirstResponder: false)
 
         // Then
-        #expect(controller.canvasView.isAccessibilityElement())
-        #expect(controller.canvasView.accessibilityRole() == .textArea)
-        #expect(controller.canvasView.accessibilityIdentifier() == "DocumentEditor.Body")
-        #expect(controller.canvasView.accessibilityLabel() == "Document body")
-        #expect(controller.canvasView.accessibilityValue() as? String == "Accessible body")
+        #expect(controller.scrollView.accessibilityRole() == .textArea)
+        #expect(controller.scrollView.accessibilityIdentifier() == "DocumentEditor.Body")
+        #expect(controller.scrollView.accessibilityLabel() == "Document body")
+        #expect(controller.scrollView.isAccessibilityEnabled())
+        #expect(controller.scrollView.accessibilityValue() as? String == "Accessible body")
     }
 
     @Test("canonical edit 뒤 accessibility value가 최신 plain text로 갱신된다")
@@ -41,7 +41,7 @@ struct AppKitEditorViewControllerAccessibilityTests {
         )
 
         // Then
-        #expect(controller.canvasView.accessibilityValue() as? String == "Before!")
+        #expect(controller.scrollView.accessibilityValue() as? String == "Before!")
     }
 
     private func makeController(text: String) -> AppKitEditorViewController {
