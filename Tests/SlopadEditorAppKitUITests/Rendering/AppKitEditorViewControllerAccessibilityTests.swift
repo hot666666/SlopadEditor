@@ -25,6 +25,7 @@ struct AppKitEditorViewControllerAccessibilityTests {
         #expect(controller.scrollView.accessibilityLabel() == "Document body")
         #expect(controller.scrollView.isAccessibilityEnabled())
         #expect(controller.scrollView.accessibilityValue() as? String == "Accessible body")
+        #expect(controller.scrollView.accessibilityTitle() == "Paragraph")
         #expect(!controller.canvasView.isAccessibilityElement())
     }
 
@@ -43,6 +44,29 @@ struct AppKitEditorViewControllerAccessibilityTests {
 
         // Then
         #expect(controller.scrollView.accessibilityValue() as? String == "Before!")
+    }
+
+    @Test("native prefix 입력 뒤 accessibility title이 canonical block 구조를 투영한다")
+    func accessibilityTitleTracksPrefixConversions() {
+        // Given
+        let controller = makeController(text: "")
+        controller.renderAndSyncSurface(makeFirstResponder: false)
+
+        // When
+        for character in "# Body" {
+            controller.perform(.insertText(String(character)), makeFirstResponder: false)
+        }
+        controller.perform(.enter, makeFirstResponder: false)
+        for character in "- [ ] Document-local checkbox" {
+            controller.perform(.insertText(String(character)), makeFirstResponder: false)
+        }
+
+        // Then
+        #expect(controller.scrollView.accessibilityTitle() == "Heading 1, Todo Unchecked")
+        #expect(
+            controller.scrollView.accessibilityValue() as? String
+                == "Body\nDocument-local checkbox"
+        )
     }
 
     @Test("native accessibility parent와 children graph는 순환하지 않는다")

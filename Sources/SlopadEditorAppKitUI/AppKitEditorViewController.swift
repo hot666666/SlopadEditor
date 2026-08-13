@@ -400,6 +400,9 @@ public final class AppKitEditorViewController: NSViewController {
     ///
     /// Passing `nil` restores the editor defaults. The scroll surface continues to route
     /// input to the single native canvas; this does not add a proxy control or state owner.
+    /// Its value is the ordered plain text and its title is the ordered canonical block-kind
+    /// summary (for example, `Heading 1, Todo Unchecked`) so native automation can prove
+    /// prefix conversion without inferring structure from serialized Markdown text.
     public func configureEditorAccessibility(identifier: String?, label: String?) {
         editorAccessibilityIdentifier = identifier ?? Accessibility.editorIdentifier
         editorAccessibilityLabel = label ?? Accessibility.editorLabel
@@ -869,20 +872,58 @@ public final class AppKitEditorViewController: NSViewController {
         }
 
         synchronizeInsertionPoint(with: renderedSurface.snapshot)
-        synchronizeEditorAccessibilityValue()
+        synchronizeEditorAccessibilityProjection()
         invalidateVisibleCanvas()
         synchronizeSlashCommandOverlay(with: renderedSurface.snapshot)
         synchronizeFloatingFormattingToolbar(with: renderedSurface.snapshot)
         return renderedSurface
     }
 
-    private func synchronizeEditorAccessibilityValue() {
-        let value = session.documentSnapshot.blocks
+    private func synchronizeEditorAccessibilityProjection() {
+        let blocks = session.documentSnapshot.blocks
+        let value = blocks
             .map(\.content.text)
             .joined(separator: "\n")
-        guard scrollView.accessibilityValue() as? String != value else { return }
-        scrollView.setAccessibilityValue(value)
-        NSAccessibility.post(element: scrollView, notification: .valueChanged)
+        if scrollView.accessibilityValue() as? String != value {
+            scrollView.setAccessibilityValue(value)
+            NSAccessibility.post(element: scrollView, notification: .valueChanged)
+        }
+
+        let blockStructure = blocks
+            .map { accessibilityName(for: $0.kind) }
+            .joined(separator: ", ")
+        if scrollView.accessibilityTitle() != blockStructure {
+            scrollView.setAccessibilityTitle(blockStructure)
+        }
+    }
+
+    private func accessibilityName(for kind: BlockKind) -> String {
+        switch kind {
+        case .paragraph:
+            "Paragraph"
+        case .heading(let level):
+            "Heading \(level.rawValue)"
+        case .unorderedListItem:
+            "Unordered List Item"
+        case .orderedListItem(let restartNumber):
+            if let restartNumber {
+                "Ordered List Item \(restartNumber)"
+            } else {
+                "Ordered List Item"
+            }
+        case .quote:
+            "Quote"
+        case .codeBlock(let language):
+            if let language, !language.isEmpty {
+                "Code Block \(language)"
+            } else {
+                "Code Block"
+            }
+        case .divider:
+            "Divider"
+        case .todo(let isChecked):
+            isChecked ? "Todo Checked" : "Todo Unchecked"
+        }
     }
 
     package func handlePreparedLayoutMemoryPressure(
