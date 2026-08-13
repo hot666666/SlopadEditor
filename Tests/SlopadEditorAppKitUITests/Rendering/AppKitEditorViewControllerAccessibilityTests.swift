@@ -23,6 +23,7 @@ struct AppKitEditorViewControllerAccessibilityTests {
         #expect(controller.scrollView.accessibilityRole() == .scrollArea)
         #expect(controller.scrollView.accessibilityIdentifier() == "DocumentEditor.Body")
         #expect(controller.scrollView.accessibilityLabel() == "Document body")
+        #expect(controller.scrollView.isAccessibilityEnabled())
         #expect(controller.scrollView.accessibilityValue() as? String == "Accessible body")
         #expect(!controller.canvasView.isAccessibilityElement())
     }
@@ -42,6 +43,52 @@ struct AppKitEditorViewControllerAccessibilityTests {
 
         // Then
         #expect(controller.scrollView.accessibilityValue() as? String == "Before!")
+    }
+
+    @Test("native accessibility parent와 children graph는 순환하지 않는다")
+    func accessibilityGraphIsAcyclic() {
+        // Given
+        let controller = makeController(text: "Graph")
+        controller.configureEditorAccessibility(
+            identifier: "DocumentEditor.Body",
+            label: "Document body"
+        )
+        controller.renderAndSyncSurface(makeFirstResponder: false)
+
+        // When / Then
+        var parentIDs = Set<ObjectIdentifier>()
+        var parent: AnyObject? = controller.scrollView
+        while let current = parent as? NSObject {
+            #expect(parentIDs.insert(ObjectIdentifier(current)).inserted)
+            parent = (current as? NSAccessibilityProtocol)?.accessibilityParent() as AnyObject?
+        }
+
+        assertAcyclicChildren(
+            of: controller.scrollView,
+            ancestors: [],
+            remainingDepth: 16
+        )
+    }
+
+    private func assertAcyclicChildren(
+        of element: NSObject,
+        ancestors: Set<ObjectIdentifier>,
+        remainingDepth: Int
+    ) {
+        guard remainingDepth > 0 else { return }
+        let identifier = ObjectIdentifier(element)
+        #expect(!ancestors.contains(identifier))
+        var nextAncestors = ancestors
+        nextAncestors.insert(identifier)
+        let children = (element as? NSAccessibilityProtocol)?.accessibilityChildren() ?? []
+        for child in children {
+            guard let child = child as? NSObject else { continue }
+            assertAcyclicChildren(
+                of: child,
+                ancestors: nextAncestors,
+                remainingDepth: remainingDepth - 1
+            )
+        }
     }
 
     private func makeController(text: String) -> AppKitEditorViewController {
