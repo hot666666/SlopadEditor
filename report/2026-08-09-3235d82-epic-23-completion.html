@@ -64,8 +64,8 @@
   </div>
   <div class="evidence panel"><div class="label">Evidence provenance</div><h2>확인된 범위와 한계</h2><div class="facts"><div class="fact"><span>integration head</span><strong><code>3235d82</code></strong><small>PR #56 merge</small></div><div class="fact"><span>codec / host proof</span><strong>public fixtures</strong><small>decode·encode boundary와 downstream contracts</small></div><div class="fact"><span>prepared policy</span><strong>96 / 6 MiB</strong><small>count / estimated retained graph cost</small></div><div class="fact"><span>resolution</span><strong>≈2% / 7.3%</strong><small>median / worst run-to-run variation</small></div></div>
     <ul class="notes"><li>PR별 stable-head test/build/fixture/runtime packet이 behavior evidence의 원본입니다. 이 페이지는 그 결과를 재실행 합계로 바꾸지 않습니다.</li><li>#37 benchmark는 10k same-head control 대비 96-entry / 6 MiB 정책을 비교했습니다. 6→7 MiB 이득은 5pp 미만이고 p95는 resolution 안이어서 6 MiB를 선택했습니다.</li><li>physical memory는 allocator-reported bytes가 아니라 retained TextKit graph의 estimated cost입니다. 장문 active paragraph의 TextKit/AppKit 비용은 store가 제거하지 않습니다.</li><li>GFM table은 성공으로 평탄화하지 않습니다. Core vocabulary 확장 전에는 typed <code>.table</code> diagnostic을 반환하며 <a href="https://github.com/hot666666/SlopadEditor/issues/50">#50</a>이 미래 범위입니다.</li></ul>
-    <div class="decisions" aria-label="Settled constraint link"><a href="ROADMAP.md#settled-constraints">정착된 제약</a></div>
-    <p class="authority"><b>Authority:</b> source/tests는 현재 동작, <a href="ROADMAP.md">ROADMAP</a>·ADR·<a href="https://github.com/hot666666/SlopadEditor/issues/23">epic #23</a>은 의도를 정의합니다. 이 페이지는 완료 상태 projection입니다.</p>
+    <div class="decisions" aria-label="Settled constraint link"><a href="../docs/ROADMAP.md#settled-constraints">정착된 제약</a></div>
+    <p class="authority"><b>Authority:</b> source/tests는 현재 동작, <a href="../docs/ROADMAP.md">ROADMAP</a>·ADR·<a href="https://github.com/hot666666/SlopadEditor/issues/23">epic #23</a>은 의도를 정의합니다. 이 페이지는 완료 상태 projection입니다.</p>
   </div></section>
 </main>
 <script>

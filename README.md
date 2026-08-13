@@ -175,7 +175,7 @@ composition, layout, viewport, TextKit, or storage metadata.
 - [ADRs](ADR/README.md) — durable decisions and their consequences.
 - [Testing](docs/TESTING.md) — gate selection and validation provenance.
 - [Lessons learned](docs/LESSONS_LEARNED.md) — repeated structural failure patterns.
-- [Epic #23 status](docs/epic-23-status.html) — historical completion evidence, not a
+- [Epic #23 status](report/2026-08-09-3235d82-epic-23-completion.html) — historical completion evidence, not a
   current work queue.
 
 ## Development Checks

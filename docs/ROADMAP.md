@@ -12,7 +12,7 @@ orders.
 ## Current Baseline
 
 [Epic #23](https://github.com/hot666666/SlopadEditor/issues/23) is complete. Its
-[completion page](epic-23-status.html) records historical integration evidence. The
+[completion page](../report/2026-08-09-3235d82-epic-23-completion.html) records historical integration evidence. The
 implemented baseline includes the headless Session/model/layout split, the curated AppKit
 and SwiftUI host surfaces, coherent TextKit2 capabilities and bounded prepared-layout
 reuse, inline marks and parser-free typed shortcuts, slash-only block commands, committed
