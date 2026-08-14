@@ -16,53 +16,40 @@ jobs:
   # gates only, so a change could compile, keep the public lifecycle intact, and still
   # land with a failing suite.
   #
-  # The exit code alone is not enough evidence. `--quiet` prints no completion summary,
-  # so a run that executed zero tests and a run that passed hundreds produce the same
-  # green check. This job therefore records the executed count and fails when it is
-  # zero — a silent empty suite is a broken gate, not a passing one.
+  # The exit code alone is not enough evidence, and two earlier attempts proved it.
+  # With `--quiet`, swift-testing prints no completion line, so a green check said
+  # nothing about how many tests ran. `--xunit-output` did not help either: SwiftPM
+  # writes that report for XCTest only, and this suite is entirely swift-testing, so
+  # the report came back with zero tests.
+  #
+  # So the run is verbose here — `--quiet` is a local convenience, not part of the
+  # gate's meaning — and the job requires swift-testing's own run summary to be
+  # present. A suite that silently executes nothing fails instead of passing.
   baseline:
     runs-on: macos-26
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Run the canonical baseline suite
-        run: swift test --quiet --xunit-output test-results.xml
-      - name: Require a non-empty suite
-        if: always()
         run: |
-          set -euo pipefail
-          shopt -s nullglob
-          reports=(test-results*.xml)
-          if [ ${#reports[@]} -eq 0 ]; then
-            echo "::error::the baseline produced no xUnit report"
+          set -uo pipefail
+          swift test 2>&1 | tee baseline.log
+          status=${PIPESTATUS[0]}
+
+          summary=$(grep -aE 'Test run with [0-9]+ test' baseline.log | tail -1 || true)
+          if [ -z "$summary" ]; then
+            echo "::error::the baseline produced no swift-testing run summary"
+            echo "--- last 40 lines ---"
+            tail -40 baseline.log
             exit 1
           fi
 
-          total=0
-          failures=0
-          for report in "${reports[@]}"; do
-            counted=$(sed -n 's/.*<testsuite[^>]*tests="\([0-9]*\)".*/\1/p' "$report" \
-              | paste -sd+ - | bc 2>/dev/null || echo 0)
-            failed=$(sed -n 's/.*<testsuite[^>]*failures="\([0-9]*\)".*/\1/p' "$report" \
-              | paste -sd+ - | bc 2>/dev/null || echo 0)
-            echo "$report: ${counted:-0} executed, ${failed:-0} failed"
-            total=$((total + ${counted:-0}))
-            failures=$((failures + ${failed:-0}))
-          done
-
-          echo "baseline executed ${total} tests with ${failures} failures"
-          if [ "$total" -eq 0 ]; then
-            echo "::error::the baseline executed zero tests"
-            exit 1
-          fi
-          if [ "$failures" -ne 0 ]; then
-            echo "::error::the baseline reported ${failures} failing tests"
-            exit 1
-          fi
-      - name: Upload the baseline report
+          echo "baseline summary: ${summary}"
+          exit "$status"
+      - name: Upload the baseline log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: baseline-xunit
-          path: test-results*.xml
+          name: baseline-log
+          path: baseline.log
           if-no-files-found: warn
