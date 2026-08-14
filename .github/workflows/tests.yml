@@ -31,11 +31,22 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run the canonical baseline suite
         run: |
-          # `|| true` keeps the step alive past a failing suite. GitHub runs this under
-          # `bash -e`, and every earlier attempt to inspect the run afterwards died with
-          # the suite itself — which is how a hollow green and an undiagnosed red both
-          # reached this gate.
-          swift test 2>&1 | tee baseline.log || true
+          # `|| status=$?` handles the failure inline, so `bash -e` does not kill the step
+          # before the diagnosis below runs. Every earlier attempt to inspect the run
+          # afterwards died with the suite itself — which is how both a hollow green and
+          # an undiagnosed red reached this gate.
+          set -o pipefail
+          status=0
+          swift test 2>&1 | tee baseline.log || status=$?
+          echo "swift test exit status: ${status}"
+
+          # A signal death and an ordinary test failure both end the run early, but they
+          # need different fixes, so record which one happened. Shells report a signal as
+          # 128+n, so 139 is SIGSEGV.
+          if [ "$status" -gt 128 ]; then
+            echo "::warning::the suite died on signal $((status - 128))"
+          fi
+          grep -aE 'Crash|signal|Fatal error|✘' baseline.log | tail -20 || true
 
           # The summary line is the evidence. Without it the suite did not finish, and a
           # zero exit code means nothing: an empty run and a passing run look identical.
