@@ -30,4 +30,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run the canonical baseline suite
-        run: swift test
+        run: |
+          # `|| true` keeps the step alive past a failing suite. GitHub runs this under
+          # `bash -e`, and every earlier attempt to inspect the run afterwards died with
+          # the suite itself — which is how a hollow green and an undiagnosed red both
+          # reached this gate.
+          swift test 2>&1 | tee baseline.log || true
+
+          # The summary line is the evidence. Without it the suite did not finish, and a
+          # zero exit code means nothing: an empty run and a passing run look identical.
+          summary=$(grep -aE 'Test run with [0-9]+ test' baseline.log | tail -1)
+          echo "baseline summary: ${summary:-(none)}"
+
+          echo "$summary" | grep -q 'passed'
