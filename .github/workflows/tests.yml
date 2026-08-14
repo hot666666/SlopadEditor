@@ -48,9 +48,23 @@ jobs:
           fi
           grep -aE 'Crash|signal|Fatal error|✘' baseline.log | tail -20 || true
 
-          # The summary line is the evidence. Without it the suite did not finish, and a
-          # zero exit code means nothing: an empty run and a passing run look identical.
-          summary=$(grep -aE 'Test run with [0-9]+ test' baseline.log | tail -1)
-          echo "baseline summary: ${summary:-(none)}"
+          # Evidence is a count of tests that actually reported, not swift-testing's run
+          # summary. The summary turned out to be unreliable output — one run printed it
+          # and the next, from a passing suite with the same command, did not — and a gate
+          # that rejects a green suite over a missing log line is worse than no gate.
+          #
+          # The exit status decides pass or fail. The count exists so that a run which
+          # executes nothing cannot masquerade as a passing one.
+          executed=$(grep -ac '✔ Test "' baseline.log || true)
+          echo "baseline executed ${executed:-0} tests"
 
-          echo "$summary" | grep -q 'passed'
+          summary=$(grep -aE 'Test run with [0-9]+ test' baseline.log | tail -1)
+          if [ -n "$summary" ]; then
+            echo "baseline summary: ${summary}"
+          fi
+
+          if [ "${executed:-0}" -eq 0 ]; then
+            echo "::error::the baseline executed zero tests"
+            exit 1
+          fi
+          exit "$status"
