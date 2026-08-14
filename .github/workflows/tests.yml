@@ -16,54 +16,21 @@ jobs:
   # gates only, so a change could compile, keep the public lifecycle intact, and still
   # land with a failing suite.
   #
-  # The exit code alone is not enough evidence, and two earlier attempts proved it.
-  # With `--quiet`, swift-testing prints no completion line, so a green check said
-  # nothing about how many tests ran. `--xunit-output` did not help either: SwiftPM
-  # writes that report for XCTest only, and this suite is entirely swift-testing, so
-  # the report came back with zero tests.
+  # Two deliberate differences from the local command:
   #
-  # So the run is verbose here — `--quiet` is a local convenience, not part of the
-  # gate's meaning — and the job requires swift-testing's own run summary to be
-  # present. A suite that silently executes nothing fails instead of passing.
+  # `--quiet` is dropped so swift-testing prints its own run summary. With it, a green
+  # check said nothing about how many tests ran, and an empty suite looked identical to
+  # a passing one.
+  #
+  # `--no-parallel` keeps the output legible. Under parallel execution the per-test
+  # lines interleave across suites, so a run that ends without a summary gives no clue
+  # which test was in flight when it stopped. Serially, the last `◇ ... started.` line
+  # with no matching result is the one that died. The suite is small enough that the
+  # extra wall time is worth being able to read the failure.
   baseline:
     runs-on: macos-26
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      # Reporting lives in its own `if: always()` step on purpose. Two earlier attempts
-      # put it after the suite inside one step, and both times the step died with the
-      # suite and produced no diagnosis at all — the gate could say "failed" but never
-      # "failed because of this".
       - name: Run the canonical baseline suite
-        run: |
-          set -o pipefail
-          swift test 2>&1 | tee baseline.log
-      - name: Report the suite outcome
-        if: always()
-        shell: bash
-        run: |
-          if [ ! -f baseline.log ]; then
-            echo "::error::the baseline produced no log"
-            exit 1
-          fi
-
-          echo "--- recorded issues ---"
-          grep -aE '✘|recorded an issue|error:|Fatal error|Crash|signal' baseline.log \
-            | tail -60 || echo "(none matched)"
-
-          echo "--- last 30 lines ---"
-          tail -30 baseline.log
-
-          summary=$(grep -aE 'Test run with [0-9]+ test' baseline.log | tail -1)
-          if [ -z "$summary" ]; then
-            echo "::error::the baseline produced no swift-testing run summary — the suite did not finish"
-            exit 1
-          fi
-          echo "baseline summary: ${summary}"
-      - name: Upload the baseline log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: baseline-log
-          path: baseline.log
-          if-no-files-found: warn
+        run: swift test --no-parallel
