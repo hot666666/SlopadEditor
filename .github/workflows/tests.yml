@@ -58,7 +58,10 @@ jobs:
           executed=$(grep -ac '✔ Test "' baseline.log || true)
           echo "baseline executed ${executed:-0} tests"
 
-          summary=$(grep -aE 'Test run with [0-9]+ test' baseline.log | tail -1)
+          # `|| true` matters here: an absent summary makes grep exit 1, and under
+          # `bash -e` a failing command substitution in an assignment aborts the step.
+          # This informational line was failing runs whose suite had already passed.
+          summary=$(grep -aE 'Test run with [0-9]+ test' baseline.log | tail -1 || true)
           if [ -n "$summary" ]; then
             echo "baseline summary: ${summary}"
           fi
