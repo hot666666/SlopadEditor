@@ -37,7 +37,11 @@ These constraints remain in force unless replaced by an ADR:
   [ADR 0014](../ADR/0014-latch-selection-mode-and-support-cross-block-text.md) and the
   [selection policy](SELECTION_INTERACTION_POLICY.md).
 - `BlockKind` and inline mark vocabulary remain closed core enums until a concrete
-  consumer proves an extension/preservation contract.
+  consumer proves an extension/preservation contract. Host-defined custom blocks are the
+  first proposal against that constraint;
+  [ADR 0017](../ADR/0017-host-custom-block-boundary.md) is **Proposed**, not accepted, and
+  the constraint stands until it is. The candidate consumer is downstream and scheduled as
+  Future work there, so the proof must come from an in-repository fixture and debug host.
 - Structure and content remain one canonical block store; do not add a second key-set
   invariant without measured need such as lazy content loading.
 - Markdown typed-input rules and whole-document conversion remain separate. The two closed
@@ -173,6 +177,31 @@ ordinary typing/composition remaining bounded around changed content.
 Exit: the new adapter proves the same owner boundaries and native behavior through its own
 platform-hosted tests and fixtures.
 
+### P7 — Decide host-defined custom blocks, Notion-grade presentation, and automation
+
+This bucket is a design queue, not implementation permission. Its open questions,
+corrected current-state facts, proposed issue decomposition, and invalidated verification
+gates live in [Custom block design questions](CUSTOM_BLOCK_DESIGN_QUESTIONS.md); the
+proposed contract lives in [ADR 0017](../ADR/0017-host-custom-block-boundary.md).
+
+- Start after Epic #67 closes. This track shares owners with the unfinished #70/#71/#74/#76
+  work, and canonical, IME, and TextKit changes do not tolerate two writers.
+- Three questions block the ADR: who decides a non-text block's height when every block is
+  measured through the text backend, how a host contributes pixels inside the canvas
+  without a second paint hook, and whether a host body may ever take first responder from
+  the canvas `NSTextInputClient`.
+- Accepting the ADR amends ADR 0012's third exposure test, ADR 0015's archive version, and
+  ADR 0013's diagnostics. Treat those amendments as part of the same decision.
+- Image and table stay built-in canonical capabilities under
+  [#50](https://github.com/hot666666/SlopadEditor/issues/50). Routing them through a host
+  escape hatch would create a second owner for the same document meaning.
+- Block-level accessibility projection remains blocked behind
+  [#94](https://github.com/hot666666/SlopadEditor/issues/94)'s cycle-safety requirement;
+  repeating the discarded experiment without a changed failure signature is excluded.
+
+Exit: the open questions are answered, ADR 0017 is accepted or withdrawn, and the intent
+documents it amends agree with each other before any code lands.
+
 ## Open Risks
 
 - TextKit2 geometry varies with OS, font, and layout-manager behavior; unit tests should
@@ -187,3 +216,7 @@ platform-hosted tests and fixtures.
   measured incremental and viewport-driven strategies.
 - Snapshot undo/redo is simple and correct but may need a measured memory strategy for
   large documents.
+- An opaque host payload inside the canonical document is a durable compatibility
+  commitment: it forces an archive version boundary, closes Markdown export for documents
+  that contain one, and gives a host a way to grow a second document owner if the
+  preservation invariant is weaker than the escape hatch.
