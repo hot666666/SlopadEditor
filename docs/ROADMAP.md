@@ -186,8 +186,12 @@ ever drawing into it or decoding its payload. The contract is
 work order, and what a host app needs in order to test its own usage are in
 [Custom block design](CUSTOM_BLOCK_DESIGN.md).
 
-- Start after Epic #67 closes. This track shares owners with the unfinished #70/#71/#74/#76
-  work, and canonical, IME, and TextKit changes do not tolerate two writers.
+- This bucket does not depend on Epic #67. Custom blocks are non-text leaves, so
+  composition never enters them, and the Markdown diagnostic needs the codec rather than
+  #74's host UX. Epic #67's critical path is human-produced evidence — a physical installed
+  Korean input source — so serializing behind it would stall this work for a non-code
+  reason. Run them in parallel; only the AppKit mount and hit-routing step shares the
+  `AppKitEditorViewController` input path with #71/#76 and needs an explicit order.
 - [#94](https://github.com/hot666666/SlopadEditor/issues/94) is a prerequisite, not a
   parallel item. Host views mounted under the canvas enter the accessibility tree
   automatically, and PR #91 removed the nested-editable shape from that exact tree.

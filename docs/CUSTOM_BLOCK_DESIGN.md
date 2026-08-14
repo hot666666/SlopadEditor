@@ -9,18 +9,34 @@
 계약 후보는 [ADR 0017](../ADR/0017-host-custom-block-boundary.md)이다. 이 문서는 그 ADR이
 결정하지 않는 구현 선택과 작업 순서를 담는다.
 
-일정: 이 트랙은 [Epic #67](https://github.com/hot666666/SlopadEditor/issues/67)과 목표가 다르며 그
-Epic의 하위 작업이 아니다. "#67 이후"는 전면 금지가 아니라 **owner 충돌 회피** 규칙이다 —
-`AGENTS.md`의 한 번에 한 writer 원칙이 근거이며, 충돌 없는 단위는 먼저 시작할 수 있다.
+## 일정과 [Epic #67](https://github.com/hot666666/SlopadEditor/issues/67)의 관계
 
-| 단위 | #67 미완 항목과의 충돌 | 지금 가능한가 |
+**이 트랙은 Epic #67에 의존하지 않는다.** 그 Epic의 하위 작업도 아니다. 미완 항목을 하나씩
+확인한 결과는 이렇다.
+
+| #67 미완 항목 | P7이 필요로 하나 |
+| --- | --- |
+| #74 Markdown import/export UX | 아니다. C3은 코덱이 타입 있는 진단을 내면 되고 호스트 UX가 필요 없다 |
+| #71 한국어 두벌식 delivery | 아니다. 커스텀 블록은 비텍스트 leaf라 composition이 진입하지 않는다 |
+| #76 live cross-block composition | 아니다. 같은 이유 |
+| #70 cross-block 시각 증거 | 아니다 |
+
+게다가 #67의 임계 경로는 코드가 아니라 **사람이 만들어야 하는 증거**다. #71은 물리 키보드로
+설치된 입력기를 실제로 돌린 기록을 요구하고(`docs/TESTING.md`가 합성 키 결과의 불충분함을
+명시한다), #76은 #70/#71 없이 완료를 주장할 수 없다. P7을 그 뒤로 미루면 코드가 아닌 이유로
+무기한 대기하게 된다.
+
+따라서 P7을 먼저 진행하고 #67은 증거가 확보되는 대로 병행한다. 남는 제약은 `AGENTS.md`의 한 번에
+한 writer 원칙뿐이며, 실제로 겹치는 지점은 하나다.
+
+| 단위 | 충돌 | 판단 |
 | --- | --- | --- |
-| C0 문서·ADR | 없음 | 가능 |
-| #94 접근성 | `AppKitEditorViewController`를 #70/#71/#76과 공유하지만 영역이 다르고 Epic #67 밖의 독립 이슈다 | 가능 |
-| C5 sizing 배선 | `SlopadEditorBlockLayout`을 만지는 미완 항목이 없다 | C1 이후 가능 |
-| C1·C4 canonical | #76이 model transaction과 history를 만진다 | 중간 — #76 진행 상황을 보고 |
-| C3 Markdown | #74와 같은 타깃 | 대기 |
-| C6 마운트·히트 | #70/#71/#76과 같은 입력 경로 hot spot | 대기 |
+| C0 문서·ADR | 없음 | 즉시 |
+| #94 접근성 | Epic #67 밖의 독립 이슈 | 즉시. P11의 선행 조건이므로 먼저 |
+| C1–C5 | #76이 model transaction과 history를 만지지만 커스텀 블록은 그 경로에 들어가지 않는다. 남는 것은 rebase 마찰 | 진행 |
+| **C6 마운트·히트** | `AppKitEditorViewController` 입력 경로를 #71/#76과 공유한다. 1,600줄짜리 hot spot이다 | **둘 중 진행 중인 쪽과 순서를 잡는다** |
+
+C6만 순서를 잡으면 나머지는 병행할 수 있다. 트랙 전체를 직렬화할 이유가 없다.
 
 ## 한 줄 요약
 
@@ -137,7 +153,7 @@ XCUITest 계층은 이 저장소에 없다. #94의 크래시가 downstream 앱�
 
 ```
 선행   #94  블록 단위 접근성과 cycle-safe 자동화 계약
-        └─ (b)가 캔버스 접근성 트리를 건드리므로 먼저 닫는다
+        └─ P11이 캔버스 접근성 트리를 건드리므로 먼저 닫는다
 
 C0  ADR 0017 승인 + ADR 0013/0015 개정, ADR 0012 재검토, ROADMAP·ARCHITECTURE 갱신
      │
