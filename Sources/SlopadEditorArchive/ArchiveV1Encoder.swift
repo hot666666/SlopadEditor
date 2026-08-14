@@ -76,6 +76,11 @@ enum ArchiveV1Encoder {
                 try output.append("null")
             }
             try output.append("}")
+        case .custom:
+            // Unreachable: `SlopadEditorArchive.encode` rejects custom blocks before any
+            // byte is produced. Failing here rather than emitting a placeholder keeps the
+            // guarantee that V1 never writes an archive with dropped host content.
+            throw .malformed
         case .divider:
             try output.append("{\"type\":\"divider\"}")
         case .todo(let isChecked):

@@ -110,6 +110,24 @@ struct SlopadEditorArchiveTests {
         #expect(envelope["storage"] == nil)
     }
 
+    @Test("V1은 custom block을 담은 문서를 byte 생성 전에 거절한다")
+    func rejectsCustomBlockBeforeProducingBytes() {
+        // Given
+        let blocks = [
+            EditorBlockInput(id: "root", content: BlockContent(text: "value")),
+            EditorBlockInput(
+                id: "custom",
+                kind: .custom(typeID: "app.todo", version: 1, payload: Data("{}".utf8))
+            ),
+        ]
+
+        // When / Then
+        #expect(throws: SlopadEditorArchiveEncodingError.unsupportedCustomBlock(blockID: "custom"))
+        {
+            _ = try SlopadEditorArchive.encode(blocks)
+        }
+    }
+
     @Test("같은 canonical input의 반복 인코딩은 같은 의미를 만든다")
     func repeatedEncodingIsSemanticallyDeterministic() throws {
         // Given

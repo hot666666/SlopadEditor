@@ -26,6 +26,14 @@ public enum SlopadEditorArchive {
         _ blocks: [EditorBlockInput],
         onCanonicalValidation: () -> Void
     ) throws(SlopadEditorArchiveEncodingError) -> Data {
+        // V1's wire vocabulary is closed and has no representation for a host payload.
+        // Rejecting here, before any byte is produced, keeps the failure whole: a caller
+        // never receives an archive whose custom blocks were silently dropped. Carrying
+        // them is a V2 change, not a V1 extension.
+        if let customBlock = blocks.first(where: { $0.kind.isCustom }) {
+            throw .unsupportedCustomBlock(blockID: customBlock.id)
+        }
+
         do {
             try ArchiveV1AdmissionPreflight.validate(blocks)
         } catch {
@@ -117,6 +125,9 @@ public enum SlopadEditorArchive {
 
 public enum SlopadEditorArchiveEncodingError: Error, Hashable, Sendable {
     case canonicalInvariant(SlopadEditorArchiveCanonicalInvariant)
+    /// The document contains a host-defined custom block, which the V1 wire format cannot
+    /// represent. No bytes are produced.
+    case unsupportedCustomBlock(blockID: BlockID)
 }
 
 public enum SlopadEditorArchiveDecodingError: Error, Hashable, Sendable {
@@ -133,6 +144,10 @@ public enum SlopadEditorArchiveCanonicalInvariant: Hashable, Sendable {
     case missingParent(blockID: BlockID, parentID: BlockID)
     case cycleDetected(BlockID)
     case noncanonicalDepthFirstOrder
+    case customTypeIDEmpty(BlockID)
+    case customPayloadTooLarge(BlockID)
+    case customBlockCarriesText(BlockID)
+    case customBlockHasChildren(BlockID)
 }
 
 extension SlopadEditorArchiveCanonicalInvariant {
@@ -150,6 +165,14 @@ extension SlopadEditorArchiveCanonicalInvariant {
             self = .cycleDetected(blockID)
         case .noncanonicalDepthFirstOrder:
             self = .noncanonicalDepthFirstOrder
+        case .customTypeIDEmpty(let blockID):
+            self = .customTypeIDEmpty(blockID)
+        case .customPayloadTooLarge(let blockID):
+            self = .customPayloadTooLarge(blockID)
+        case .customBlockCarriesText(let blockID):
+            self = .customBlockCarriesText(blockID)
+        case .customBlockHasChildren(let blockID):
+            self = .customBlockHasChildren(blockID)
         }
     }
 }

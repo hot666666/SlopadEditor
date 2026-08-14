@@ -101,6 +101,11 @@ enum ArchiveV1AdmissionPreflight {
                 try tracker.consumeArchiveBytes(4)
             }
             try tracker.consumeArchiveBytes(1)
+        case .custom:
+            // Unreachable for the same reason as the encoder: encode rejects custom blocks
+            // before the preflight runs. There is no budget to charge for a shape V1
+            // cannot write.
+            throw .malformed
         case .divider:
             try consumeTaggedObject(type: "divider", with: &tracker)
         case .todo(let isChecked):

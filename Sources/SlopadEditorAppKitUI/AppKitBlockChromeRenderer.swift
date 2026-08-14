@@ -169,6 +169,8 @@ public struct AppKitDefaultBlockChromeRenderer: AppKitBlockChromeRenderer {
             return "curlybraces"
         case .divider:
             return "minus"
+        case .custom:
+            return "square.dashed"
         case .paragraph:
             return "line.3.horizontal"
         }

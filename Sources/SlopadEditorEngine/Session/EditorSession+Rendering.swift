@@ -413,7 +413,7 @@ struct BlockSelectionMembershipCache {
 extension BlockKind {
     fileprivate var usesAtomicSelectionTint: Bool {
         switch self {
-        case .divider:
+        case .divider, .custom:
             return true
         default:
             return false

@@ -144,4 +144,12 @@ public enum EditorDocumentTransactionError: Error, Hashable, Sendable {
     case cycleDetected(BlockID)
     case noncanonicalDepthFirstOrder
     case invalidSelection
+    /// A custom block in the patch carried an empty `typeID`.
+    case customTypeIDEmpty(BlockID)
+    /// A custom block's payload exceeded ``BlockKind/customPayloadByteLimit``.
+    case customPayloadTooLarge(BlockID)
+    /// A custom block carried canonical text or inline marks, which it cannot own.
+    case customBlockCarriesText(BlockID)
+    /// A custom block had child blocks. First-version custom blocks are leaves.
+    case customBlockHasChildren(BlockID)
 }

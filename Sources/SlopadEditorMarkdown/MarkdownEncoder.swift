@@ -186,6 +186,9 @@ struct MarkdownEncoder {
             validateInlineMarks(content.marks, in: content.text, blockID: input.id)
 
             switch input.kind {
+            case .custom(let typeID, _, _):
+                appendDiagnostic(.unsupportedCustomBlock(typeID: typeID), blockID: input.id)
+
             case .divider:
                 if !content.text.isEmpty || !content.marks.isEmpty {
                     appendDiagnostic(.nonemptyDivider, blockID: input.id)
@@ -295,6 +298,12 @@ struct MarkdownEncoder {
 
         case .divider:
             return "---"
+
+        case .custom:
+            // Unreachable: validation above records `unsupportedCustomBlock` and encoding
+            // fails closed before any block is rendered. Returning empty here keeps the
+            // failure in the diagnostic rather than inventing a syntax for it.
+            return ""
         }
     }
 

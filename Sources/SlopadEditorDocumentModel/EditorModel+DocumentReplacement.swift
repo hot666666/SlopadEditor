@@ -10,6 +10,10 @@ package enum EditorDocumentReplacementError: Error, Hashable, Sendable {
     case cycleDetected(BlockID)
     case noncanonicalDepthFirstOrder
     case invalidSelection
+    case customTypeIDEmpty(BlockID)
+    case customPayloadTooLarge(BlockID)
+    case customBlockCarriesText(BlockID)
+    case customBlockHasChildren(BlockID)
 }
 
 extension EditorModel {
@@ -90,6 +94,14 @@ extension EditorDocumentReplacementError {
             self = .cycleDetected(blockID)
         case .documentInput(.noncanonicalDepthFirstOrder):
             self = .noncanonicalDepthFirstOrder
+        case .documentInput(.customTypeIDEmpty(let blockID)):
+            self = .customTypeIDEmpty(blockID)
+        case .documentInput(.customPayloadTooLarge(let blockID)):
+            self = .customPayloadTooLarge(blockID)
+        case .documentInput(.customBlockCarriesText(let blockID)):
+            self = .customBlockCarriesText(blockID)
+        case .documentInput(.customBlockHasChildren(let blockID)):
+            self = .customBlockHasChildren(blockID)
         case .invalidSelection:
             self = .invalidSelection
         }

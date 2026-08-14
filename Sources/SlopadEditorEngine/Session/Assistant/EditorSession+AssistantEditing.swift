@@ -205,6 +205,14 @@ extension EditorDocumentTransactionError {
             self = .noncanonicalDepthFirstOrder
         case .invalidSelection:
             self = .invalidSelection
+        case .customTypeIDEmpty(let blockID):
+            self = .customTypeIDEmpty(blockID)
+        case .customPayloadTooLarge(let blockID):
+            self = .customPayloadTooLarge(blockID)
+        case .customBlockCarriesText(let blockID):
+            self = .customBlockCarriesText(blockID)
+        case .customBlockHasChildren(let blockID):
+            self = .customBlockHasChildren(blockID)
         }
     }
 }
