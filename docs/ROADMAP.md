@@ -177,34 +177,47 @@ ordinary typing/composition remaining bounded around changed content.
 Exit: the new adapter proves the same owner boundaries and native behavior through its own
 platform-hosted tests and fixtures.
 
-### P7 — Decide host-defined custom blocks, Notion-grade presentation, and automation
+### P7 — Open host-defined custom blocks
 
-This bucket is a design queue, not implementation permission. Its open questions,
-corrected current-state facts, proposed issue decomposition, and invalidated verification
-gates live in [Custom block design questions](CUSTOM_BLOCK_DESIGN_QUESTIONS.md); the
-proposed contract lives in [ADR 0017](../ADR/0017-host-custom-block-boundary.md).
+The editor owns input, block management, and its own rendering. A host hands over a view
+and its meaning; the editor places, clips, and scrolls that view inside the canvas without
+ever drawing into it or decoding its payload. The contract is
+[ADR 0017](../ADR/0017-host-custom-block-boundary.md); the implementation choices, the
+work order, and what a host app needs in order to test its own usage are in
+[Custom block design](CUSTOM_BLOCK_DESIGN.md).
 
 - Start after Epic #67 closes. This track shares owners with the unfinished #70/#71/#74/#76
   work, and canonical, IME, and TextKit changes do not tolerate two writers.
-- Three questions block the ADR: what isolation and inputs a custom block's sizer gets on
-  the existing `Sendable`, synchronous measurement seam, how a host contributes pixels
-  inside the canvas without a second paint hook, and whether a host body may ever take
-  first responder from the canvas `NSTextInputClient`.
-- Accepting the ADR amends ADR 0012's third exposure test, ADR 0015's archive version, and
-  ADR 0013's diagnostics. Treat those amendments as part of the same decision.
+- [#94](https://github.com/hot666666/SlopadEditor/issues/94) is a prerequisite, not a
+  parallel item. Host views mounted under the canvas enter the accessibility tree
+  automatically, and PR #91 removed the nested-editable shape from that exact tree.
+- Accepting ADR 0017 amends ADR 0015's archive version and ADR 0013's diagnostics, and
+  requires a ruling on whether ADR 0012's third exposure test admits "supplying a view" as
+  a narrow third form. Treat those as part of the same decision.
 - Image and table stay built-in canonical capabilities under
   [#50](https://github.com/hot666666/SlopadEditor/issues/50). Routing them through a host
   escape hatch would create a second owner for the same document meaning.
-- The Notion-style presentation target is not purely additive. The shipped default chrome
-  always draws a gutter separator, and the shipped todo checkbox sits centred in the
-  gutter, so reaching that target changes default appearance for existing hosts and
-  reopens the P2 checkbox-versus-gutter hit-priority rule — the competing hit becomes text,
-  not gutter. Treat it as revisiting a closed decision, not as new chrome.
-- Block-level accessibility projection remains blocked behind
-  [#94](https://github.com/hot666666/SlopadEditor/issues/94)'s cycle-safety requirement;
-  repeating the discarded experiment without a changed failure signature is excluded. If
-  custom bodies are hosted as native views, they enter the accessibility tree
-  automatically, which makes #94 a prerequisite rather than a parallel item.
+
+Exit: an embedding app can put its own block into a document, have it survive edit, move,
+copy, save, and reload without the editor understanding it, and test its own usage without
+reaching into editor internals.
+
+### P8 — Decide the hover rail and Notion-grade presentation
+
+Separate from P7, because this changes shipped appearance rather than adding a capability.
+
+- The shipped default chrome always draws a gutter separator and the shipped todo checkbox
+  sits centred in the gutter. A Notion-style layout removes the separator and moves the
+  checkbox inline, which changes default appearance for existing hosts.
+- Moving the checkbox out of the gutter reopens the P2 hit-priority rule: the competing hit
+  becomes text, not gutter. Treat it as revisiting a closed decision, not as new chrome.
+- `BlockHitRegion.dragHandle` exists but nothing currently produces it; a rail drag handle
+  has to make that path real.
+- Column alignment is geometry-affecting, so it invalidates layout caches and requires
+  re-running the 100/1,000/10,000-block benchmark gates.
+
+Exit: the owner has decided whether default appearance changes, and if so the P2 hit
+priority is restated against the new geometry with recorded visual and benchmark evidence.
 
 Exit: the open questions are answered, ADR 0017 is accepted or withdrawn, and the intent
 documents it amends agree with each other before any code lands.
