@@ -1,3 +1,4 @@
+import Foundation
 import SlopadEditorCoreModel
 
 struct ArchiveV1Block {
@@ -22,19 +23,29 @@ struct ArchiveV1Block {
 
 enum ArchiveV1Decoder {
     static func decodeBlocks(
-        _ value: StrictJSONValue
+        _ value: StrictJSONValue,
+        allowsCustomBlocks: Bool = false
     ) throws(StrictJSONError) -> [ArchiveV1Block] {
         guard case .array(let values) = value else { throw .malformed }
-        return try values.map(decodeBlock)
+        var blocks: [ArchiveV1Block] = []
+        blocks.reserveCapacity(values.count)
+        for value in values {
+            blocks.append(try decodeBlock(value, allowsCustomBlocks: allowsCustomBlocks))
+        }
+        return blocks
     }
 
     private static func decodeBlock(
-        _ value: StrictJSONValue
+        _ value: StrictJSONValue,
+        allowsCustomBlocks: Bool
     ) throws(StrictJSONError) -> ArchiveV1Block {
         let object = try value.exactObject(keys: ["id", "parentID", "kind", "content"])
         let id = try string(object.required("id"))
         let parentID = try nullableString(object.required("parentID"))
-        let kind = try decodeKind(object.required("kind"))
+        let kind = try decodeKind(
+            object.required("kind"),
+            allowsCustomBlocks: allowsCustomBlocks
+        )
         let (text, marks) = try decodeContent(object.required("content"))
         return ArchiveV1Block(
             rawID: id,
@@ -46,7 +57,8 @@ enum ArchiveV1Decoder {
     }
 
     private static func decodeKind(
-        _ value: StrictJSONValue
+        _ value: StrictJSONValue,
+        allowsCustomBlocks: Bool
     ) throws(StrictJSONError) -> BlockKind {
         guard case .object(let object) = value else { throw .malformed }
         let type = try string(object.required("type"))
@@ -81,6 +93,23 @@ enum ArchiveV1Decoder {
         case "todo":
             try requireKeys(object, ["type", "isChecked"])
             return .todo(isChecked: try boolean(object.required("isChecked")))
+        case "custom":
+            // Only V2 admits this. A V1 archive naming it was not written by a V1 writer,
+            // so it is malformed rather than a document to salvage.
+            guard allowsCustomBlocks else { throw StrictJSONError.malformed }
+            try requireKeys(object, ["type", "typeID", "version", "payload"])
+            let typeID = try string(object.required("typeID"))
+            let version = try integer(object.required("version"))
+            let encodedPayload = try string(object.required("payload"))
+            // Strict decoding: a payload that is not exact base64 fails the archive rather
+            // than reaching the host as silently different bytes.
+            guard
+                let payload = Data(
+                    base64Encoded: encodedPayload,
+                    options: []
+                )
+            else { throw StrictJSONError.malformed }
+            return .custom(typeID: typeID, version: version, payload: payload)
         default:
             throw .malformed
         }

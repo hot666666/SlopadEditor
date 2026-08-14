@@ -110,21 +110,123 @@ struct SlopadEditorArchiveTests {
         #expect(envelope["storage"] == nil)
     }
 
-    @Test("V1은 custom block을 담은 문서를 byte 생성 전에 거절한다")
-    func rejectsCustomBlockBeforeProducingBytes() {
+    @Test("custom block이 없는 문서는 계속 V1으로 인코딩한다")
+    func keepsEmittingV1WithoutCustomBlocks() throws {
         // Given
+        let blocks = [EditorBlockInput(id: "root", content: BlockContent(text: "value"))]
+
+        // When
+        let data = try SlopadEditorArchive.encode(blocks)
+        let envelope = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        // Then
+        #expect(envelope["formatVersion"] as? Int == 1)
+    }
+
+    @Test("custom block이 있으면 V2로 올리고 payload를 바이트 단위로 왕복한다")
+    func roundTripsCustomBlockThroughV2() throws {
+        // Given — 0x00과 비-UTF8 바이트를 포함해 base64 경로를 실제로 태운다
+        let payload = Data([0x00, 0x01, 0xFF, 0xFE, 0x7F, 0x80])
         let blocks = [
             EditorBlockInput(id: "root", content: BlockContent(text: "value")),
             EditorBlockInput(
                 id: "custom",
-                kind: .custom(typeID: "app.todo", version: 1, payload: Data("{}".utf8))
+                kind: .custom(typeID: "app.todo", version: 3, payload: payload)
             ),
         ]
 
+        // When
+        let data = try SlopadEditorArchive.encode(blocks)
+        let envelope = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let decoded = try SlopadEditorArchive.decode(data)
+
+        // Then
+        #expect(envelope["formatVersion"] as? Int == 2)
+        #expect(decoded == blocks)
+        #expect(decoded[1].kind == .custom(typeID: "app.todo", version: 3, payload: payload))
+    }
+
+    @Test("빈 payload도 왕복한다")
+    func roundTripsEmptyCustomPayload() throws {
+        // Given
+        let blocks = [
+            EditorBlockInput(
+                id: "custom",
+                kind: .custom(typeID: "app.todo", version: 1, payload: Data())
+            )
+        ]
+
+        // When
+        let decoded = try SlopadEditorArchive.decode(try SlopadEditorArchive.encode(blocks))
+
+        // Then
+        #expect(decoded == blocks)
+    }
+
+    @Test("V1 envelope에 custom block이 있으면 malformed로 거절한다")
+    func rejectsCustomBlockDeclaredAsV1() throws {
+        // Given — V2로 인코딩한 뒤 버전만 1로 낮춘 문서
+        let blocks = [
+            EditorBlockInput(
+                id: "custom",
+                kind: .custom(typeID: "app.todo", version: 1, payload: Data("{}".utf8))
+            )
+        ]
+        let v2 = try SlopadEditorArchive.encode(blocks)
+        let downgraded = try #require(
+            String(data: v2, encoding: .utf8)?
+                .replacingOccurrences(of: "\"formatVersion\":2", with: "\"formatVersion\":1")
+                .data(using: .utf8)
+        )
+
         // When / Then
-        #expect(throws: SlopadEditorArchiveEncodingError.unsupportedCustomBlock(blockID: "custom"))
-        {
-            _ = try SlopadEditorArchive.encode(blocks)
+        #expect(throws: SlopadEditorArchiveDecodingError.malformedData) {
+            _ = try SlopadEditorArchive.decode(downgraded)
+        }
+    }
+
+    @Test("V3 이상은 여전히 future version으로 거절한다")
+    func rejectsVersionsBeyondV2() throws {
+        // Given
+        let blocks = [EditorBlockInput(id: "root", content: BlockContent(text: "value"))]
+        let v1 = try SlopadEditorArchive.encode(blocks)
+        let future = try #require(
+            String(data: v1, encoding: .utf8)?
+                .replacingOccurrences(of: "\"formatVersion\":1", with: "\"formatVersion\":3")
+                .data(using: .utf8)
+        )
+
+        // When / Then
+        #expect(
+            throws: SlopadEditorArchiveDecodingError.unsupportedFutureVersion(
+                found: 3,
+                latestSupported: 2
+            )
+        ) {
+            _ = try SlopadEditorArchive.decode(future)
+        }
+    }
+
+    @Test("손상된 base64 payload는 문서 전체를 거절한다")
+    func rejectsMalformedBase64Payload() throws {
+        // Given
+        let blocks = [
+            EditorBlockInput(
+                id: "custom",
+                kind: .custom(typeID: "app.todo", version: 1, payload: Data("hello".utf8))
+            )
+        ]
+        let v2 = try SlopadEditorArchive.encode(blocks)
+        let encodedPayload = Data("hello".utf8).base64EncodedString()
+        let corrupted = try #require(
+            String(data: v2, encoding: .utf8)?
+                .replacingOccurrences(of: encodedPayload, with: "not base64!!")
+                .data(using: .utf8)
+        )
+
+        // When / Then
+        #expect(throws: SlopadEditorArchiveDecodingError.malformedData) {
+            _ = try SlopadEditorArchive.decode(corrupted)
         }
     }
 

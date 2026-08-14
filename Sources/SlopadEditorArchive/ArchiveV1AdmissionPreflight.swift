@@ -1,3 +1,4 @@
+import Foundation
 import SlopadEditorCoreModel
 
 enum ArchiveV1EncodingBudgetError: Error, Equatable {
@@ -9,11 +10,14 @@ enum ArchiveV1EncodingBudgetError: Error, Equatable {
 enum ArchiveV1AdmissionPreflight {
     static func validate(
         _ blocks: [EditorBlockInput],
+        formatVersion: Int = 1,
         budget: ArchiveWireBudget = .v1
     ) throws(ArchiveV1EncodingBudgetError) {
         var tracker = ArchiveWireBudgetTracker(budget: budget)
         do {
-            try tracker.consumeArchiveBytes("{\"formatVersion\":1,\"blocks\":[".utf8.count)
+            try tracker.consumeArchiveBytes(
+                "{\"formatVersion\":\(formatVersion),\"blocks\":[".utf8.count
+            )
             try tracker.consumeObject(memberCount: 2, decodedKeyBytes: 19)
             try tracker.consumeScalarValue()
             try tracker.consumeArray()
@@ -101,11 +105,20 @@ enum ArchiveV1AdmissionPreflight {
                 try tracker.consumeArchiveBytes(4)
             }
             try tracker.consumeArchiveBytes(1)
-        case .custom:
-            // Unreachable for the same reason as the encoder: encode rejects custom blocks
-            // before the preflight runs. There is no budget to charge for a shape V1
-            // cannot write.
-            throw .malformed
+        case .custom(let typeID, let version, let payload):
+            try tracker.consumeObject(memberCount: 4, decodedKeyBytes: 21)
+            try tracker.consumeArchiveBytes("{\"type\":".utf8.count)
+            try consume("custom", with: &tracker)
+            try tracker.consumeArchiveBytes(",\"typeID\":".utf8.count)
+            try consume(typeID, with: &tracker)
+            try tracker.consumeArchiveBytes(",\"version\":".utf8.count)
+            try tracker.consumeScalarValue()
+            try tracker.consumeArchiveBytes(String(version).utf8.count)
+            try tracker.consumeArchiveBytes(",\"payload\":".utf8.count)
+            // Charge the encoded size, not the raw one. Base64 costs four bytes per three,
+            // and the wire budget exists to bound what is actually written.
+            try consume(payload.base64EncodedString(), with: &tracker)
+            try tracker.consumeArchiveBytes(1)
         case .divider:
             try consumeTaggedObject(type: "divider", with: &tracker)
         case .todo(let isChecked):

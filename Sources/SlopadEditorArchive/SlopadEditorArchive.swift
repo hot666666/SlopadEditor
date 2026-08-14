@@ -26,16 +26,14 @@ public enum SlopadEditorArchive {
         _ blocks: [EditorBlockInput],
         onCanonicalValidation: () -> Void
     ) throws(SlopadEditorArchiveEncodingError) -> Data {
-        // V1's wire vocabulary is closed and has no representation for a host payload.
-        // Rejecting here, before any byte is produced, keeps the failure whole: a caller
-        // never receives an archive whose custom blocks were silently dropped. Carrying
-        // them is a V2 change, not a V1 extension.
-        if let customBlock = blocks.first(where: { $0.kind.isCustom }) {
-            throw .unsupportedCustomBlock(blockID: customBlock.id)
-        }
+        // A document earns V2 only by containing something V1 cannot express. Emitting V1
+        // whenever possible keeps every archive written so far readable by readers that
+        // predate custom blocks; bumping unconditionally would strand them for a feature
+        // the document does not use.
+        let formatVersion = blocks.contains { $0.kind.isCustom } ? 2 : 1
 
         do {
-            try ArchiveV1AdmissionPreflight.validate(blocks)
+            try ArchiveV1AdmissionPreflight.validate(blocks, formatVersion: formatVersion)
         } catch {
             switch error {
             case .exceeded(let blockID):
@@ -51,7 +49,7 @@ public enum SlopadEditorArchive {
         }
 
         do {
-            return try ArchiveV1Encoder.encode(blocks)
+            return try ArchiveV1Encoder.encode(blocks, formatVersion: formatVersion)
         } catch {
             switch error {
             case .exceeded(let blockID):
@@ -86,20 +84,31 @@ public enum SlopadEditorArchive {
 
         switch version {
         case 1:
-            return try decodeV1(envelope)
-        case 2...:
-            throw .unsupportedFutureVersion(found: version, latestSupported: 1)
+            return try decodeBlocks(envelope, allowsCustomBlocks: false)
+        case 2:
+            return try decodeBlocks(envelope, allowsCustomBlocks: true)
+        case 3...:
+            throw .unsupportedFutureVersion(found: version, latestSupported: 2)
         default:
             throw .unsupportedPastVersion(found: version, earliestSupported: 1)
         }
     }
 
-    private static func decodeV1(
-        _ envelope: StrictJSONObject
+    /// Decodes the block array for a known envelope version.
+    ///
+    /// The two versions share every rule but one: only V2 admits a custom block. A V1
+    /// archive carrying one is malformed rather than tolerated, because a V1 writer could
+    /// not have produced it and guessing at intent is how a format quietly widens.
+    private static func decodeBlocks(
+        _ envelope: StrictJSONObject,
+        allowsCustomBlocks: Bool
     ) throws(SlopadEditorArchiveDecodingError) -> [EditorBlockInput] {
         let rawBlocks: [ArchiveV1Block]
         do {
-            rawBlocks = try ArchiveV1Decoder.decodeBlocks(envelope.required("blocks"))
+            rawBlocks = try ArchiveV1Decoder.decodeBlocks(
+                envelope.required("blocks"),
+                allowsCustomBlocks: allowsCustomBlocks
+            )
         } catch {
             throw .malformedData
         }
@@ -125,9 +134,6 @@ public enum SlopadEditorArchive {
 
 public enum SlopadEditorArchiveEncodingError: Error, Hashable, Sendable {
     case canonicalInvariant(SlopadEditorArchiveCanonicalInvariant)
-    /// The document contains a host-defined custom block, which the V1 wire format cannot
-    /// represent. No bytes are produced.
-    case unsupportedCustomBlock(blockID: BlockID)
 }
 
 public enum SlopadEditorArchiveDecodingError: Error, Hashable, Sendable {
