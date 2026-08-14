@@ -4,7 +4,11 @@ import Testing
 import SlopadEditorCoreModel
 @testable import SlopadEditorEngine
 
-@Suite("custom block patch 보존 정책")
+// Serialized deliberately, and narrowly. This suite failed three consecutive parallel
+// runs and passed serially, so the isolation belongs to the suite that needs it rather
+// than to the whole gate. If a later change explains what the concurrency exposed, drop
+// this trait rather than keeping it as decoration.
+@Suite("custom block patch 보존 정책", .serialized)
 struct EditorSessionCustomBlockPreservationTests {
     private static let customKind = BlockKind.custom(
         typeID: "app.todo",

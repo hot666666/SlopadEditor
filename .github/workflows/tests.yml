@@ -16,21 +16,18 @@ jobs:
   # gates only, so a change could compile, keep the public lifecycle intact, and still
   # land with a failing suite.
   #
-  # Two deliberate differences from the local command:
-  #
   # `--quiet` is dropped so swift-testing prints its own run summary. With it, a green
   # check said nothing about how many tests ran, and an empty suite looked identical to
   # a passing one.
   #
-  # `--no-parallel` keeps the output legible. Under parallel execution the per-test
-  # lines interleave across suites, so a run that ends without a summary gives no clue
-  # which test was in flight when it stopped. Serially, the last `◇ ... started.` line
-  # with no matching result is the one that died. The suite is small enough that the
-  # extra wall time is worth being able to read the failure.
+  # Parallel execution is kept. An earlier commit here reached for `--no-parallel` after
+  # a suite started failing, and that was the wrong instinct: serializing the whole gate
+  # slows every future run and hides whatever the concurrency actually exposed. A suite
+  # that cannot run alongside others declares that itself with `.serialized`.
   baseline:
     runs-on: macos-26
-    timeout-minutes: 25
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Run the canonical baseline suite
-        run: swift test --no-parallel
+        run: swift test
