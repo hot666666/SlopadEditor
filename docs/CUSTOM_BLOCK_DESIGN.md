@@ -72,8 +72,14 @@ V1 리더가 V2 문서를 거부하는 현행 fail-closed 동작은 유지한다
 **payload 예산은 하나의 상수를 공유한다.** archive·클립보드·patch 검증이 같은 블록당 상한을 쓴다.
 셋이 다르면 저장은 되는데 복사가 안 되는 문서가 생긴다.
 
-**patch 보존 비교 키는 `id + typeID + version + payload 바이트`다.** capability가 없으면 순서 변경도
-거부한다(보수적 기본). capability는 커스텀 블록 변경 전용이며 일반 검증 우회 플래그가 아니다.
+**patch 보존 비교 키는 `id + typeID + version + payload 바이트`다.** 이 넷이 patch 전후로 모두
+살아 있어야 하며, capability 없이는 삭제·재타이핑·재버전·payload 재작성이 거부된다. capability는
+커스텀 블록 변경 전용이며 일반 검증 우회 플래그가 아니다.
+
+**위치와 부모는 비교하지 않는다.** 초안은 순서 변경까지 거부하려 했으나, 그러면 문단을
+재배치하는 평범한 assistant patch가 거의 전부 거부된다. 호스트는 결국 capability를 상시 켜게 되고
+불변식은 무력화된다. 막아야 할 것은 조용한 소실이지 이동이 아니다 — 이동한 블록은 `BlockID`로
+다시 찾을 수 있지만 삭제된 블록은 돌아오지 않는다.
 
 **provider는 컨트롤러 초기화 시 주입하고 `resetDocument`를 넘어 유지한다.** SwiftUI는 뷰 모디파이어로
 같은 값을 전달한다. 전역 레지스트리는 없다.

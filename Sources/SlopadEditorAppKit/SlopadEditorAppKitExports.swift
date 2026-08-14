@@ -37,6 +37,7 @@ public typealias EditorDocumentSnapshot = SlopadEditorEngine.EditorDocumentSnaps
 public typealias EditorDocumentSource = SlopadEditorEngine.EditorDocumentSource
 public typealias EditorDocumentContextSnapshot = SlopadEditorEngine.EditorDocumentContextSnapshot
 public typealias EditorDocumentPatch = SlopadEditorEngine.EditorDocumentPatch
+public typealias EditorCustomBlockPatchPolicy = SlopadEditorEngine.EditorCustomBlockPatchPolicy
 public typealias EditorDocumentTransactionError = SlopadEditorEngine.EditorDocumentTransactionError
 public typealias EditorSelectedContent = SlopadEditorEngine.EditorSelectedContent
 public typealias EditorSelectedText = SlopadEditorEngine.EditorSelectedText

@@ -51,7 +51,8 @@ extension EditorSession {
         do {
             result = try editorModel.replaceDocument(
                 with: patch.replacementBlocks,
-                selection: patch.selectionAfter
+                selection: patch.selectionAfter,
+                preservingCustomBlocks: patch.customBlockPolicy == .preserve
             )
         } catch let error {
             throw EditorDocumentTransactionError(error)
@@ -213,6 +214,8 @@ extension EditorDocumentTransactionError {
             self = .customBlockCarriesText(blockID)
         case .customBlockHasChildren(let blockID):
             self = .customBlockHasChildren(blockID)
+        case .customBlockNotPreserved(let blockID):
+            self = .customBlockNotPreserved(blockID)
         }
     }
 }
