@@ -195,9 +195,16 @@ proposed contract lives in [ADR 0017](../ADR/0017-host-custom-block-boundary.md)
 - Image and table stay built-in canonical capabilities under
   [#50](https://github.com/hot666666/SlopadEditor/issues/50). Routing them through a host
   escape hatch would create a second owner for the same document meaning.
+- The Notion-style presentation target is not purely additive. The shipped default chrome
+  always draws a gutter separator, and the shipped todo checkbox sits centred in the
+  gutter, so reaching that target changes default appearance for existing hosts and
+  reopens the P2 checkbox-versus-gutter hit-priority rule — the competing hit becomes text,
+  not gutter. Treat it as revisiting a closed decision, not as new chrome.
 - Block-level accessibility projection remains blocked behind
   [#94](https://github.com/hot666666/SlopadEditor/issues/94)'s cycle-safety requirement;
-  repeating the discarded experiment without a changed failure signature is excluded.
+  repeating the discarded experiment without a changed failure signature is excluded. If
+  custom bodies are hosted as native views, they enter the accessibility tree
+  automatically, which makes #94 a prerequisite rather than a parallel item.
 
 Exit: the open questions are answered, ADR 0017 is accepted or withdrawn, and the intent
 documents it amends agree with each other before any code lands.
