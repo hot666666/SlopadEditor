@@ -215,6 +215,10 @@ Separate from P7, because this changes shipped appearance rather than adding a c
   has to make that path real.
 - Column alignment is geometry-affecting, so it invalidates layout caches and requires
   re-running the 100/1,000/10,000-block benchmark gates.
+- `AppKitEditorStyle` carries no color. Chrome draws from system semantic colors, which is
+  why dark mode already works and why no host can set a brand palette. Contained callout
+  and code backgrounds need a color token surface; introducing one is the first step of
+  this bucket, not part of P7.
 
 Exit: the owner has decided whether default appearance changes, and if so the P2 hit
 priority is restated against the new geometry with recorded visual and benchmark evidence.

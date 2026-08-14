@@ -9,7 +9,18 @@
 계약 후보는 [ADR 0017](../ADR/0017-host-custom-block-boundary.md)이다. 이 문서는 그 ADR이
 결정하지 않는 구현 선택과 작업 순서를 담는다.
 
-일정: 코드는 [Epic #67](https://github.com/hot666666/SlopadEditor/issues/67)이 닫힌 뒤 시작한다.
+일정: 이 트랙은 [Epic #67](https://github.com/hot666666/SlopadEditor/issues/67)과 목표가 다르며 그
+Epic의 하위 작업이 아니다. "#67 이후"는 전면 금지가 아니라 **owner 충돌 회피** 규칙이다 —
+`AGENTS.md`의 한 번에 한 writer 원칙이 근거이며, 충돌 없는 단위는 먼저 시작할 수 있다.
+
+| 단위 | #67 미완 항목과의 충돌 | 지금 가능한가 |
+| --- | --- | --- |
+| C0 문서·ADR | 없음 | 가능 |
+| #94 접근성 | `AppKitEditorViewController`를 #70/#71/#76과 공유하지만 영역이 다르고 Epic #67 밖의 독립 이슈다 | 가능 |
+| C5 sizing 배선 | `SlopadEditorBlockLayout`을 만지는 미완 항목이 없다 | C1 이후 가능 |
+| C1·C4 canonical | #76이 model transaction과 history를 만진다 | 중간 — #76 진행 상황을 보고 |
+| C3 Markdown | #74와 같은 타깃 | 대기 |
+| C6 마운트·히트 | #70/#71/#76과 같은 입력 경로 hot spot | 대기 |
 
 ## 한 줄 요약
 
@@ -57,6 +68,31 @@ V1 리더가 V2 문서를 거부하는 현행 fail-closed 동작은 유지한다
 
 **`BlockHitRegion.dragHandle`을 실제로 생성한다.** 현재 `handleMouseDown`은 `.gutter`와 `.body`만
 만들고 `.dragHandle`은 switch에만 있고 도달하지 않는다. hover rail이 이 경로를 살린다.
+
+## 테마 — 무엇이 이미 되고 무엇이 없나
+
+호스트가 자기 뷰를 그리므로 그 뷰가 에디터와 어울리는지가 문제가 된다. 현재 상태는 이렇다.
+
+**다크 모드는 이미 된다.** 에디터의 색은 `AppKitBlockChromeRenderer`가 시스템 시맨틱 컬러로
+그린다(`.controlAccentColor`, `.selectedContentBackgroundColor`, `.separatorColor`,
+`.secondaryLabelColor`). OS 외형을 따라간다. 호스트 뷰도 `NSView`이므로 `effectiveAppearance`를
+그대로 받는다. 새로 할 일이 없다.
+
+**폰트와 기하 테마는 있다.** `AppKitEditorStyle`이 폰트 이름·크기·행간·gutter 폭·좌우 여백·들여쓰기
+폭을 담고, `updateEditorStyle(_:)`과 `editorStyle` 읽기가 모두 public이다. 호스트는 이 값을 읽어
+자기 뷰의 폰트를 에디터 본문과 맞출 수 있다.
+
+**스타일이 바뀌면 재측정은 자동이다.** `updateEditorStyle(_:)`은 텍스트 백엔드를 교체하고, 그
+교체가 `advanceTextLayoutRevision()`을 거쳐 측정 캐시를 통째로 비운다. 호스트의 sizing 함수도 다시
+불린다. 커스텀 블록을 위해 새로 만들 장치가 없다.
+
+**색 테마는 없다.** `AppKitEditorStyle`에 색 필드가 하나도 없고, 색은 chrome 렌더러에 상수로 박혀
+있다. 호스트가 브랜드 색을 지정할 계약이 없다는 뜻이다.
+
+이 빈칸은 P7을 막지 않는다. 호스트 뷰는 자기 색을 자기가 정하고, 에디터가 그리는 선택 표시는
+시스템 색이라 어느 외형에서도 읽힌다. 다만 **P8(Notion 프레젠테이션)의 전제조건이다** — "callout과
+code block이 자체 배경을 갖는다" 같은 목표는 색 토큰 없이 표현할 수 없다. 색 토큰을 도입한다면
+그것은 P8의 첫 단계이지 커스텀 블록 작업의 일부가 아니다.
 
 ## 앱이 자기 코드를 테스트하려면 에디터가 내놔야 하는 것
 
