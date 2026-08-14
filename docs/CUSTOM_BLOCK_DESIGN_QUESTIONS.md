@@ -35,24 +35,39 @@ Each question states the constraint that makes it hard, the real options, and a
 recommendation. D1–D3 block ADR 0017; D4–D6 block implementation; D7–D9 block the
 presentation and automation tracks.
 
-### D1 — Who decides a custom block's height?
+### D1 — What isolation and inputs does a custom block's sizer get?
 
-`TextLayoutCache.measured` routes **every** block, `divider` included, through
-`BlockMeasuring`, which is implemented by the TextKit backend
-(`TextLayoutCache.swift:83-102`). A custom block has no text.
-`SlopadEditorBlockLayout` may not depend on AppKit or the host, and
-[ADR 0003](../ADR/0003-text-layout-backend-seam.md) keeps measurement, geometry,
-navigation, and drawing as one coherent backend contract.
+The measurement mechanism already exists, and the seam already reserves a place for this
+case. `SlopadEditorBlockLayout` holds `any BlockMeasuring` — a narrow, `Sendable`,
+synchronous "height and baseline for a block at a given width", declared apart from
+geometry, navigation, and deletion precisely so "a consumer is handed only what it uses:
+`BlockLayout` needs a height and nothing else" (`BlockTextLayoutProtocol.swift:1-10`). That
+file's own comment names "a future non-text block type" as one of the reasons the
+capabilities are split (`:73-74`). `TextLayoutCache` keys on
+`blockID + text + kind + marks + availableWidth + depth`, so equal inputs mean equal
+measurements by construction, and `invalidate(blockID:)` already exists
+(`TextLayoutCache.swift:29-45, 105-107`).
+
+So the question is not who owns height. Two narrower consequences are the actual decision:
+
+1. **The payload must live in the canonical `Block` value the key reads.** If it sits
+   anywhere else, the cache returns a stale height after a payload edit. ADR 0017 P1
+   already puts it there; this is why that term is not negotiable.
+2. **`BlockMeasuring` is `Sendable` and synchronous.** The shipped TextKit backend
+   satisfies that with a lock-guarded `TextKitLayoutContext`
+   (`TextKitLayoutContext.swift:8-10`), not with a view. A provider therefore cannot size a
+   custom block by asking a live `NSView` through this seam.
 
 | Option | Shape | Cost |
 | --- | --- | --- |
-| **A. Canonical declared height** | The host stores height in the payload envelope; layout reads it like a constant | Simplest; makes a presentation value canonical document state, which contradicts the ownership table and breaks under font/width changes |
-| **B. Provider sizing function on the layout seam** | `BlockMeasuring` gains a non-text branch answered by a registered sizer | Keeps one measurement owner; the sizer must be platform-neutral and synchronous, so an AppKit `NSView`'s intrinsic size cannot be its source |
-| **C. Runtime measured height with invalidation** | The adapter measures the host view and reports a height change to Session, which invalidates that block | Matches how derived layout already works and survives resize; needs a documented convergence rule so a view that resizes in response to its own height cannot loop |
+| **A. Pure sizing function over payload and width** | Provider supplies a `Sendable` `(payload, version, width, depth) -> height`, no view involved | Fits the existing seam with no change to it; a host whose body has genuine intrinsic sizing must reproduce that math outside its view |
+| **B. Runtime view measurement plus invalidation** | The adapter measures the mounted body and reports a height change; layout invalidates that block and re-measures | Handles content whose size is not synchronously knowable; needs an isolation story the seam does not have today, plus a convergence rule so a body that resizes in response to its own height cannot loop |
+| **C. Canonical declared height** | Height stored in the payload envelope, read like a constant | Makes a presentation value canonical document state, contradicting the ownership table, and breaks under width and font changes |
 
-Recommendation: **C, with a B-shaped seam.** Layout keeps asking one measurement owner; the
-adapter supplies the answer for custom kinds and reports changes as invalidation, never as
-canonical state. This requires stating a maximum re-measure depth per layout pass.
+Recommendation: **A as the contract, B only as an escape for asynchronously-sized
+content**, with a stated maximum re-measure count per layout pass. C stays excluded. The
+candidate consumer — displaying an app-owned Todo — is sizable from its payload, so A is
+very likely sufficient for the first version.
 
 ### D2 — How does a provider put pixels inside the canvas?
 
@@ -145,7 +160,7 @@ To be created only after D1–D6 close, and started only after Epic #67 closes.
 | C2 | Archive V2 with custom payload budgets | `SlopadEditorArchive` | C1, D5 | Round-trip preserves identity and payload; V1/V2 compatibility policy tested at budget boundaries |
 | C3 | Markdown unsupported-custom diagnostics | `SlopadEditorMarkdown` | C1 | Encode and decode fail closed with the `typeID` named; downstream Markdown fixture proves it |
 | C4 | Patch preservation invariant and host capability | `SlopadEditorDocumentModel` | C1, D6 | Unknown custom blocks survive an assistant round trip; capability path covered both ways |
-| C5 | Layout measurement seam for non-text blocks | `SlopadEditorBlockLayout` | C1, D1 | Height converges without canonical presentation state; re-measure depth bounded |
+| C5 | Custom-block sizing through the existing measurement capability | `SlopadEditorBlockLayout`, backend | C1, D1 | Payload edits produce a fresh height through the existing cache key; no canonical presentation state; any escape path bounds its re-measure count |
 | C6 | Provider mount, recycling, and hit routing | `SlopadEditorAppKitUI` | C5, D2, D3, D7 | Scroll, damage, drag, and selection stay correct with visible custom bodies |
 | C7 | Unsupported placeholder and preservation fixture | fixtures | C2, C4, C6 | A downstream host proves an unregistered type survives edit, move, copy, save, reload |
 | C8 | Hover rail and presentation tokens | `SlopadEditorAppKitUI`, style | D7, D8 | Rail behavior verified in `SlopadEditorDebugApp`; benchmark gates re-run and recorded |

@@ -186,10 +186,10 @@ proposed contract lives in [ADR 0017](../ADR/0017-host-custom-block-boundary.md)
 
 - Start after Epic #67 closes. This track shares owners with the unfinished #70/#71/#74/#76
   work, and canonical, IME, and TextKit changes do not tolerate two writers.
-- Three questions block the ADR: who decides a non-text block's height when every block is
-  measured through the text backend, how a host contributes pixels inside the canvas
-  without a second paint hook, and whether a host body may ever take first responder from
-  the canvas `NSTextInputClient`.
+- Three questions block the ADR: what isolation and inputs a custom block's sizer gets on
+  the existing `Sendable`, synchronous measurement seam, how a host contributes pixels
+  inside the canvas without a second paint hook, and whether a host body may ever take
+  first responder from the canvas `NSTextInputClient`.
 - Accepting the ADR amends ADR 0012's third exposure test, ADR 0015's archive version, and
   ADR 0013's diagnostics. Treat those amendments as part of the same decision.
 - Image and table stay built-in canonical capabilities under

@@ -35,7 +35,9 @@ Current source constrains the shape of any answer:
 | --- | --- |
 | `BlockKind` is a closed enum with eight cases | `Sources/SlopadEditorCoreModel/Document/BlockKind.swift` |
 | Exhaustive `BlockKind` switches span nine production files across seven targets | Markdown encoder, Archive V1 encoder/decoder/preflight, TextKit chrome metrics, AppKit chrome renderer, BlockLayout full pass, clipboard write plan, Session rendering |
-| Every block, including the atomic `divider`, is measured through the text backend | `Sources/SlopadEditorBlockLayout/TextLayout/TextLayoutCache.swift:83-102` |
+| Every block, including the atomic `divider`, is measured through one narrow `BlockMeasuring` capability, cached on a key derived from the block's own values | `Sources/SlopadEditorBlockLayout/TextLayout/TextLayoutCache.swift:29-45, 83-102` |
+| The capability split already reserves a place for "a future non-text block type" | `Sources/SlopadEditorCoreModel/Layout/BlockTextLayoutProtocol.swift:1-10, 69-74` |
+| That capability is `Sendable` and synchronous; the shipped backend satisfies it with a lock-guarded context, not a view | `BlockTextLayoutProtocol.swift:13-15`, `TextKitLayoutContext.swift:8-10` |
 | The only shipped atomic non-text leaf is `divider` | `BlockKind+TextCapability.swift:8-18`, `EditorSession+Rendering.swift:413-421` |
 | The archive envelope pins `formatVersion:1` and fails closed on any other version | `ArchiveV1Encoder.swift:10`, `SlopadEditorArchive.swift:67-74` |
 | Block chrome is draw-only into a clipped `CGContext` | `Sources/SlopadEditorAppKitUI/AppKitBlockChromeRenderer.swift:10-36` |
@@ -104,9 +106,11 @@ These are blocking. Each changes which target owns a contract, so guessing one w
 produce exactly the kind of intent/source disagreement `AGENTS.md` tells us to fix in the
 document first.
 
-- **D1 — Height authority.** Every block is measured today through `BlockMeasuring`, which
-  is the text backend. A custom block is not text, and `SlopadEditorBlockLayout` may not
-  depend on AppKit or the host.
+- **D1 — Sizer isolation and inputs.** The measurement seam already exists and already
+  reserves a place for a non-text block type. What is open is narrower: `BlockMeasuring` is
+  `Sendable` and synchronous, and the shipped backend satisfies it with a lock-guarded
+  layout context rather than a view, so a provider cannot size a block by asking a live
+  `NSView` through it.
 - **D2 — Body hosting mechanism.** `AppKitBlockChromeRenderer` cannot host interactive
   controls, and adding a second paint hook is a recorded failure pattern.
 - **D3 — Focus and first-responder policy.** A host view that becomes first responder
