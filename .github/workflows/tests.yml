@@ -1,0 +1,24 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # AGENTS.md names `swift test --quiet` the canonical baseline for every executable
+  # change, but until now no workflow ran it: CI covered the host-surface and naming
+  # gates only, so a change could compile, keep the public lifecycle intact, and still
+  # land with a failing suite.
+  baseline:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the canonical baseline suite
+        run: swift test --quiet
