@@ -31,12 +31,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run the canonical baseline suite
+        shell: bash
         run: |
-          set -uo pipefail
+          # GitHub runs `run:` steps under `bash -e`, which aborts the step the moment
+          # the suite fails — before any of the reporting below can execute. That is how
+          # an earlier failing run reached the log with no failure detail at all.
+          set +e
+          set -o pipefail
           swift test 2>&1 | tee baseline.log
-          status=${PIPESTATUS[0]}
+          status=$?
 
-          summary=$(grep -aE 'Test run with [0-9]+ test' baseline.log | tail -1 || true)
+          summary=$(grep -aE 'Test run with [0-9]+ test' baseline.log | tail -1)
           if [ -z "$summary" ]; then
             echo "::error::the baseline produced no swift-testing run summary"
             echo "--- last 40 lines ---"
@@ -45,6 +50,12 @@ jobs:
           fi
 
           echo "baseline summary: ${summary}"
+
+          if [ "$status" -ne 0 ]; then
+            echo "--- recorded issues ---"
+            grep -aE '✘|recorded an issue|error:|Fatal error' baseline.log | tail -60
+            echo "::error::the baseline suite failed"
+          fi
           exit "$status"
       - name: Upload the baseline log
         if: always()
