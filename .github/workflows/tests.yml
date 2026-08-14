@@ -15,10 +15,54 @@ jobs:
   # change, but until now no workflow ran it: CI covered the host-surface and naming
   # gates only, so a change could compile, keep the public lifecycle intact, and still
   # land with a failing suite.
+  #
+  # The exit code alone is not enough evidence. `--quiet` prints no completion summary,
+  # so a run that executed zero tests and a run that passed hundreds produce the same
+  # green check. This job therefore records the executed count and fails when it is
+  # zero — a silent empty suite is a broken gate, not a passing one.
   baseline:
     runs-on: macos-26
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Run the canonical baseline suite
-        run: swift test --quiet
+        run: swift test --quiet --xunit-output test-results.xml
+      - name: Require a non-empty suite
+        if: always()
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          reports=(test-results*.xml)
+          if [ ${#reports[@]} -eq 0 ]; then
+            echo "::error::the baseline produced no xUnit report"
+            exit 1
+          fi
+
+          total=0
+          failures=0
+          for report in "${reports[@]}"; do
+            counted=$(sed -n 's/.*<testsuite[^>]*tests="\([0-9]*\)".*/\1/p' "$report" \
+              | paste -sd+ - | bc 2>/dev/null || echo 0)
+            failed=$(sed -n 's/.*<testsuite[^>]*failures="\([0-9]*\)".*/\1/p' "$report" \
+              | paste -sd+ - | bc 2>/dev/null || echo 0)
+            echo "$report: ${counted:-0} executed, ${failed:-0} failed"
+            total=$((total + ${counted:-0}))
+            failures=$((failures + ${failed:-0}))
+          done
+
+          echo "baseline executed ${total} tests with ${failures} failures"
+          if [ "$total" -eq 0 ]; then
+            echo "::error::the baseline executed zero tests"
+            exit 1
+          fi
+          if [ "$failures" -ne 0 ]; then
+            echo "::error::the baseline reported ${failures} failing tests"
+            exit 1
+          fi
+      - name: Upload the baseline report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-xunit
+          path: test-results*.xml
+          if-no-files-found: warn
