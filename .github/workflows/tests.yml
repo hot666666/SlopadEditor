@@ -30,33 +30,36 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      # Reporting lives in its own `if: always()` step on purpose. Two earlier attempts
+      # put it after the suite inside one step, and both times the step died with the
+      # suite and produced no diagnosis at all — the gate could say "failed" but never
+      # "failed because of this".
       - name: Run the canonical baseline suite
-        shell: bash
         run: |
-          # GitHub runs `run:` steps under `bash -e`, which aborts the step the moment
-          # the suite fails — before any of the reporting below can execute. That is how
-          # an earlier failing run reached the log with no failure detail at all.
-          set +e
           set -o pipefail
           swift test 2>&1 | tee baseline.log
-          status=$?
-
-          summary=$(grep -aE 'Test run with [0-9]+ test' baseline.log | tail -1)
-          if [ -z "$summary" ]; then
-            echo "::error::the baseline produced no swift-testing run summary"
-            echo "--- last 40 lines ---"
-            tail -40 baseline.log
+      - name: Report the suite outcome
+        if: always()
+        shell: bash
+        run: |
+          if [ ! -f baseline.log ]; then
+            echo "::error::the baseline produced no log"
             exit 1
           fi
 
-          echo "baseline summary: ${summary}"
+          echo "--- recorded issues ---"
+          grep -aE '✘|recorded an issue|error:|Fatal error|Crash|signal' baseline.log \
+            | tail -60 || echo "(none matched)"
 
-          if [ "$status" -ne 0 ]; then
-            echo "--- recorded issues ---"
-            grep -aE '✘|recorded an issue|error:|Fatal error' baseline.log | tail -60
-            echo "::error::the baseline suite failed"
+          echo "--- last 30 lines ---"
+          tail -30 baseline.log
+
+          summary=$(grep -aE 'Test run with [0-9]+ test' baseline.log | tail -1)
+          if [ -z "$summary" ]; then
+            echo "::error::the baseline produced no swift-testing run summary — the suite did not finish"
+            exit 1
           fi
-          exit "$status"
+          echo "baseline summary: ${summary}"
       - name: Upload the baseline log
         if: always()
         uses: actions/upload-artifact@v4
