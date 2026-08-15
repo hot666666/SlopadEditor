@@ -72,3 +72,26 @@ jobs:
             exit 1
           fi
           exit "$status"
+
+  # `swift test` never launches the product. This does: it builds the debug host and drives
+  # twenty-one named scenarios — todo hit control, floating toolbar, text and cross-block
+  # drag selection, drag reorder, caret movement, typed prefix rules, slash commands, native
+  # insert, Enter split, scrolling — each asserting its own resulting state and exiting.
+  #
+  # `docs/TESTING.md` treats the debug host as evidence a unit test cannot give, and nothing
+  # was running it. It is a separate job so a windowing failure reports as itself instead of
+  # masking the unit suite.
+  debug-scenarios:
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Drive the debug host scenarios
+        run: bash scripts/slopadeditor-debug-state-regression.sh "$RUNNER_TEMP/debug-scenarios"
+      - name: Upload the scenario screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-scenarios
+          path: ${{ runner.temp }}/debug-scenarios
+          if-no-files-found: warn
