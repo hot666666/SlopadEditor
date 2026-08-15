@@ -1,19 +1,23 @@
+import Foundation
 import SlopadEditorCoreModel
 
-enum ArchiveV1EncodingBudgetError: Error, Equatable {
+enum ArchiveEncodingBudgetError: Error, Equatable {
     case exceeded(blockID: BlockID)
 }
 
 /// Allocation-bounded admission over caller-owned values. It runs before Core canonical
 /// validation so hostile collection sizes cannot force its document maps or traversals.
-enum ArchiveV1AdmissionPreflight {
+enum ArchiveAdmissionPreflight {
     static func validate(
         _ blocks: [EditorBlockInput],
+        formatVersion: Int = 1,
         budget: ArchiveWireBudget = .v1
-    ) throws(ArchiveV1EncodingBudgetError) {
+    ) throws(ArchiveEncodingBudgetError) {
         var tracker = ArchiveWireBudgetTracker(budget: budget)
         do {
-            try tracker.consumeArchiveBytes("{\"formatVersion\":1,\"blocks\":[".utf8.count)
+            try tracker.consumeArchiveBytes(
+                "{\"formatVersion\":\(formatVersion),\"blocks\":[".utf8.count
+            )
             try tracker.consumeObject(memberCount: 2, decodedKeyBytes: 19)
             try tracker.consumeScalarValue()
             try tracker.consumeArray()
@@ -100,6 +104,20 @@ enum ArchiveV1AdmissionPreflight {
                 try tracker.consumeScalarValue()
                 try tracker.consumeArchiveBytes(4)
             }
+            try tracker.consumeArchiveBytes(1)
+        case .custom(let typeID, let version, let payload):
+            try tracker.consumeObject(memberCount: 4, decodedKeyBytes: 21)
+            try tracker.consumeArchiveBytes("{\"type\":".utf8.count)
+            try consume("custom", with: &tracker)
+            try tracker.consumeArchiveBytes(",\"typeID\":".utf8.count)
+            try consume(typeID, with: &tracker)
+            try tracker.consumeArchiveBytes(",\"version\":".utf8.count)
+            try tracker.consumeScalarValue()
+            try tracker.consumeArchiveBytes(String(version).utf8.count)
+            try tracker.consumeArchiveBytes(",\"payload\":".utf8.count)
+            // Charge the encoded size, not the raw one. Base64 costs four bytes per three,
+            // and the wire budget exists to bound what is actually written.
+            try consume(payload.base64EncodedString(), with: &tracker)
             try tracker.consumeArchiveBytes(1)
         case .divider:
             try consumeTaggedObject(type: "divider", with: &tracker)

@@ -19,6 +19,9 @@ public final class AppKitEditorViewController: NSViewController {
         static let selectionRevealPadding: CGFloat = 24
         static let scrollEpsilon: CGFloat = 0.5
         static let dropIndicatorHorizontalInset: CGFloat = 12
+        /// Keeps a host body clear of the selection border the editor strokes just inside
+        /// the block frame, so a selected custom block still reads as selected.
+        static let customBlockBodyVerticalInset: CGFloat = 4
         static let blockSelectionFillAlpha: CGFloat = 0.18
         static let blockSelectionStrokeAlpha: CGFloat = 0.72
         static let blockSelectionStrokeInset: CGFloat = 0.5
@@ -124,7 +127,14 @@ public final class AppKitEditorViewController: NSViewController {
         }
         return try session.documentContextSnapshot()
     }
-    public private(set) var snapshot: EditorSessionSnapshot?
+    public private(set) var snapshot: EditorSessionSnapshot? {
+        didSet {
+            // Every render path assigns here — the ordinary one and both convergence
+            // fallbacks — so reconciling in the observer keeps host bodies in step with
+            // exactly the surface that was published, without each path remembering to.
+            synchronizeCustomBlockBodies()
+        }
+    }
 
     /// The full height of the laid-out document, excluding the editor's bottom padding.
     ///
@@ -139,6 +149,22 @@ public final class AppKitEditorViewController: NSViewController {
     /// every keystroke and every scroll tick. This fires when the number a host would act
     /// on actually moved.
     public var onContentHeightChange: ((Double) -> Void)?
+    /// Supplies views for host-defined custom blocks, or `nil` when the host defines none.
+    ///
+    /// Set per editor instance rather than registered globally, so a test can substitute a
+    /// stub and two editors in one app can serve different block families. Replacing it
+    /// releases every body the previous provider had mounted.
+    public var customBlockProvider: (any AppKitCustomBlockProvider)? {
+        get { customBlockMountController.provider }
+        set {
+            customBlockMountController.releaseAll()
+            customBlockMountController.provider = newValue
+            synchronizeCustomBlockBodies()
+        }
+    }
+
+    private let customBlockMountController = AppKitCustomBlockMountController()
+
     public var blockChromeRenderer: any AppKitBlockChromeRenderer
     public var onSnapshotChanged: ((EditorSessionSnapshot) -> Void)?
     public var onUpdate: ((EditorUpdate) -> Void)?
@@ -874,6 +900,53 @@ public final class AppKitEditorViewController: NSViewController {
         synchronizeSlashCommandOverlay(with: renderedSurface.snapshot)
         synchronizeFloatingFormattingToolbar(with: renderedSurface.snapshot)
         return renderedSurface
+    }
+
+    /// Positions host-supplied custom block bodies for the current snapshot.
+    ///
+    /// The body sits in the content lane, not the whole block frame: the editor fills and
+    /// strokes the frame to show selection and drag state, so a body covering it would hide
+    /// the very chrome that says the block is selected. Everything left of `gutterWidth`
+    /// stays the editor's — that geometric separation is what lets the rail and drag handle
+    /// keep working without asking the host to yield hits.
+    private func synchronizeCustomBlockBodies() {
+        guard let snapshot else {
+            customBlockMountController.releaseAll()
+            return
+        }
+
+        let style = editorStyle
+        let bodies = snapshot.visibleBlocks.compactMap {
+            rendered -> AppKitCustomBlockMountController.VisibleBody? in
+            guard case .custom(let typeID, let version, let payload) = rendered.kind else {
+                return nil
+            }
+
+            let blockFrame = CGRect(editorRect: rendered.frame)
+            let leading =
+                style.gutterWidth + style.contentHorizontalPadding
+                + Double(rendered.depth) * style.blockIndentWidth
+            let width = max(
+                0,
+                blockFrame.width - leading - style.contentHorizontalPadding
+            )
+            let frame = CGRect(
+                x: leading,
+                y: blockFrame.minY + UX.customBlockBodyVerticalInset,
+                width: width,
+                height: max(0, blockFrame.height - UX.customBlockBodyVerticalInset * 2)
+            )
+
+            return AppKitCustomBlockMountController.VisibleBody(
+                blockID: rendered.id,
+                typeID: typeID,
+                version: version,
+                payload: payload,
+                frame: frame
+            )
+        }
+
+        customBlockMountController.reconcile(bodies, in: editorCanvasView)
     }
 
     private func synchronizeEditorAccessibilityValue() {

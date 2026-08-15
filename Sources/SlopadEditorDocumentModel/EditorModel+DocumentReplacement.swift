@@ -10,13 +10,45 @@ package enum EditorDocumentReplacementError: Error, Hashable, Sendable {
     case cycleDetected(BlockID)
     case noncanonicalDepthFirstOrder
     case invalidSelection
+    case customTypeIDEmpty(BlockID)
+    case customPayloadTooLarge(BlockID)
+    case customBlockCarriesText(BlockID)
+    case customBlockHasChildren(BlockID)
+    case customBlockNotPreserved(BlockID)
 }
 
 extension EditorModel {
+    /// Requires every custom block in the current document to survive the post-image intact.
+    ///
+    /// The editor cannot decode a payload, so it cannot distinguish an intentional rewrite
+    /// from an accidental loss — and the most likely way to lose one is a patch produced by
+    /// round-tripping the document through a format that has no representation for custom
+    /// blocks. Identity, type, version, and payload bytes are compared; position and parent
+    /// are not, because an ordinary patch that reorders paragraphs also moves whatever sits
+    /// between them.
+    private func validateCustomBlocksSurvive(
+        in blockInputs: [EditorBlockInput]
+    ) throws(EditorDocumentReplacementError) {
+        var survivors: [BlockID: BlockKind] = [:]
+        for input in blockInputs where input.kind.isCustom {
+            survivors[input.id] = input.kind
+        }
+
+        for blockID in document.blocks.keys {
+            guard let existing = document.blocks[blockID], existing.kind.isCustom else {
+                continue
+            }
+            guard survivors[blockID] == existing.kind else {
+                throw .customBlockNotPreserved(blockID)
+            }
+        }
+    }
+
     @discardableResult
     package func replaceDocument(
         with blockInputs: [EditorBlockInput],
-        selection selectionAfter: EditorSelection
+        selection selectionAfter: EditorSelection,
+        preservingCustomBlocks: Bool = true
     ) throws(EditorDocumentReplacementError) -> EditorCommandResult {
         do {
             try Document.validateCanonicalReplacement(
@@ -25,6 +57,10 @@ extension EditorModel {
             )
         } catch let error {
             throw EditorDocumentReplacementError(error)
+        }
+
+        if preservingCustomBlocks {
+            try validateCustomBlocksSurvive(in: blockInputs)
         }
 
         let beforeDocument = document
@@ -90,6 +126,14 @@ extension EditorDocumentReplacementError {
             self = .cycleDetected(blockID)
         case .documentInput(.noncanonicalDepthFirstOrder):
             self = .noncanonicalDepthFirstOrder
+        case .documentInput(.customTypeIDEmpty(let blockID)):
+            self = .customTypeIDEmpty(blockID)
+        case .documentInput(.customPayloadTooLarge(let blockID)):
+            self = .customPayloadTooLarge(blockID)
+        case .documentInput(.customBlockCarriesText(let blockID)):
+            self = .customBlockCarriesText(blockID)
+        case .documentInput(.customBlockHasChildren(let blockID)):
+            self = .customBlockHasChildren(blockID)
         case .invalidSelection:
             self = .invalidSelection
         }

@@ -1,13 +1,14 @@
 import Foundation
 import SlopadEditorCoreModel
 
-enum ArchiveV1Encoder {
+enum ArchiveEncoder {
     static func encode(
-        _ blocks: [EditorBlockInput]
-    ) throws(ArchiveV1EncodingBudgetError) -> Data {
+        _ blocks: [EditorBlockInput],
+        formatVersion: Int = 1
+    ) throws(ArchiveEncodingBudgetError) -> Data {
         var output = LimitedArchiveOutput(budget: .v1)
         do {
-            try output.append("{\"formatVersion\":1,\"blocks\":[")
+            try output.append("{\"formatVersion\":\(formatVersion),\"blocks\":[")
         } catch {
             throw .exceeded(blockID: blocks[0].id)
         }
@@ -75,6 +76,14 @@ enum ArchiveV1Encoder {
             } else {
                 try output.append("null")
             }
+            try output.append("}")
+        case .custom(let typeID, let version, let payload):
+            // Base64 because the payload is opaque bytes and JSON has no byte type. The
+            // editor never looks inside it; this is transport, not interpretation.
+            try output.append("{\"type\":\"custom\",\"typeID\":")
+            try appendJSONString(typeID, to: &output)
+            try output.append(",\"version\":\(version),\"payload\":")
+            try appendJSONString(payload.base64EncodedString(), to: &output)
             try output.append("}")
         case .divider:
             try output.append("{\"type\":\"divider\"}")

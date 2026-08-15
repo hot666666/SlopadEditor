@@ -103,6 +103,13 @@ public struct MarkdownEncodingDiagnostic: Hashable, Sendable {
         case invalidLinkDestination
         case ambiguousEmptyContainer
         case unrepresentableEmptyParagraph
+        /// A host-defined custom block reached the codec.
+        ///
+        /// Markdown has no representation for it and this codec has no host hook, so encode
+        /// fails closed and names the type. A host that needs export converts its own blocks
+        /// to standard kinds outside the codec first. Decode can never produce a custom
+        /// block, so the round trip is deliberately asymmetric.
+        case unsupportedCustomBlock(typeID: String)
     }
 
     public let kind: Kind

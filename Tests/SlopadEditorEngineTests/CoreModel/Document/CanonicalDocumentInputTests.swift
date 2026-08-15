@@ -16,7 +16,7 @@ struct CanonicalDocumentInputTests {
         try CanonicalDocumentInput.validate(blocks)
     }
 
-    @Test("여섯 document invariant는 shared seam에서 fail closed 한다")
+    @Test("구조 document invariant는 shared seam에서 fail closed 한다")
     func rejectsEveryDocumentInputInvariant() {
         // Given
         var invalidContent = BlockContent(text: "abcd")

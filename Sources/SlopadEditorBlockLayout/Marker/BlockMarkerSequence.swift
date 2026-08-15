@@ -58,7 +58,7 @@ extension BlockMarkerSequence {
             return .orderedListItem(number: 1)
         case .todo(let isChecked):
             return .todo(isChecked: isChecked)
-        case .paragraph, .heading, .quote, .codeBlock, .divider:
+        case .paragraph, .heading, .quote, .codeBlock, .divider, .custom:
             return .none
         }
     }

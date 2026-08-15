@@ -26,8 +26,14 @@ public enum SlopadEditorArchive {
         _ blocks: [EditorBlockInput],
         onCanonicalValidation: () -> Void
     ) throws(SlopadEditorArchiveEncodingError) -> Data {
+        // A document earns V2 only by containing something V1 cannot express. Emitting V1
+        // whenever possible keeps every archive written so far readable by readers that
+        // predate custom blocks; bumping unconditionally would strand them for a feature
+        // the document does not use.
+        let formatVersion = blocks.contains { $0.kind.isCustom } ? 2 : 1
+
         do {
-            try ArchiveV1AdmissionPreflight.validate(blocks)
+            try ArchiveAdmissionPreflight.validate(blocks, formatVersion: formatVersion)
         } catch {
             switch error {
             case .exceeded(let blockID):
@@ -43,7 +49,7 @@ public enum SlopadEditorArchive {
         }
 
         do {
-            return try ArchiveV1Encoder.encode(blocks)
+            return try ArchiveEncoder.encode(blocks, formatVersion: formatVersion)
         } catch {
             switch error {
             case .exceeded(let blockID):
@@ -78,20 +84,31 @@ public enum SlopadEditorArchive {
 
         switch version {
         case 1:
-            return try decodeV1(envelope)
-        case 2...:
-            throw .unsupportedFutureVersion(found: version, latestSupported: 1)
+            return try decodeBlocks(envelope, allowsCustomBlocks: false)
+        case 2:
+            return try decodeBlocks(envelope, allowsCustomBlocks: true)
+        case 3...:
+            throw .unsupportedFutureVersion(found: version, latestSupported: 2)
         default:
             throw .unsupportedPastVersion(found: version, earliestSupported: 1)
         }
     }
 
-    private static func decodeV1(
-        _ envelope: StrictJSONObject
+    /// Decodes the block array for a known envelope version.
+    ///
+    /// The two versions share every rule but one: only V2 admits a custom block. A V1
+    /// archive carrying one is malformed rather than tolerated, because a V1 writer could
+    /// not have produced it and guessing at intent is how a format quietly widens.
+    private static func decodeBlocks(
+        _ envelope: StrictJSONObject,
+        allowsCustomBlocks: Bool
     ) throws(SlopadEditorArchiveDecodingError) -> [EditorBlockInput] {
-        let rawBlocks: [ArchiveV1Block]
+        let rawBlocks: [ArchiveBlock]
         do {
-            rawBlocks = try ArchiveV1Decoder.decodeBlocks(envelope.required("blocks"))
+            rawBlocks = try ArchiveDecoder.decodeBlocks(
+                envelope.required("blocks"),
+                allowsCustomBlocks: allowsCustomBlocks
+            )
         } catch {
             throw .malformedData
         }
@@ -133,6 +150,10 @@ public enum SlopadEditorArchiveCanonicalInvariant: Hashable, Sendable {
     case missingParent(blockID: BlockID, parentID: BlockID)
     case cycleDetected(BlockID)
     case noncanonicalDepthFirstOrder
+    case customTypeIDEmpty(BlockID)
+    case customPayloadTooLarge(BlockID)
+    case customBlockCarriesText(BlockID)
+    case customBlockHasChildren(BlockID)
 }
 
 extension SlopadEditorArchiveCanonicalInvariant {
@@ -150,6 +171,14 @@ extension SlopadEditorArchiveCanonicalInvariant {
             self = .cycleDetected(blockID)
         case .noncanonicalDepthFirstOrder:
             self = .noncanonicalDepthFirstOrder
+        case .customTypeIDEmpty(let blockID):
+            self = .customTypeIDEmpty(blockID)
+        case .customPayloadTooLarge(let blockID):
+            self = .customPayloadTooLarge(blockID)
+        case .customBlockCarriesText(let blockID):
+            self = .customBlockCarriesText(blockID)
+        case .customBlockHasChildren(let blockID):
+            self = .customBlockHasChildren(blockID)
         }
     }
 }

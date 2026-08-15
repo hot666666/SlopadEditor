@@ -1,0 +1,97 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # AGENTS.md names `swift test --quiet` the canonical baseline for every executable
+  # change, but until now no workflow ran it: CI covered the host-surface and naming
+  # gates only, so a change could compile, keep the public lifecycle intact, and still
+  # land with a failing suite.
+  #
+  # `--quiet` is dropped so swift-testing prints its own run summary. With it, a green
+  # check said nothing about how many tests ran, and an empty suite looked identical to
+  # a passing one.
+  #
+  # Parallel execution is kept. An earlier commit here reached for `--no-parallel` after
+  # a suite started failing, and that was the wrong instinct: serializing the whole gate
+  # slows every future run and hides whatever the concurrency actually exposed. A suite
+  # that cannot run alongside others declares that itself with `.serialized`.
+  baseline:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the canonical baseline suite
+        run: |
+          # `|| status=$?` handles the failure inline, so `bash -e` does not kill the step
+          # before the diagnosis below runs. Every earlier attempt to inspect the run
+          # afterwards died with the suite itself — which is how both a hollow green and
+          # an undiagnosed red reached this gate.
+          set -o pipefail
+          status=0
+          swift test 2>&1 | tee baseline.log || status=$?
+          echo "swift test exit status: ${status}"
+
+          # A signal death and an ordinary test failure both end the run early, but they
+          # need different fixes, so record which one happened. Shells report a signal as
+          # 128+n, so 139 is SIGSEGV.
+          if [ "$status" -gt 128 ]; then
+            echo "::warning::the suite died on signal $((status - 128))"
+          fi
+          grep -aE 'Crash|signal|Fatal error|✘' baseline.log | tail -20 || true
+
+          # The exit status is not sufficient on its own. This toolchain returned 0 from a
+          # run whose swift-testing suite reported a failing test, so a gate that trusted
+          # it alone passed a red suite. Failures are read from the log instead, and the
+          # exit status is kept as a second signal for the cases the log cannot show
+          # (a crash, a build error, a run that never started).
+          # Match the result line only. swift-testing prints both "recorded an issue" and
+          # "failed after ..." for one failing test, so counting every ✘ line reports twice
+          # the real number.
+          failures=$(grep -acE '✘ Test .* failed after' baseline.log || true)
+          executed=$(grep -ac '✔ Test "' baseline.log || true)
+          echo "baseline executed ${executed:-0} tests with ${failures:-0} failures"
+
+          if [ "${failures:-0}" -ne 0 ]; then
+            echo "--- failures ---"
+            grep -aE '✘' baseline.log | tail -40 || true
+            echo "::error::the baseline reported ${failures} failing tests"
+            exit 1
+          fi
+
+          if [ "${executed:-0}" -eq 0 ]; then
+            echo "::error::the baseline executed zero tests"
+            exit 1
+          fi
+          exit "$status"
+
+  # `swift test` never launches the product. This does: it builds the debug host and drives
+  # twenty-one named scenarios — todo hit control, floating toolbar, text and cross-block
+  # drag selection, drag reorder, caret movement, typed prefix rules, slash commands, native
+  # insert, Enter split, scrolling — each asserting its own resulting state and exiting.
+  #
+  # `docs/TESTING.md` treats the debug host as evidence a unit test cannot give, and nothing
+  # was running it. It is a separate job so a windowing failure reports as itself instead of
+  # masking the unit suite.
+  debug-scenarios:
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Drive the debug host scenarios
+        run: bash scripts/slopadeditor-debug-state-regression.sh "$RUNNER_TEMP/debug-scenarios"
+      - name: Upload the scenario screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-scenarios
+          path: ${{ runner.temp }}/debug-scenarios
+          if-no-files-found: warn

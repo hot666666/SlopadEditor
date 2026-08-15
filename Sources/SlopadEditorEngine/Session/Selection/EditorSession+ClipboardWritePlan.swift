@@ -113,6 +113,11 @@ extension EditorSession {
             return "[\(isChecked ? "x" : " ")] \(input.content.text)"
         case .divider:
             return "---"
+        case .custom(let typeID, _, _):
+            // The plain-text lane is a literal fallback for editors that cannot read the
+            // structured payload. Emitting the payload bytes here would leak host data into
+            // a text field, so the type is named and the content is not.
+            return "[\(typeID)]"
         }
     }
 }

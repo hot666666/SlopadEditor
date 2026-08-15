@@ -24,3 +24,4 @@ the decisions that led to it.
 - [0014 - Latch selection mode at gesture origin and support cross-block text](0014-latch-selection-mode-and-support-cross-block-text.md)
 - [0015 - Version the native archive and keep storage lifecycle host-owned](0015-version-native-archive-and-keep-storage-host-owned.md)
 - [0016 - Name the package SlopadEditor and reserve SlopadEditor for the app](0016-name-the-package-slopadeditor-and-reserve-slopad-for-the-app.md)
+- [0017 - 호스트 정의 커스텀 블록을 불투명 atomic leaf로 admit한다](0017-host-custom-block-boundary.md) — **Proposed**, blocked on open design questions

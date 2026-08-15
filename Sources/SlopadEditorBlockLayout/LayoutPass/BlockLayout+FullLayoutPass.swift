@@ -263,6 +263,11 @@ private func estimatedLazyMeasurement(for block: Block) -> BlockMeasurement {
         baseHeight = 18
     case .codeBlock:
         baseHeight = 40
+    case .custom:
+        // A placeholder for the lazy pass only. The real height comes from the host's
+        // sizing function through the ordinary measurement path, which this estimate
+        // exists to stand in for until that block is measured.
+        baseHeight = 36
     case .paragraph, .unorderedListItem, .orderedListItem, .quote, .todo:
         baseHeight = 36
     }

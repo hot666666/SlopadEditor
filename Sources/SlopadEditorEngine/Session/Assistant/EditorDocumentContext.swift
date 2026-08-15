@@ -116,19 +116,45 @@ public struct EditorDocumentContextSnapshot: Hashable, Sendable {
 // MARK: - Document Patch
 
 /// A canonical full-document post-image guarded by the exact source context.
+/// What a patch is allowed to do to host-defined custom blocks.
+///
+/// The editor cannot decode a custom payload, so it cannot tell an intentional rewrite from
+/// an accidental loss. A patch produced by round-tripping the document through a format that
+/// has no representation for custom blocks would drop them silently, and the host would learn
+/// about it when the data was already gone.
+public enum EditorCustomBlockPatchPolicy: Hashable, Sendable {
+    /// Every custom block present before the patch must still be present after it, with the
+    /// same identity, type, version, and payload bytes.
+    ///
+    /// Position and parent are deliberately not compared. A patch that reorders paragraphs
+    /// moves whatever sits between them, and rejecting that would fail almost every ordinary
+    /// assistant patch — which would push callers to disable the policy entirely. A moved
+    /// block is still reachable by `BlockID`; a deleted one is not.
+    case preserve
+
+    /// The caller asserts it understands the custom payloads in this document and may add,
+    /// remove, retype, reversion, or rewrite them.
+    ///
+    /// This is not a general validation bypass. Every other canonical invariant still applies.
+    case hostManaged
+}
+
 public struct EditorDocumentPatch: Hashable, Sendable {
     public let source: EditorDocumentSource
     public let replacementBlocks: [EditorBlockInput]
     public let selectionAfter: EditorSelection
+    public let customBlockPolicy: EditorCustomBlockPatchPolicy
 
     public init(
         source: EditorDocumentSource,
         replacementBlocks: [EditorBlockInput],
-        selectionAfter: EditorSelection
+        selectionAfter: EditorSelection,
+        customBlockPolicy: EditorCustomBlockPatchPolicy = .preserve
     ) {
         self.source = source
         self.replacementBlocks = replacementBlocks
         self.selectionAfter = selectionAfter
+        self.customBlockPolicy = customBlockPolicy
     }
 }
 
@@ -144,4 +170,15 @@ public enum EditorDocumentTransactionError: Error, Hashable, Sendable {
     case cycleDetected(BlockID)
     case noncanonicalDepthFirstOrder
     case invalidSelection
+    /// A custom block in the patch carried an empty `typeID`.
+    case customTypeIDEmpty(BlockID)
+    /// A custom block's payload exceeded ``BlockKind/customPayloadByteLimit``.
+    case customPayloadTooLarge(BlockID)
+    /// A custom block carried canonical text or inline marks, which it cannot own.
+    case customBlockCarriesText(BlockID)
+    /// A custom block had child blocks. First-version custom blocks are leaves.
+    case customBlockHasChildren(BlockID)
+    /// The patch dropped or altered a custom block under
+    /// ``EditorCustomBlockPatchPolicy/preserve``.
+    case customBlockNotPreserved(BlockID)
 }

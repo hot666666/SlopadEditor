@@ -7,6 +7,14 @@ package enum CanonicalDocumentInputValidationError: Error, Hashable, Sendable {
     case missingParent(blockID: BlockID, parentID: BlockID)
     case cycleDetected(BlockID)
     case noncanonicalDepthFirstOrder
+    /// A custom block carried an empty `typeID`, so no provider could ever be routed to it.
+    case customTypeIDEmpty(BlockID)
+    /// A custom block's opaque payload exceeded ``BlockKind/customPayloadByteLimit``.
+    case customPayloadTooLarge(BlockID)
+    /// A custom block carried canonical text or inline marks, which it cannot own.
+    case customBlockCarriesText(BlockID)
+    /// A custom block had child blocks. First-version custom blocks are leaves.
+    case customBlockHasChildren(BlockID)
 }
 
 package enum CanonicalDocumentReplacementValidationError: Error, Hashable, Sendable {
@@ -37,6 +45,17 @@ package enum CanonicalDocumentInput {
             if let parentID = input.parentID, records[parentID] == nil {
                 throw .missingParent(blockID: input.id, parentID: parentID)
             }
+            if case .custom(let typeID, _, let payload) = input.kind {
+                guard !typeID.isEmpty else {
+                    throw .customTypeIDEmpty(input.id)
+                }
+                guard payload.count <= BlockKind.customPayloadByteLimit else {
+                    throw .customPayloadTooLarge(input.id)
+                }
+                guard input.content.text.isEmpty, input.content.marks.isEmpty else {
+                    throw .customBlockCarriesText(input.id)
+                }
+            }
         }
 
         var visitedParentChains: Set<BlockID> = []
@@ -64,6 +83,14 @@ package enum CanonicalDocumentInput {
                 childIDsByParent[parentID, default: []].append(input.id)
             } else {
                 rootBlockIDs.append(input.id)
+            }
+        }
+
+        // Leaf-ness is checked here rather than in the loop above because it is a property
+        // of the assembled tree, not of one input.
+        for input in blockInputs where input.kind.isCustom {
+            guard childIDsByParent[input.id] == nil else {
+                throw .customBlockHasChildren(input.id)
             }
         }
 
