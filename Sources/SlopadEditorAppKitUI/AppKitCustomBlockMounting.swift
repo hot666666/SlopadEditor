@@ -130,13 +130,17 @@ final class AppKitCustomBlockMountController {
             )
         }
 
-        for blockID in mounted.keys where !survivingIDs.contains(blockID) {
+        // Copy the keys before releasing. `release` removes from `mounted`, and iterating a
+        // dictionary's key view while mutating it is not defined behaviour — it happens to
+        // be the kind of defect that survives a passing test suite and shows up as a crash
+        // once a document is large enough to scroll blocks out of view.
+        for blockID in Array(mounted.keys) where !survivingIDs.contains(blockID) {
             release(blockID)
         }
     }
 
     func releaseAll() {
-        for blockID in mounted.keys {
+        for blockID in Array(mounted.keys) {
             release(blockID)
         }
     }
