@@ -1,11 +1,11 @@
 import Foundation
 import SlopadEditorCoreModel
 
-enum ArchiveV1Encoder {
+enum ArchiveEncoder {
     static func encode(
         _ blocks: [EditorBlockInput],
         formatVersion: Int = 1
-    ) throws(ArchiveV1EncodingBudgetError) -> Data {
+    ) throws(ArchiveEncodingBudgetError) -> Data {
         var output = LimitedArchiveOutput(budget: .v1)
         do {
             try output.append("{\"formatVersion\":\(formatVersion),\"blocks\":[")

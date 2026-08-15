@@ -1,18 +1,18 @@
 import Foundation
 import SlopadEditorCoreModel
 
-enum ArchiveV1EncodingBudgetError: Error, Equatable {
+enum ArchiveEncodingBudgetError: Error, Equatable {
     case exceeded(blockID: BlockID)
 }
 
 /// Allocation-bounded admission over caller-owned values. It runs before Core canonical
 /// validation so hostile collection sizes cannot force its document maps or traversals.
-enum ArchiveV1AdmissionPreflight {
+enum ArchiveAdmissionPreflight {
     static func validate(
         _ blocks: [EditorBlockInput],
         formatVersion: Int = 1,
         budget: ArchiveWireBudget = .v1
-    ) throws(ArchiveV1EncodingBudgetError) {
+    ) throws(ArchiveEncodingBudgetError) {
         var tracker = ArchiveWireBudgetTracker(budget: budget)
         do {
             try tracker.consumeArchiveBytes(

@@ -1,7 +1,7 @@
 import Foundation
 import SlopadEditorCoreModel
 
-struct ArchiveV1Block {
+struct ArchiveBlock {
     let rawID: String
     let rawParentID: String?
     let kind: BlockKind
@@ -21,13 +21,13 @@ struct ArchiveV1Block {
     }
 }
 
-enum ArchiveV1Decoder {
+enum ArchiveDecoder {
     static func decodeBlocks(
         _ value: StrictJSONValue,
         allowsCustomBlocks: Bool = false
-    ) throws(StrictJSONError) -> [ArchiveV1Block] {
+    ) throws(StrictJSONError) -> [ArchiveBlock] {
         guard case .array(let values) = value else { throw .malformed }
-        var blocks: [ArchiveV1Block] = []
+        var blocks: [ArchiveBlock] = []
         blocks.reserveCapacity(values.count)
         for value in values {
             blocks.append(try decodeBlock(value, allowsCustomBlocks: allowsCustomBlocks))
@@ -38,7 +38,7 @@ enum ArchiveV1Decoder {
     private static func decodeBlock(
         _ value: StrictJSONValue,
         allowsCustomBlocks: Bool
-    ) throws(StrictJSONError) -> ArchiveV1Block {
+    ) throws(StrictJSONError) -> ArchiveBlock {
         let object = try value.exactObject(keys: ["id", "parentID", "kind", "content"])
         let id = try string(object.required("id"))
         let parentID = try nullableString(object.required("parentID"))
@@ -47,7 +47,7 @@ enum ArchiveV1Decoder {
             allowsCustomBlocks: allowsCustomBlocks
         )
         let (text, marks) = try decodeContent(object.required("content"))
-        return ArchiveV1Block(
+        return ArchiveBlock(
             rawID: id,
             rawParentID: parentID,
             kind: kind,

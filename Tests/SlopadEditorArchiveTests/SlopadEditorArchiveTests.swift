@@ -494,11 +494,11 @@ struct SlopadEditorArchiveTests {
         let budget = Self.preflightBudget(arrayElements: 3)
 
         // When
-        try ArchiveV1AdmissionPreflight.validate(exactBlocks, budget: budget)
+        try ArchiveAdmissionPreflight.validate(exactBlocks, budget: budget)
 
         // Then
-        #expect(throws: ArchiveV1EncodingBudgetError.exceeded(blockID: "block-3")) {
-            try ArchiveV1AdmissionPreflight.validate(overBlocks, budget: budget)
+        #expect(throws: ArchiveEncodingBudgetError.exceeded(blockID: "block-3")) {
+            try ArchiveAdmissionPreflight.validate(overBlocks, budget: budget)
         }
     }
 
@@ -510,11 +510,11 @@ struct SlopadEditorArchiveTests {
         let budget = Self.preflightBudget(arrayElements: 4)
 
         // When
-        try ArchiveV1AdmissionPreflight.validate([exactBlock], budget: budget)
+        try ArchiveAdmissionPreflight.validate([exactBlock], budget: budget)
 
         // Then
-        #expect(throws: ArchiveV1EncodingBudgetError.exceeded(blockID: "marked")) {
-            try ArchiveV1AdmissionPreflight.validate([overBlock], budget: budget)
+        #expect(throws: ArchiveEncodingBudgetError.exceeded(blockID: "marked")) {
+            try ArchiveAdmissionPreflight.validate([overBlock], budget: budget)
         }
     }
 
@@ -526,11 +526,11 @@ struct SlopadEditorArchiveTests {
         let budget = Self.preflightBudget(values: 11)
 
         // When
-        try ArchiveV1AdmissionPreflight.validate([exactBlock], budget: budget)
+        try ArchiveAdmissionPreflight.validate([exactBlock], budget: budget)
 
         // Then
-        #expect(throws: ArchiveV1EncodingBudgetError.exceeded(blockID: "a")) {
-            try ArchiveV1AdmissionPreflight.validate([overBlock], budget: budget)
+        #expect(throws: ArchiveEncodingBudgetError.exceeded(blockID: "a")) {
+            try ArchiveAdmissionPreflight.validate([overBlock], budget: budget)
         }
     }
 
@@ -542,11 +542,11 @@ struct SlopadEditorArchiveTests {
         let budget = Self.preflightBudget(objectMembers: 9)
 
         // When
-        try ArchiveV1AdmissionPreflight.validate([exactBlock], budget: budget)
+        try ArchiveAdmissionPreflight.validate([exactBlock], budget: budget)
 
         // Then
-        #expect(throws: ArchiveV1EncodingBudgetError.exceeded(blockID: "a")) {
-            try ArchiveV1AdmissionPreflight.validate([overBlock], budget: budget)
+        #expect(throws: ArchiveEncodingBudgetError.exceeded(blockID: "a")) {
+            try ArchiveAdmissionPreflight.validate([overBlock], budget: budget)
         }
     }
 
@@ -554,16 +554,16 @@ struct SlopadEditorArchiveTests {
     func encoderPreflightByteCountMatchesWriter() throws {
         // Given
         let blocks = allKindBlocks(root: "root", child: "child")
-        let encoded = try ArchiveV1Encoder.encode(blocks)
+        let encoded = try ArchiveEncoder.encode(blocks)
         let exactBudget = Self.preflightBudget(archiveBytes: encoded.count)
         let underBudget = Self.preflightBudget(archiveBytes: encoded.count - 1)
 
         // When
-        try ArchiveV1AdmissionPreflight.validate(blocks, budget: exactBudget)
+        try ArchiveAdmissionPreflight.validate(blocks, budget: exactBudget)
 
         // Then
-        #expect(throws: ArchiveV1EncodingBudgetError.self) {
-            try ArchiveV1AdmissionPreflight.validate(blocks, budget: underBudget)
+        #expect(throws: ArchiveEncodingBudgetError.self) {
+            try ArchiveAdmissionPreflight.validate(blocks, budget: underBudget)
         }
     }
 

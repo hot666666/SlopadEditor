@@ -33,7 +33,7 @@ public enum SlopadEditorArchive {
         let formatVersion = blocks.contains { $0.kind.isCustom } ? 2 : 1
 
         do {
-            try ArchiveV1AdmissionPreflight.validate(blocks, formatVersion: formatVersion)
+            try ArchiveAdmissionPreflight.validate(blocks, formatVersion: formatVersion)
         } catch {
             switch error {
             case .exceeded(let blockID):
@@ -49,7 +49,7 @@ public enum SlopadEditorArchive {
         }
 
         do {
-            return try ArchiveV1Encoder.encode(blocks, formatVersion: formatVersion)
+            return try ArchiveEncoder.encode(blocks, formatVersion: formatVersion)
         } catch {
             switch error {
             case .exceeded(let blockID):
@@ -103,9 +103,9 @@ public enum SlopadEditorArchive {
         _ envelope: StrictJSONObject,
         allowsCustomBlocks: Bool
     ) throws(SlopadEditorArchiveDecodingError) -> [EditorBlockInput] {
-        let rawBlocks: [ArchiveV1Block]
+        let rawBlocks: [ArchiveBlock]
         do {
-            rawBlocks = try ArchiveV1Decoder.decodeBlocks(
+            rawBlocks = try ArchiveDecoder.decodeBlocks(
                 envelope.required("blocks"),
                 allowsCustomBlocks: allowsCustomBlocks
             )

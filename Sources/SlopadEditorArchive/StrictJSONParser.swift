@@ -40,6 +40,8 @@ enum StrictJSONError: Error {
 /// 80,000 values and 70,000 object members, leaving deliberate structural headroom while
 /// bounding every collection and decoded-string allocation.
 struct ArchiveWireBudget: Equatable {
+    /// Named for the version that introduced it, and unchanged since: V2 adds a block kind
+    /// to the vocabulary, not headroom, so both versions are admitted under these limits.
     static let v1 = ArchiveWireBudget(
         maximumArchiveBytes: 16 * 1_024 * 1_024,
         maximumValues: 150_000,
