@@ -92,9 +92,11 @@ struct MarkdownCustomBlockBoundaryTests {
 
         // When
         let encoded = try SlopadEditorMarkdown.encode(converted)
+        let decoded = try SlopadEditorMarkdown.decode(encoded)
 
-        // Then
-        #expect(encoded.contains("Todo: 장보기"))
+        // Then — 의미로 확인한다. Markdown 이스케이프 세부에 단언을 걸면 코덱이
+        // 옳게 동작하는 동안에도 테스트가 깨진다.
+        #expect(decoded.map(\.content.text) == ["intro", "Todo: 장보기"])
     }
 
     @Test("decode는 custom block을 만들 수 없어 왕복이 비대칭이다")

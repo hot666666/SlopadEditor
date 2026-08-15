@@ -53,7 +53,10 @@ jobs:
           # it alone passed a red suite. Failures are read from the log instead, and the
           # exit status is kept as a second signal for the cases the log cannot show
           # (a crash, a build error, a run that never started).
-          failures=$(grep -ac '✘ Test ' baseline.log || true)
+          # Match the result line only. swift-testing prints both "recorded an issue" and
+          # "failed after ..." for one failing test, so counting every ✘ line reports twice
+          # the real number.
+          failures=$(grep -acE '✘ Test .* failed after' baseline.log || true)
           executed=$(grep -ac '✔ Test "' baseline.log || true)
           echo "baseline executed ${executed:-0} tests with ${failures:-0} failures"
 
