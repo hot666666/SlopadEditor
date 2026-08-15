@@ -7,6 +7,7 @@ public typealias AppKitEditorViewController = SlopadEditorAppKitUI.AppKitEditorV
 public typealias AppKitEditorStyle = SlopadEditorAppKitUI.AppKitEditorStyle
 public typealias AppKitEditorAction = SlopadEditorAppKitUI.AppKitEditorAction
 public typealias AppKitBlockChromeRenderer = SlopadEditorAppKitUI.AppKitBlockChromeRenderer
+public typealias AppKitCustomBlockProvider = SlopadEditorAppKitUI.AppKitCustomBlockProvider
 public typealias AppKitBlockChromeRenderContext =
     SlopadEditorAppKitUI.AppKitBlockChromeRenderContext
 public typealias AppKitDefaultBlockChromeRenderer =
