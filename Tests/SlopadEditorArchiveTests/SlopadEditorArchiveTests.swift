@@ -247,11 +247,12 @@ struct SlopadEditorArchiveTests {
     @Test("future와 past version은 migration 추측 없이 분리된 typed error로 거절한다")
     func unsupportedVersionsFailWithTypedErrors() {
         // Given / When / Then
+        // V2 is supported since custom blocks landed, so the future boundary moved to 3.
         #expect(
             throws: SlopadEditorArchiveDecodingError.unsupportedFutureVersion(
-                found: 2, latestSupported: 1)
+                found: 3, latestSupported: 2)
         ) {
-            try SlopadEditorArchive.decode(Self.json(#"{"formatVersion":2,"blocks":null}"#))
+            try SlopadEditorArchive.decode(Self.json(#"{"formatVersion":3,"blocks":null}"#))
         }
         #expect(
             throws: SlopadEditorArchiveDecodingError.unsupportedPastVersion(

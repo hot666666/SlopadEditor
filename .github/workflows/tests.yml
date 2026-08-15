@@ -48,22 +48,20 @@ jobs:
           fi
           grep -aE 'Crash|signal|Fatal error|✘' baseline.log | tail -20 || true
 
-          # Evidence is a count of tests that actually reported, not swift-testing's run
-          # summary. The summary turned out to be unreliable output — one run printed it
-          # and the next, from a passing suite with the same command, did not — and a gate
-          # that rejects a green suite over a missing log line is worse than no gate.
-          #
-          # The exit status decides pass or fail. The count exists so that a run which
-          # executes nothing cannot masquerade as a passing one.
+          # The exit status is not sufficient on its own. This toolchain returned 0 from a
+          # run whose swift-testing suite reported a failing test, so a gate that trusted
+          # it alone passed a red suite. Failures are read from the log instead, and the
+          # exit status is kept as a second signal for the cases the log cannot show
+          # (a crash, a build error, a run that never started).
+          failures=$(grep -ac '✘ Test ' baseline.log || true)
           executed=$(grep -ac '✔ Test "' baseline.log || true)
-          echo "baseline executed ${executed:-0} tests"
+          echo "baseline executed ${executed:-0} tests with ${failures:-0} failures"
 
-          # `|| true` matters here: an absent summary makes grep exit 1, and under
-          # `bash -e` a failing command substitution in an assignment aborts the step.
-          # This informational line was failing runs whose suite had already passed.
-          summary=$(grep -aE 'Test run with [0-9]+ test' baseline.log | tail -1 || true)
-          if [ -n "$summary" ]; then
-            echo "baseline summary: ${summary}"
+          if [ "${failures:-0}" -ne 0 ]; then
+            echo "--- failures ---"
+            grep -aE '✘' baseline.log | tail -40 || true
+            echo "::error::the baseline reported ${failures} failing tests"
+            exit 1
           fi
 
           if [ "${executed:-0}" -eq 0 ]; then
